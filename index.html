@@ -806,6 +806,7 @@ function reinitTokenClient() {
 function onTokenReceived(resp) {
   if (resp.error) { log('❌ Auth error: ' + resp.error); return; }
   accessToken = resp.access_token;
+  gapi.client.setToken({ access_token: accessToken });
   setGmailStatus(true);
   doScanInbox();
 }
@@ -825,11 +826,25 @@ async function doScanInbox() {
   scannedEmails = [];
 
   try {
+    const folder = settings.emailFolder || 'INBOX';
+    log(`🗂 Using folder/label: ${folder}`);
+    log(`🔑 Token set: ${!!gapi.client.getToken()}`);
+
+    // Verify which account we're authenticated as
+    const profileResp = await gapi.client.gmail.users.getProfile({ userId: 'me' });
+    log(`👤 Authenticated as: ${profileResp.result.emailAddress} (${profileResp.result.messagesTotal} total messages)`);
+
     const listResp = await gapi.client.gmail.users.messages.list({
       userId: 'me',
       maxResults: 500,
-      labelIds: [settings.emailFolder || 'INBOX'],
+      labelIds: [folder],
     });
+
+    log(`📡 API status: ${listResp.status}`);
+    if (listResp.status !== 200) {
+      log(`❌ API error ${listResp.status}: ${JSON.stringify(listResp.result)}`);
+      return;
+    }
 
     const messages = (listResp.result.messages || []);
     if (!messages.length) { log('📭 No messages found.'); renderEmailTable([]); return; }
@@ -1169,7 +1184,8 @@ document.getElementById('btn-scan').addEventListener('click', () => {
   }
   if (!accessToken) {
     log('⏳ Opening Google sign-in popup...');
-    tokenClient.requestAccessToken({ prompt: '' });
+    const hint = DB.getSettings().inboxEmail || '';
+    tokenClient.requestAccessToken({ prompt: 'select_account', login_hint: hint });
   } else {
     doScanInbox();
   }
