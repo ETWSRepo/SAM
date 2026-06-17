@@ -689,12 +689,13 @@
           <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;">
             <colgroup>
               <col style="width:90px;">
-              <col style="width:300px;">
+              <col style="width:280px;">
+              <col style="width:90px;">
+              <col style="width:90px;">
+              <col style="width:110px;">
               <col style="width:100px;">
-              <col style="width:100px;">
-              <col style="width:120px;">
-              <col style="width:120px;">
-              <col style="width:220px;">
+              <col style="width:200px;">
+              <col style="width:80px;">
             </colgroup>
             <thead>
               <tr>
@@ -705,6 +706,7 @@
                 <th>Winning Bid</th>
                 <th>Bidder #</th>
                 <th>Bidder Name</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="winners-tbody"></tbody>
@@ -713,10 +715,29 @@
       </div>
     </section>
 
-    <!-- ══ Step 5: Winner Announcement ══ -->
+    <!-- ══ Step 5: Announce Winners ══ -->
     <section class="screen" id="screen-winner-announce">
-      <div class="page-header"><h2>Step 5 — Winner Announcement</h2><p>Generate the list of winning bidders.</p></div>
-      <div class="placeholder-box"><div class="icon">🏆</div>Coming soon</div>
+      <div class="page-header"><h2>Step 5 — Announce Winners</h2><p>Review and announce winning bidders for each item.</p></div>
+      <div class="card" id="announce-card">
+        <div id="announce-toolbar-wrap"></div>
+        <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
+          <table class="tablekit" id="announce-table" style="table-layout:fixed;width:560px;">
+            <colgroup>
+              <col style="width:100px;">
+              <col style="width:300px;">
+              <col style="width:120px;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Bidder #</th>
+                <th>Bidder Name</th>
+                <th>Items Won</th>
+              </tr>
+            </thead>
+            <tbody id="announce-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- ══ Step 6: Payment & Pickup ══ -->
@@ -1588,6 +1609,9 @@ function addBidder() {
   tr.querySelector('.nb-last').focus();
 
   tr.querySelector('.nb-phone').addEventListener('blur', e => { e.target.value = fmtPhone(e.target.value); });
+  tr.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') tr.querySelector('.nb-save').click(); });
+  });
   tr.querySelector('.nb-save').addEventListener('click', () => {
     const lastEl  = tr.querySelector('.nb-last');
     const firstEl = tr.querySelector('.nb-first');
@@ -1614,6 +1638,41 @@ function addBidder() {
 
 // ══════════════════════════════════════
 //  RENDER — Winners table
+// ══════════════════════════════════════
+//  RENDER — Announce Winners table
+// ══════════════════════════════════════
+function refreshAnnounceTable() {
+  const bidders = Bidders.getAll();
+  const winners = DB.getWinners();
+  const tbody   = document.getElementById('announce-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (!bidders.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-secondary);">No bidders registered yet. Complete Step 3 first.</td></tr>';
+    return;
+  }
+
+  // Count wins per bidder number
+  const winCount = {};
+  Object.values(winners).forEach(w => {
+    if (!w.bidder_number) return;
+    winCount[w.bidder_number] = (winCount[w.bidder_number] || 0) + 1;
+  });
+
+  const tdStyle = 'font-size:13px;padding:6px 8px;';
+  bidders.slice().sort((a, b) => a.bidder_number - b.bidder_number).forEach(b => {
+    const count = winCount[b.bidder_number] || 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="${tdStyle}font-weight:600;">${escHtml(String(b.bidder_number))}</td>
+      <td style="${tdStyle}">${escHtml(`${b.last_name}, ${b.first_name}`.trim())}</td>
+      <td style="${tdStyle}text-align:center;${count > 0 ? 'font-weight:600;color:var(--success);' : 'color:var(--text-tertiary);'}">${count > 0 ? count : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 // ══════════════════════════════════════
 function refreshWinnersTable() {
   const items   = Items.getAll();
@@ -1644,16 +1703,27 @@ function refreshWinnersTable() {
       <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(w.winning_bid || ''))}" placeholder="$0.00"></td>
       <td><input class="win-num" style="${inpStyle}text-align:center;" value="${escHtml(String(bidderNum))}" placeholder="#"></td>
       <td><span class="win-name" style="font-size:12px;">${escHtml(bidderName)}</span></td>
+      <td style="text-align:center;"><button class="btn danger win-clear" style="font-size:11px;padding:2px 8px;">Clear</button></td>
     `;
     tbody.appendChild(tr);
   });
 
   tbody.querySelectorAll('.win-bid').forEach(inp => {
     inp.addEventListener('change', () => {
-      const key     = inp.closest('tr').dataset.itemKey;
+      const tr      = inp.closest('tr');
+      const key     = tr.dataset.itemKey;
       const winners = DB.getWinners();
       winners[key]  = Object.assign(winners[key] || {}, { winning_bid: inp.value.trim() });
       DB.saveWinners(winners);
+      // Clear error state so user can re-submit bidder number cleanly
+      inp.style.borderColor = '';
+      const numEl  = tr.querySelector('.win-num');
+      const nameEl = tr.querySelector('.win-name');
+      numEl.style.borderColor = '';
+      if (nameEl.textContent === 'Winning bid required') {
+        nameEl.textContent = '';
+        nameEl.style.color = '';
+      }
     });
   });
 
@@ -1661,20 +1731,49 @@ function refreshWinnersTable() {
     inp.addEventListener('change', () => {
       const num     = parseInt(inp.value.trim(), 10);
       const key     = inp.closest('tr').dataset.itemKey;
+      const tr      = inp.closest('tr');
       const winners = DB.getWinners();
+      inp.style.borderColor = '';
       if (!num) {
         const existing = winners[key] || {};
         winners[key] = { winning_bid: existing.winning_bid || '' };
-        inp.closest('tr').querySelector('.win-name').textContent = '';
+        tr.querySelector('.win-name').textContent = '';
         DB.saveWinners(winners);
         return;
       }
+      const bidEl = tr.querySelector('.win-bid');
+      if (!bidEl.value.trim()) {
+        inp.style.borderColor = 'var(--danger)';
+        bidEl.style.borderColor = 'var(--danger)';
+        tr.querySelector('.win-name').textContent = 'Winning bid required';
+        tr.querySelector('.win-name').style.color = 'var(--danger)';
+        return;
+      }
+      bidEl.style.borderColor = '';
       const bidder = Bidders.getAll().find(b => b.bidder_number === num);
       const name   = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '(not found)';
       winners[key] = Object.assign(winners[key] || {}, { bidder_number: num, bidder_name: name });
       DB.saveWinners(winners);
-      inp.closest('tr').querySelector('.win-name').textContent = name;
+      const nameEl = tr.querySelector('.win-name');
+      nameEl.textContent = name;
+      nameEl.style.color = bidder ? '' : 'var(--danger)';
       inp.style.borderColor = bidder ? '' : 'var(--danger)';
+    });
+  });
+
+  tbody.querySelectorAll('.win-clear').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tr      = btn.closest('tr');
+      const key     = tr.dataset.itemKey;
+      const winners = DB.getWinners();
+      delete winners[key];
+      DB.saveWinners(winners);
+      tr.querySelector('.win-bid').value = '';
+      tr.querySelector('.win-num').value = '';
+      tr.querySelector('.win-name').textContent = '';
+      tr.querySelector('.win-bid').style.borderColor = '';
+      tr.querySelector('.win-num').style.borderColor = '';
+      tr.querySelector('.win-name').style.color = '';
     });
   });
 }
@@ -1929,6 +2028,19 @@ function navigate(screenId) {
       navigate._winnersToolbarInited = true;
     }
     refreshWinnersTable();
+  }
+  if (screenId === 'winner-announce') {
+    if (!navigate._announceToolbarInited) {
+      PageToolbar.init({ title: 'Announce Winners', logoText: 'ETCC', tableSelector: '#announce-table' });
+      const tb   = document.getElementById('page-toolbar');
+      const card = document.getElementById('announce-card');
+      if (tb && card) {
+        const wrap = card.querySelector('div[style*="overflow-x"]');
+        card.insertBefore(tb, wrap);
+      }
+      navigate._announceToolbarInited = true;
+    }
+    refreshAnnounceTable();
   }
 }
 

@@ -543,6 +543,51 @@ function runAll() {
     assertEqual('winning_bid kept',   winStore['900-1'].winning_bid, '$50.00'),
   ]);
 
+  // ── 25. Announce Winners — win count per bidder ──────────────────────────
+  function calcWinCount(winnersObj) {
+    const winCount = {};
+    Object.values(winnersObj).forEach(w => {
+      if (!w.bidder_number) return;
+      winCount[w.bidder_number] = (winCount[w.bidder_number] || 0) + 1;
+    });
+    return winCount;
+  }
+  const testWinners = {
+    '200-1': { bidder_number: 1, bidder_name: 'Smith, John',  winning_bid: '$30' },
+    '200-2': { bidder_number: 1, bidder_name: 'Smith, John',  winning_bid: '$35' },
+    '900-1': { bidder_number: 2, bidder_name: 'Jones, Sue',   winning_bid: '$50' },
+    '900-2': {},
+  };
+  const wc = calcWinCount(testWinners);
+  renderSuite('Announce Winners — win count', [
+    assertEqual('bidder 1 won 2 items',       wc[1], 2),
+    assertEqual('bidder 2 won 1 item',        wc[2], 1),
+    assert('entry with no bidder ignored',    !(3 in wc)),
+  ]);
+
+  // ── 26. Announce Winners — name format Last, First ───────────────────────
+  function announceName(b) {
+    return `${b.last_name}, ${b.first_name}`.trim();
+  }
+  renderSuite('Announce Winners — name format', [
+    assertEqual('Last, First',     announceName({ last_name: 'Crown', first_name: 'Alvin' }), 'Crown, Alvin'),
+    assertEqual('Last only',       announceName({ last_name: 'Crown', first_name: '' }),      'Crown,'),
+    assertEqual('First only',      announceName({ last_name: '',      first_name: 'Alvin' }), ', Alvin'),
+  ]);
+
+  // ── 27. Winners — clear removes entry ────────────────────────────────────
+  _store['sam_winners'] = null;
+  DB.saveWinners({ '200-1': { bidder_number: 1, bidder_name: 'Smith, John', winning_bid: '$30' }, '900-1': { bidder_number: 2, bidder_name: 'Jones, Sue', winning_bid: '$50' } });
+  const wBefore = DB.getWinners();
+  delete wBefore['200-1'];
+  DB.saveWinners(wBefore);
+  const wAfter = DB.getWinners();
+  renderSuite('Winners — clear removes entry', [
+    assert('200-1 removed',    !('200-1' in wAfter)),
+    assert('900-1 still exists', '900-1' in wAfter),
+    assertEqual('remaining count', Object.keys(wAfter).length, 1),
+  ]);
+
   // ── Summary ───────────────────────────────────────────────────────────────
   const total = passCount + failCount;
   document.getElementById('s-pass').textContent  = passCount;
