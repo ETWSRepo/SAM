@@ -671,6 +671,33 @@ function runAll() {
     assert('amount set, whitespace reason → invalid', otherIsInvalid(5, '   ')),
   ]);
 
+  // ── Pay & Pickup sort indicator flag ──────────────────────────────────────
+  {
+    function makeSort() { return { by: '', dir: 'asc', active: false }; }
+    function clickSort(s, by) {
+      if (s.by === by) { s.dir = s.dir === 'asc' ? 'desc' : 'asc'; }
+      else { s.by = by; s.dir = 'asc'; }
+      s.active = true;
+    }
+    function ind(s, col) { return (!s.active || s.by !== col) ? '' : (s.dir === 'asc' ? '▲' : '▼'); }
+
+    const s0 = makeSort();
+    const t0a = assert('no indicator on bidder before click', ind(s0, 'bidder_number') === '');
+    const t0b = assert('no indicator on last before click',   ind(s0, 'last_name')     === '');
+
+    const s1 = makeSort(); clickSort(s1, 'bidder_number');
+    const t1  = assert('▲ on bidder after first click asc',  ind(s1, 'bidder_number') === '▲');
+
+    const s2 = makeSort(); clickSort(s2, 'bidder_number'); clickSort(s2, 'bidder_number');
+    const t2  = assert('▼ on bidder after second click desc', ind(s2, 'bidder_number') === '▼');
+
+    const s3 = makeSort(); clickSort(s3, 'last_name');
+    const t3a = assert('▲ on last after click',              ind(s3, 'last_name')     === '▲');
+    const t3b = assert('bidder clears when last sorted',     ind(s3, 'bidder_number') === '');
+
+    renderSuite('Pay & Pickup — sort indicator flag', [t0a, t0b, t1, t2, t3a, t3b]);
+  }
+
   // ── Summary ───────────────────────────────────────────────────────────────
   const total = passCount + failCount;
   document.getElementById('s-pass').textContent  = passCount;
