@@ -548,6 +548,7 @@
               <tr>
                 <th style="width:28px;"></th>
                 <th>Email Label</th>
+                <th style="width:200px;">Select By</th>
                 <th>Database Name</th>
                 <th style="width:60px; text-align:center;">Edit</th>
                 <th style="width:60px; text-align:center;">Remove</th>
@@ -627,26 +628,28 @@ const CATEGORIES = {
   900: 'Miscellaneous / Other'
 };
 
+const SELECT_BY_OPTIONS = ['Next Line', 'Current Line to End', 'Current Line to Comma'];
+
 const DEFAULT_FIELD_MAP = [
-  { label: 'Category',        column: 'category'         },
-  { label: 'Description',     column: 'description'      },
-  { label: 'Value',           column: 'value'            },
-  { label: 'Reserve',         column: 'reserve_amount'   },
-  { label: 'Donor Name',      column: 'donor_name'       },
-  { label: 'Donor Email',     column: 'donor_email'      },
-  { label: 'Donor Phone',     column: 'donor_phone'      },
-  { label: 'Member',          column: 'member'           },
-  { label: 'Email',           column: 'email'            },
-  { label: 'Submission Date', column: 'submission_date'  },
-  { label: 'Status',           column: 'status'            },
-  { label: 'Response',         column: 'response'          },
-  { label: 'ItemCategory',      column: 'item_category'     },
-  { label: 'ItemDescription',   column: 'item_description'  },
-  { label: 'ItemValue',         column: 'item_value'        },
-  { label: 'ItemReserveAmount', column: 'reserve_amount'    },
-  { label: 'DonorName',         column: 'donor_name'        },
-  { label: 'DonorEmail',        column: 'donor_email'       },
-  { label: 'DonorPhone',        column: 'donor_phone'       },
+  { label: 'Category',        selectBy: 'Next Line',             column: 'category'         },
+  { label: 'Description',     selectBy: 'Next Line',             column: 'description'      },
+  { label: 'Value',           selectBy: 'Next Line',             column: 'value'            },
+  { label: 'Reserve',         selectBy: 'Next Line',             column: 'reserve_amount'   },
+  { label: 'Donor Name',      selectBy: 'Next Line',             column: 'donor_name'       },
+  { label: 'Donor Email',     selectBy: 'Next Line',             column: 'donor_email'      },
+  { label: 'Donor Phone',     selectBy: 'Next Line',             column: 'donor_phone'      },
+  { label: 'Member',          selectBy: 'Next Line',             column: 'member'           },
+  { label: 'Email',           selectBy: 'Next Line',             column: 'email'            },
+  { label: 'Submission Date', selectBy: 'Next Line',             column: 'submission_date'  },
+  { label: 'Status',          selectBy: 'Current Line to End',   column: 'status'           },
+  { label: 'Response',        selectBy: 'Current Line to End',   column: 'response'         },
+  { label: 'ItemCategory',    selectBy: 'Current Line to End',   column: 'item_category'    },
+  { label: 'ItemDescription', selectBy: 'Current Line to End',   column: 'item_description' },
+  { label: 'ItemValue',       selectBy: 'Current Line to End',   column: 'item_value'       },
+  { label: 'ItemReserveAmount', selectBy: 'Current Line to End', column: 'reserve_amount'   },
+  { label: 'DonorName',       selectBy: 'Current Line to End',   column: 'donor_name'       },
+  { label: 'DonorEmail',      selectBy: 'Current Line to End',   column: 'donor_email'      },
+  { label: 'DonorPhone',      selectBy: 'Current Line to End',   column: 'donor_phone'      },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -1054,6 +1057,7 @@ function renderFieldMapTable() {
     tr.innerHTML = `
       <td style="width:28px;cursor:grab;text-align:center;color:var(--text-tertiary);font-size:16px;user-select:none;">⠿</td>
       <td class="fm-label-cell" style="font-size:13px;">${escHtml(row.label)}</td>
+      <td class="fm-selectby-cell" style="font-size:12px;color:var(--text-secondary);">${escHtml(row.selectBy || 'Next Line')}</td>
       <td class="fm-column-cell" style="font-size:12px;color:var(--text-secondary);font-family:monospace;">${escHtml(row.column)}</td>
       <td style="text-align:center;">
         <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="editFieldMapRow(${idx})">Edit</button>
@@ -1093,8 +1097,13 @@ function editFieldMapRow(idx) {
   const row = map[idx];
   const tbody = document.getElementById('field-map-tbody');
   const tr = tbody.querySelectorAll('tr')[idx];
-  tr.querySelector('.fm-label-cell').innerHTML  = `<input type="text" value="${escHtml(row.label)}"  data-idx="${idx}" data-key="label"  style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;" />`;
-  tr.querySelector('.fm-column-cell').innerHTML = `<input type="text" value="${escHtml(row.column)}" data-idx="${idx}" data-key="column" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:monospace;" />`;
+  const inputStyle = 'width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:inherit;';
+  const selOpts = SELECT_BY_OPTIONS.map(o =>
+    `<option value="${o}"${(row.selectBy||'Next Line')===o?' selected':''}>${o}</option>`
+  ).join('');
+  tr.querySelector('.fm-label-cell').innerHTML    = `<input type="text" value="${escHtml(row.label)}"  data-idx="${idx}" data-key="label"  style="${inputStyle}" />`;
+  tr.querySelector('.fm-selectby-cell').innerHTML = `<select data-idx="${idx}" data-key="selectBy" style="${inputStyle}">${selOpts}</select>`;
+  tr.querySelector('.fm-column-cell').innerHTML   = `<input type="text" value="${escHtml(row.column)}" data-idx="${idx}" data-key="column" style="${inputStyle}font-family:monospace;" />`;
   const editBtn = tr.querySelector('button.btn:not(.danger)');
   editBtn.textContent = 'Save';
   editBtn.onclick = () => saveFieldMapRow(idx);
@@ -1104,8 +1113,9 @@ function saveFieldMapRow(idx) {
   const map = DB.getFieldMap();
   const tbody = document.getElementById('field-map-tbody');
   const tr = tbody.querySelectorAll('tr')[idx];
-  map[idx].label  = tr.querySelector('input[data-key="label"]').value.trim();
-  map[idx].column = tr.querySelector('input[data-key="column"]').value.trim();
+  map[idx].label    = tr.querySelector('[data-key="label"]').value.trim();
+  map[idx].selectBy = tr.querySelector('[data-key="selectBy"]').value;
+  map[idx].column   = tr.querySelector('[data-key="column"]').value.trim();
   DB.saveFieldMap(map);
   renderFieldMapTable();
 }
@@ -1126,16 +1136,6 @@ function saveSettings() {
   };
   DB.saveSettings(settings);
 
-  // Read current field map from inputs
-  const rows = document.querySelectorAll('#field-map-tbody tr');
-  const map  = [];
-  rows.forEach(tr => {
-    const inputs = tr.querySelectorAll('input[data-key]');
-    const label  = inputs[0]?.value.trim();
-    const column = inputs[1]?.value.trim();
-    if (label && column) map.push({ label, column });
-  });
-  DB.saveFieldMap(map);
 
   // Re-init OAuth client with new client ID
   if (clientId) reinitTokenClient();
