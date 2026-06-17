@@ -415,7 +415,7 @@
       <span class="nav-badge">1</span> Load Item Emails
     </div>
     <div class="nav-item" data-screen="bidding-sheets">
-      <span class="nav-badge">2</span> Create Bidding Sheets
+      <span class="nav-badge">2</span> Create Bid Sheets
     </div>
     <div class="nav-item" data-screen="bidder-reg">
       <span class="nav-badge">3</span> Register Bidders
@@ -465,8 +465,6 @@
           <span id="gmail-status-text">Not connected to Gmail</span>
         </div>
         <button class="btn primary" id="btn-scan" style="display:none;">📧 Scan</button>
-        <button class="btn" id="btn-process-all" disabled>✅ Process All New</button>
-        <button class="btn" id="btn-process-selected" disabled>Process Selected</button>
         <div class="spacer"></div>
         <span id="scan-note" style="font-size:11px; color:var(--text-tertiary);"></span>
       </div>
@@ -555,9 +553,9 @@
       </div>
     </section>
 
-    <!-- ══ Step 2: Bidding Sheets ══ -->
+    <!-- ══ Step 2: Bid Sheets ══ -->
     <section class="screen" id="screen-bidding-sheets">
-      <div class="page-header"><h2>Step 2 — Create Bidding Sheets</h2><p>Print a bidding sheet for each auction item.</p></div>
+      <div class="page-header"><h2>Step 2 — Create Bid Sheets</h2><p>Print a bid sheet for each auction item.</p></div>
 
       <div class="card" id="bs-items-card">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
@@ -565,7 +563,7 @@
           <div style="display:flex;gap:8px;">
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="bsCheckAll()">Check All</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="bsClearAll()">Clear All</button>
-            <button class="btn primary" style="font-size:11px;padding:3px 10px;" onclick="printBiddingSheets()">🖨️ Print Bidding Sheets</button>
+            <button class="btn primary" style="font-size:11px;padding:3px 10px;" onclick="printBiddingSheets()">🖨️ Print Bid Sheets</button>
           </div>
         </div>
         <div style="overflow-x:auto;">
@@ -666,6 +664,28 @@
         </div>
       </div>
 
+      <!-- Bid Sheet Setup -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Bid Sheet Setup</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-starting-bid-pct">Starting Bid %</label>
+            <input type="number" id="inp-starting-bid-pct" min="0" max="100" step="1" style="width:100px;" />
+            <span class="form-hint">Percentage of item value used as the starting bid amount on bid sheets.</span>
+          </div>
+          <div class="form-row">
+            <label for="inp-final-bid-pct">Final Bid %</label>
+            <input type="number" id="inp-final-bid-pct" min="0" max="999" step="1" style="width:100px;" />
+            <span class="form-hint">Percentage of item value used as the final (highest) bid amount on bid sheets.</span>
+          </div>
+          <div class="form-row">
+            <label for="inp-bid-count">Bid Count</label>
+            <input type="number" id="inp-bid-count" min="1" max="100" step="1" style="width:100px;" />
+            <span class="form-hint">Number of bid rows on each bid sheet. Bids are evenly incremented from Starting Bid to Final Bid.</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Field mapping -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -758,8 +778,8 @@
       <p>This application manages the silent auction for the East Tennessee Corvette Club. Follow the six steps in order for each auction event.</p>
       <h3>Step 1 — Item Load</h3>
       <p>Scans <strong>etccwebsite.auction@gmail.com</strong> for donation emails. Extracts item fields and loads them into the items database. Duplicate emails are skipped. Each item receives a unique item number based on its category.</p>
-      <h3>Step 2 — Create Bidding Sheets</h3>
-      <p>Generates a printable bidding sheet for each item showing item number, description, starting bid, bid increment, and a table of bid rows.</p>
+      <h3>Step 2 — Create Bid Sheets</h3>
+      <p>Generates a printable bid sheet for each item showing item number, description, starting bid, bid increment, and a table of bid rows.</p>
       <h3>Step 3 — Bidder Registration</h3>
       <p>Register attendees as bidders. Import member numbers from a Club Express file. Send emails to individual or all bidders.</p>
       <h3>Step 4 — Auction Close</h3>
@@ -832,9 +852,12 @@ const DEFAULT_FIELD_MAP = [
 ];
 
 const DEFAULT_SETTINGS = {
-  gmailClientId:  '',
-  inboxEmail:     'etccwebsite.auction@gmail.com',
-  debugMode:      false,
+  gmailClientId:   '',
+  inboxEmail:      'etccwebsite.auction@gmail.com',
+  debugMode:       false,
+  startingBidPct:  30,
+  finalBidPct:     150,
+  bidCount:        25,
   emailFolder:    'INBOX',
 };
 
@@ -1082,8 +1105,7 @@ async function doScanInbox() {
     const scanCount = scannedEmails.length;
     log(`✅ Fetched ${scanCount} emails.`);
     renderEmailTable(scannedEmails);
-    document.getElementById('btn-process-all').disabled = false;
-    document.getElementById('btn-process-selected').disabled = false;
+
     document.getElementById('scan-note').textContent = 'Scanned ' + new Date().toLocaleTimeString();
     document.getElementById('m-total').textContent = scanCount;
     alert(`Scan complete — ${scanCount} email${scanCount !== 1 ? 's' : ''} found.`);
@@ -1246,11 +1268,27 @@ function printBiddingSheets() {
   const checked = rows.filter(tr => tr.querySelector('.bs-chk')?.checked);
   if (!checked.length) { alert('No items selected. Use Check All or select individual items first.'); return; }
 
+  const s = DB.getSettings();
+  const bidCount     = s.bidCount       || 25;
+  const startPct     = (s.startingBidPct || 30) / 100;
+  const finalPct     = (s.finalBidPct    || 150) / 100;
+
   const items = Items.getAll();
   const selectedNums = new Set(checked.map(tr => tr.cells[1]?.textContent.trim()));
   const selected = items.filter(i => selectedNums.has(String(i.item_number)));
 
-  const sheets = selected.map(item => `
+  const sheets = selected.map(item => {
+    const itemVal   = parseFloat(String(item.value || '0').replace(/[^0-9.]/g, '')) || 0;
+    const firstBid  = Math.round(itemVal * startPct * 100) / 100;
+    const lastBid   = Math.round(itemVal * finalPct  * 100) / 100;
+    const increment = bidCount > 1 ? (lastBid - firstBid) / (bidCount - 1) : 0;
+    const bidRows   = Array.from({length: bidCount}, (_, i) => {
+      const amt  = Math.round((firstBid + increment * i) * 100) / 100;
+      const bold = (i + 1) % 2 === 0 ? ' style="font-weight:700;"' : '';
+      const disp = '$' + amt.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      return `<tr><td>${i + 1}</td><td${bold}>${disp}</td><td></td><td></td><td${bold}>${disp}</td></tr>`;
+    }).join('');
+    return `
     <div class="sheet">
       <div class="sheet-header">
         <div class="sheet-title">East Tennessee Corvette Club — Silent Auction</div>
@@ -1265,16 +1303,15 @@ function printBiddingSheets() {
       </table>
       <table class="bid-table">
         <thead><tr><th>#</th><th>Bid Amount</th><th>Bidder #</th><th>Bidder Initials</th><th>Bid Amount</th></tr></thead>
-        <tbody>
-          ${Array.from({length: 35}, (_, i) => { const amt = '$' + ((i + 1) * 5); const bold = (i + 1) % 2 === 0 ? ' style="font-weight:700;"' : ''; return `<tr><td>${i + 1}</td><td${bold}>${amt}</td><td></td><td></td><td${bold}>${amt}</td></tr>`; }).join('')}
-        </tbody>
+        <tbody>${bidRows}</tbody>
       </table>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const win = window.open('', '_blank', 'width=900,height=700');
   win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Bidding Sheets</title>
+<html><head><meta charset="UTF-8"><title>Bid Sheets</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: system-ui, sans-serif; margin: 0; color: #111; }
@@ -1394,10 +1431,13 @@ function refreshMetrics() {
 // ══════════════════════════════════════
 function loadSettingsForm() {
   const s = DB.getSettings();
-  document.getElementById('inp-client-id').value    = s.gmailClientId || '';
-  document.getElementById('inp-inbox-email').value  = s.inboxEmail    || '';
-  document.getElementById('inp-email-folder').value = s.emailFolder   || 'INBOX';
-  document.getElementById('inp-debug-mode').checked = !!s.debugMode;
+  document.getElementById('inp-client-id').value       = s.gmailClientId  || '';
+  document.getElementById('inp-inbox-email').value     = s.inboxEmail     || '';
+  document.getElementById('inp-email-folder').value    = s.emailFolder    || 'INBOX';
+  document.getElementById('inp-debug-mode').checked    = !!s.debugMode;
+  document.getElementById('inp-starting-bid-pct').value = s.startingBidPct ?? 30;
+  document.getElementById('inp-final-bid-pct').value    = s.finalBidPct    ?? 150;
+  document.getElementById('inp-bid-count').value        = s.bidCount       ?? 25;
   renderFieldMapTable();
 }
 
@@ -1488,10 +1528,13 @@ function removeFieldMapRow(idx) {
 function saveSettings() {
   const clientId = document.getElementById('inp-client-id').value.trim();
   const settings = {
-    gmailClientId: clientId,
-    inboxEmail:    document.getElementById('inp-inbox-email').value.trim(),
-    emailFolder:   document.getElementById('inp-email-folder').value.trim() || 'INBOX',
-    debugMode:     document.getElementById('inp-debug-mode').checked,
+    gmailClientId:  clientId,
+    inboxEmail:     document.getElementById('inp-inbox-email').value.trim(),
+    emailFolder:    document.getElementById('inp-email-folder').value.trim() || 'INBOX',
+    debugMode:      document.getElementById('inp-debug-mode').checked,
+    startingBidPct: parseInt(document.getElementById('inp-starting-bid-pct').value, 10) || 0,
+    finalBidPct:    parseInt(document.getElementById('inp-final-bid-pct').value,    10) || 0,
+    bidCount:       parseInt(document.getElementById('inp-bid-count').value,         10) || 20,
   };
   DB.saveSettings(settings);
 
@@ -1588,17 +1631,6 @@ document.getElementById('btn-scan').addEventListener('click', () => {
   }
 });
 
-document.getElementById('btn-process-all').addEventListener('click', () => {
-  const newEmails = scannedEmails.filter(e => e.status !== 'loaded');
-  if (!newEmails.length) { log('ℹ️ No new emails to process.'); return; }
-  processEmails(newEmails);
-});
-
-document.getElementById('btn-process-selected').addEventListener('click', () => {
-  const selected = [...document.querySelectorAll('.email-chk:checked')].map(c => scannedEmails[parseInt(c.dataset.idx)]);
-  if (!selected.length) { log('ℹ️ No emails selected.'); return; }
-  processEmails(selected);
-});
 
 document.getElementById('btn-load-items').addEventListener('click', () => {
   const newEmails = scannedEmails.filter(e => e.status !== 'loaded');
