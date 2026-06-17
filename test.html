@@ -57,6 +57,7 @@ const CATEGORIES = {
 const DEFAULT_SETTINGS = {
   gmailClientId: '', inboxEmail: 'etccwebsite.auction@gmail.com',
   debugMode: false, startingBidPct: 30, finalBidPct: 150, bidCount: 25,
+  squarePct: 2.6, squareFee: 0.10,
 };
 
 const DB = {
@@ -70,6 +71,8 @@ const DB = {
   saveBidders(v)  { localStorage.setItem('sam_bidders',  JSON.stringify(v)); },
   getWinners()    { return JSON.parse(localStorage.getItem('sam_winners')  || '{}'); },
   saveWinners(v)  { localStorage.setItem('sam_winners',  JSON.stringify(v)); },
+  getPayments()   { return JSON.parse(localStorage.getItem('sam_payments') || '{}'); },
+  savePayments(v) { localStorage.setItem('sam_payments', JSON.stringify(v)); },
 };
 
 const Bidders = {
@@ -586,6 +589,86 @@ function runAll() {
     assert('200-1 removed',    !('200-1' in wAfter)),
     assert('900-1 still exists', '900-1' in wAfter),
     assertEqual('remaining count', Object.keys(wAfter).length, 1),
+  ]);
+
+  // ── 28. Square settings defaults ─────────────────────────────────────────
+  _store['sam_settings'] = null;
+  const sqDef = DB.getSettings();
+  renderSuite('Square settings — defaults', [
+    assertEqual('squarePct default 2.6',  sqDef.squarePct, 2.6),
+    assertEqual('squareFee default 0.10', sqDef.squareFee, 0.10),
+  ]);
+
+  // ── 29. Square settings round-trip ───────────────────────────────────────
+  DB.saveSettings({ squarePct: 3.5, squareFee: 0.25 });
+  const sqLoaded = DB.getSettings();
+  renderSuite('Square settings — save/load round-trip', [
+    assertEqual('squarePct saved/loaded', sqLoaded.squarePct, 3.5),
+    assertEqual('squareFee saved/loaded', sqLoaded.squareFee, 0.25),
+  ]);
+  _store['sam_settings'] = null;
+
+  // ── 30. Credit Card Transaction calculation ───────────────────────────────
+  function calcCCTransaction(totalBid, sqPct, sqFee) {
+    return Math.round((totalBid * (sqPct / 100) + sqFee) * 100) / 100;
+  }
+  renderSuite('Credit Card Transaction calculation', [
+    assertEqual('2.6% + $0.10 on $100',  calcCCTransaction(100, 2.6, 0.10), 2.70),
+    assertEqual('2.6% + $0.10 on $50',   calcCCTransaction(50,  2.6, 0.10), 1.40),
+    assertEqual('0% + $0 on $100',       calcCCTransaction(100, 0,   0),    0),
+    assertEqual('3.5% + $0.25 on $200',  calcCCTransaction(200, 3.5, 0.25), 7.25),
+  ]);
+
+  // ── 31. Credit Card total calculation ────────────────────────────────────
+  function calcCCTotal(totalBid, sqPct, sqFee) {
+    return Math.round((totalBid + totalBid * (sqPct / 100) + sqFee) * 100) / 100;
+  }
+  renderSuite('Credit Card total calculation', [
+    assertEqual('$100 + 2.6% + $0.10',  calcCCTotal(100, 2.6, 0.10), 102.70),
+    assertEqual('$50 + 2.6% + $0.10',   calcCCTotal(50,  2.6, 0.10),  51.40),
+    assertEqual('$0 + 0% + $0',         calcCCTotal(0,   0,   0),      0),
+    assertEqual('$200 + 3.5% + $0.25',  calcCCTotal(200, 3.5, 0.25), 207.25),
+  ]);
+
+  // ── 32. DB.getPayments / savePayments round-trip ──────────────────────────
+  _store['sam_payments'] = null;
+  renderSuite('DB.getPayments — empty store', [
+    assert('returns object',        typeof DB.getPayments() === 'object'),
+    assert('returns empty object',  Object.keys(DB.getPayments()).length === 0),
+  ]);
+  DB.savePayments({ 1: { checknum: '1042', method: 'Check', paid: true, other: 10, otherReason: 'Donation' } });
+  const pmts = DB.getPayments();
+  renderSuite('DB.savePayments / getPayments round-trip', [
+    assert('bidder 1 exists',         1 in pmts),
+    assertEqual('checknum',           pmts[1].checknum,    '1042'),
+    assertEqual('method',             pmts[1].method,      'Check'),
+    assertEqual('paid',               pmts[1].paid,        true),
+    assertEqual('other',              pmts[1].other,       10),
+    assertEqual('otherReason',        pmts[1].otherReason, 'Donation'),
+  ]);
+  _store['sam_payments'] = null;
+
+  // ── 33. Payment totalBid — sum of winning bids ────────────────────────────
+  function calcTotalBid(items) {
+    return items.reduce((s, it) => s + (parseFloat(it.winning_bid) || 0), 0);
+  }
+  renderSuite('Payment totalBid — sum of winning bids', [
+    assertEqual('two items',          calcTotalBid([{ winning_bid: '30' }, { winning_bid: '45' }]),   75),
+    assertEqual('one item',           calcTotalBid([{ winning_bid: '100' }]),                        100),
+    assertEqual('empty list',         calcTotalBid([]),                                                0),
+    assertEqual('non-numeric ignored', calcTotalBid([{ winning_bid: 'N/A' }, { winning_bid: '20' }]), 20),
+  ]);
+
+  // ── 34. Other amount validation logic ─────────────────────────────────────
+  function otherIsInvalid(amount, reason) {
+    return (parseFloat(amount) || 0) !== 0 && String(reason || '').trim() === '';
+  }
+  renderSuite('Other amount validation', [
+    assert('amount set, reason empty → invalid',   otherIsInvalid(10, '')),
+    assert('amount set, reason present → valid',  !otherIsInvalid(10, 'Donation')),
+    assert('amount zero, reason empty → valid',   !otherIsInvalid(0, '')),
+    assert('amount empty, reason empty → valid',  !otherIsInvalid('', '')),
+    assert('amount set, whitespace reason → invalid', otherIsInvalid(5, '   ')),
   ]);
 
   // ── Summary ───────────────────────────────────────────────────────────────

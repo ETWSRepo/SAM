@@ -740,10 +740,35 @@
       </div>
     </section>
 
-    <!-- ══ Step 6: Payment & Pickup ══ -->
+    <!-- ══ Step 6: Pay & Pickup ══ -->
     <section class="screen" id="screen-payment-pickup">
-      <div class="page-header"><h2>Step 6 — Payment &amp; Pickup</h2><p>Tabular payment report sortable by bidder number or last name.</p></div>
-      <div class="placeholder-box"><div class="icon">💳</div>Coming soon</div>
+      <div class="page-header"><h2>Step 6 — Pay &amp; Pickup</h2><p>Record payment method and item pickup for each winning bidder.</p></div>
+      <div class="card" id="payment-card">
+        <div id="payment-toolbar-wrap"></div>
+        <div style="overflow-x:auto;max-height:600px;overflow-y:auto;">
+          <table id="payment-table" style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:#dbeafe;position:sticky;top:0;z-index:1;">
+                <th style="padding:8px 10px;text-align:left;font-weight:700;width:80px;">Bidder #</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:700;width:140px;">Last Name</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:700;width:120px;">First Name</th>
+                <th style="padding:8px 10px;text-align:center;font-weight:700;width:70px;"># Items</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:700;width:100px;">Winning Bid</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:700;">Item # — Description</th>
+                <th style="padding:8px 10px;text-align:center;font-weight:700;width:90px;">Cash/Check</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:700;width:110px;">Check #</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:700;width:130px;">Credit Card Transaction</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:700;width:110px;">Credit Card</th>
+                <th style="padding:8px 10px;text-align:center;font-weight:700;width:60px;">Paid</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:700;width:130px;">Payment Method</th>
+                <th style="padding:8px 10px;text-align:right;font-weight:700;width:110px;">Other Amount</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:700;width:160px;">Other Amount Reason</th>
+              </tr>
+            </thead>
+            <tbody id="payment-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
 
@@ -769,6 +794,9 @@
             <label for="inp-bid-count">Bid Count</label>
             <input type="number" id="inp-bid-count" min="1" max="100" step="1" style="width:100px;" />
             <span class="form-hint">Number of bid rows on each bid sheet. Bids are evenly incremented from Starting Bid to Final Bid.</span>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn primary" onclick="saveSettings()">Save Settings</button>
           </div>
         </div>
       </div>
@@ -796,6 +824,26 @@
             </thead>
             <tbody id="field-map-tbody"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Square Card -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Square Card Processing</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-square-pct">Transaction Percent</label>
+            <input type="number" id="inp-square-pct" min="0" max="100" step="any" style="width:100px;" />
+            <span class="form-hint">Square percentage fee charged per transaction (e.g. 2.6).</span>
+          </div>
+          <div class="form-row">
+            <label for="inp-square-fee">Transaction Fee</label>
+            <input type="number" id="inp-square-fee" min="0" step="any" style="width:100px;" />
+            <span class="form-hint">Square flat fee charged per transaction in dollars (e.g. 0.10).</span>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+          </div>
         </div>
       </div>
 
@@ -982,6 +1030,8 @@ const DEFAULT_SETTINGS = {
   finalBidPct:     150,
   bidCount:        25,
   emailFolder:    'INBOX',
+  squarePct:       2.6,
+  squareFee:       0.10,
 };
 
 // ══════════════════════════════════════
@@ -998,6 +1048,8 @@ const DB = {
   saveBidders(v)  { localStorage.setItem('sam_bidders',  JSON.stringify(v)); },
   getWinners()    { return JSON.parse(localStorage.getItem('sam_winners')  || '{}'); },
   saveWinners(v)  { localStorage.setItem('sam_winners',  JSON.stringify(v)); },
+  getPayments()   { return JSON.parse(localStorage.getItem('sam_payments') || '{}'); },
+  savePayments(v) { localStorage.setItem('sam_payments', JSON.stringify(v)); },
 };
 
 // ══════════════════════════════════════
@@ -1641,6 +1693,152 @@ function addBidder() {
 // ══════════════════════════════════════
 //  RENDER — Announce Winners table
 // ══════════════════════════════════════
+//  RENDER — Pay & Pickup table
+// ══════════════════════════════════════
+function refreshPaymentTable() {
+  const bidders  = Bidders.getAll();
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const items    = Items.getAll();
+  const settings = DB.getSettings();
+  const sqPct    = (settings.squarePct || 0) / 100;
+  const sqFee    = settings.squareFee  || 0;
+  const tbody    = document.getElementById('payment-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  // Build map: bidder_number → { bidder, items[] }
+  const itemMap = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  const byBidder = {};
+  Object.entries(winners).forEach(([itemKey, w]) => {
+    if (!w.bidder_number) return;
+    const num = w.bidder_number;
+    if (!byBidder[num]) byBidder[num] = { items: [] };
+    byBidder[num].items.push({ itemKey, winning_bid: w.winning_bid || '', desc: itemMap[itemKey]?.description || itemKey });
+  });
+
+  const winningBidderNums = Object.keys(byBidder).map(Number).sort((a, b) => a - b);
+
+  if (!winningBidderNums.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-secondary);">No winners recorded yet. Complete Step 4 first.</td></tr>';
+    return;
+  }
+
+  const chkStyle = 'width:16px;height:16px;cursor:pointer;';
+  const rowBg    = '#f8faff';
+
+  winningBidderNums.forEach((num, gi) => {
+    const bidder   = bidders.find(b => b.bidder_number === num) || {};
+    const group    = byBidder[num];
+    const pay      = payments[num] || {};
+    const bg       = gi % 2 === 0 ? '#ffffff' : rowBg;
+    const totalBid = group.items.reduce((s, it) => s + (parseFloat(it.winning_bid) || 0), 0);
+
+    group.items.forEach((item, ii) => {
+      const tr = document.createElement('tr');
+      tr.style.background = bg;
+      tr.style.borderTop  = ii === 0 ? '2px solid var(--border)' : '1px solid #eaeaea';
+      if (ii === 0) {
+        // Bidder header cells (first item row)
+        tr.innerHTML = `
+          <td style="padding:7px 10px;font-weight:700;" rowspan="${group.items.length}">${escHtml(String(num))}</td>
+          <td style="padding:7px 10px;" rowspan="${group.items.length}">${escHtml(bidder.last_name  || '')}</td>
+          <td style="padding:7px 10px;" rowspan="${group.items.length}">${escHtml(bidder.first_name || '')}</td>
+          <td style="text-align:center;padding:7px 10px;font-weight:600;" rowspan="${group.items.length}">${group.items.length}</td>
+          <td style="padding:7px 10px;text-align:right;">${escHtml(item.winning_bid)}</td>
+          <td style="padding:7px 10px;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid)}</td>
+          <td style="padding:7px 10px;" rowspan="${group.items.length}">
+            <input type="text" class="pay-checknum" data-num="${num}" value="${escHtml(pay.checknum || '')}" placeholder="—" style="width:90px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;">
+          </td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid * sqPct + sqFee)}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid + totalBid * sqPct + sqFee)}</td>
+          <td style="text-align:center;padding:7px 10px;" rowspan="${group.items.length}">
+            <input type="checkbox" class="pay-paid" data-num="${num}" style="width:16px;height:16px;cursor:pointer;" ${pay.paid ? 'checked' : ''}>
+          </td>
+          <td style="padding:7px 10px;" rowspan="${group.items.length}">
+            <select class="pay-method" data-num="${num}" style="border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;width:120px;">
+              <option value="Credit Card" ${(pay.method||'Credit Card')==='Credit Card'?'selected':''}>Credit Card</option>
+              <option value="Cash"        ${(pay.method||'Credit Card')==='Cash'       ?'selected':''}>Cash</option>
+              <option value="Check"       ${(pay.method||'Credit Card')==='Check'      ?'selected':''}>Check</option>
+            </select>
+          </td>
+          <td style="padding:7px 10px;" rowspan="${group.items.length}">
+            <input type="number" class="pay-other" data-num="${num}" value="${pay.other || ''}" placeholder="0.00" min="0" step="any" style="width:90px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;">
+          </td>
+          <td style="padding:7px 10px;" rowspan="${group.items.length}">
+            <input type="text" class="pay-other-reason" data-num="${num}" value="${escHtml(pay.otherReason || '')}" placeholder="—" style="width:140px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;">
+            <div class="pay-other-err" data-num="${num}" style="display:none;color:var(--danger);font-size:11px;margin-top:3px;">Reason is required.</div>
+          </td>
+        `;
+      } else {
+        tr.innerHTML = `
+          <td style="padding:7px 10px;text-align:right;">${escHtml(item.winning_bid)}</td>
+          <td style="padding:7px 10px;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
+        `;
+      }
+      tbody.appendChild(tr);
+    });
+  });
+
+  // Payment handlers
+  const savePayField = (el, field, value) => {
+    const num = parseInt(el.dataset.num, 10);
+    const p   = DB.getPayments();
+    p[num]    = Object.assign(p[num] || {}, { [field]: value });
+    DB.savePayments(p);
+  };
+  tbody.querySelectorAll('.pay-checknum').forEach(inp => inp.addEventListener('change', () => savePayField(inp, 'checknum', inp.value.trim())));
+  tbody.querySelectorAll('.pay-method').forEach(sel  => sel.addEventListener('change', () => savePayField(sel, 'method', sel.value)));
+  tbody.querySelectorAll('.pay-paid').forEach(cb     => cb.addEventListener('change',  () => savePayField(cb,  'paid',   cb.checked)));
+  const validateOther = (num) => {
+    const amtInp    = tbody.querySelector(`.pay-other[data-num="${num}"]`);
+    const reasonInp = tbody.querySelector(`.pay-other-reason[data-num="${num}"]`);
+    const errDiv    = tbody.querySelector(`.pay-other-err[data-num="${num}"]`);
+    if (!amtInp || !reasonInp) return;
+    const needsReason = (parseFloat(amtInp.value) || 0) !== 0 && reasonInp.value.trim() === '';
+    reasonInp.style.borderColor = needsReason ? 'var(--danger)' : 'var(--border)';
+    if (errDiv) errDiv.style.display = needsReason ? 'block' : 'none';
+  };
+
+  const isOtherInvalid = (num) => {
+    const amtInp    = tbody.querySelector(`.pay-other[data-num="${num}"]`);
+    const reasonInp = tbody.querySelector(`.pay-other-reason[data-num="${num}"]`);
+    return (parseFloat(amtInp?.value) || 0) !== 0 && reasonInp?.value.trim() === '';
+  };
+
+  const trapOtherFocus = (e, num) => {
+    if (!isOtherInvalid(num)) return;
+    const amtInp    = tbody.querySelector(`.pay-other[data-num="${num}"]`);
+    const reasonInp = tbody.querySelector(`.pay-other-reason[data-num="${num}"]`);
+    const allowed   = [amtInp, reasonInp];
+    if (!allowed.includes(e.relatedTarget)) {
+      e.preventDefault();
+      setTimeout(() => reasonInp.focus(), 0);
+    }
+  };
+
+  tbody.querySelectorAll('.pay-other').forEach(inp => {
+    inp.addEventListener('change', () => {
+      savePayField(inp, 'other', parseFloat(inp.value) || 0);
+      validateOther(parseInt(inp.dataset.num, 10));
+    });
+    inp.addEventListener('focusout', (e) => trapOtherFocus(e, parseInt(inp.dataset.num, 10)));
+  });
+  tbody.querySelectorAll('.pay-other-reason').forEach(inp => {
+    inp.addEventListener('change', () => {
+      savePayField(inp, 'otherReason', inp.value.trim());
+      validateOther(parseInt(inp.dataset.num, 10));
+    });
+    inp.addEventListener('focusout', (e) => trapOtherFocus(e, parseInt(inp.dataset.num, 10)));
+  });
+
+  winningBidderNums.forEach(num => validateOther(num));
+}
+
+// ══════════════════════════════════════
 function refreshAnnounceTable() {
   const bidders = Bidders.getAll();
   const winners = DB.getWinners();
@@ -1841,6 +2039,8 @@ function loadSettingsForm() {
   document.getElementById('inp-starting-bid-pct').value = s.startingBidPct ?? 30;
   document.getElementById('inp-final-bid-pct').value    = s.finalBidPct    ?? 150;
   document.getElementById('inp-bid-count').value        = s.bidCount       ?? 25;
+  document.getElementById('inp-square-pct').value       = s.squarePct      ?? 2.6;
+  document.getElementById('inp-square-fee').value       = s.squareFee      ?? 0.10;
   renderFieldMapTable();
 }
 
@@ -1938,6 +2138,8 @@ function saveSettings() {
     startingBidPct: parseInt(document.getElementById('inp-starting-bid-pct').value, 10) || 0,
     finalBidPct:    parseInt(document.getElementById('inp-final-bid-pct').value,    10) || 0,
     bidCount:       parseInt(document.getElementById('inp-bid-count').value,         10) || 20,
+    squarePct:      parseFloat(document.getElementById('inp-square-pct').value)     || 0,
+    squareFee:      parseFloat(document.getElementById('inp-square-fee').value)     || 0,
   };
   DB.saveSettings(settings);
 
@@ -2041,6 +2243,19 @@ function navigate(screenId) {
       navigate._announceToolbarInited = true;
     }
     refreshAnnounceTable();
+  }
+  if (screenId === 'payment-pickup') {
+    if (!navigate._paymentToolbarInited) {
+      PageToolbar.init({ title: 'Pay & Pickup', logoText: 'ETCC', tableSelector: '#payment-table' });
+      const tb   = document.getElementById('page-toolbar');
+      const card = document.getElementById('payment-card');
+      if (tb && card) {
+        const wrap = card.querySelector('div[style*="overflow-x"]');
+        card.insertBefore(tb, wrap);
+      }
+      navigate._paymentToolbarInited = true;
+    }
+    refreshPaymentTable();
   }
 }
 
