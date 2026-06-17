@@ -425,8 +425,10 @@
 
   <!-- Left Nav -->
   <nav id="nav">
+    <div class="nav-item active" data-screen="home" style="font-size:13px;font-weight:600;color:#fff;padding:12px 16px 10px;">🏠 Home</div>
+    <hr class="nav-divider" />
     <div class="nav-section-label">Auction Steps</div>
-    <div class="nav-item active" data-screen="item-load">
+    <div class="nav-item" data-screen="item-load">
       <span class="nav-badge">1</span> Load Item Emails
     </div>
     <div class="nav-item" data-screen="bidding-sheets">
@@ -459,7 +461,55 @@
   <main id="main">
 
     <!-- ══ Step 1: Item Load ══ -->
-    <section class="screen active" id="screen-item-load">
+    <!-- ══ Home / Splash ══ -->
+    <section class="screen active" id="screen-home">
+      <div style="max-width:700px;margin:40px auto 0;">
+        <div style="text-align:center;margin-bottom:36px;">
+          <img src="Images/ETCClogoWhiteBackground.png" alt="ETCC Logo" style="height:80px;margin-bottom:16px;" />
+          <h1 style="font-size:1.8rem;font-weight:700;color:var(--text);margin:0 0 8px;">Silent Auction Manager</h1>
+          <p style="font-size:14px;color:var(--text-secondary);margin:0;">East Tennessee Corvette Club — Auction Management System</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;" id="home-metrics"></div>
+
+        <div style="padding:20px 24px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;font-size:13px;line-height:1.7;color:var(--text);">
+          <strong>Welcome to your new Auction Management site!</strong> This is your home base for running the whole show — from items rolling in automatically off email, to printing bidding forms, tracking winners, and getting invoices out the door without you lifting a finger. No database skills needed, nothing to maintain, just a tool built to take the busywork off your plate so you can focus on running a great auction. Glad to have you trying it out!
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">Auction Workflow</div>
+          <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div onclick="navigate('item-load')"       style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">1</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Load Item Emails</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Scan the auction inbox and import items from Gmail</div></div>
+            </div>
+            <div onclick="navigate('bidding-sheets')"  style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">2</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Create Bid Sheets</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Print bid sheets for each auction item</div></div>
+            </div>
+            <div onclick="navigate('bidder-reg')"      style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">3</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Register Bidders</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Add bidders and assign bidder numbers</div></div>
+            </div>
+            <div onclick="navigate('auction-close')"   style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">4</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Record Winning Bidders</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Enter the winning bidder number for each item</div></div>
+            </div>
+            <div onclick="navigate('winner-announce')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">5</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Announce Winners</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Display and email the list of winning bidders</div></div>
+            </div>
+            <div onclick="navigate('payment-pickup')"  style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">6</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Pay &amp; Pickup</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Record payments and item pickup for each winner</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ Step 1: Item Load ══ -->
+    <section class="screen" id="screen-item-load">
       <div class="page-header">
         <h2>Step 1 — Item Load</h2>
         <p>Scan the auction inbox, review emails, and load items into the database.</p>
@@ -2215,6 +2265,28 @@ function log(msg) {
 const navItems = document.querySelectorAll('#nav .nav-item[data-screen]');
 const screens  = document.querySelectorAll('.screen');
 
+function refreshHomeMetrics() {
+  const el = document.getElementById('home-metrics');
+  if (!el) return;
+  const items   = Items.getAll();
+  const bidders = Bidders.getAll();
+  const winners = DB.getWinners();
+  const payments = DB.getPayments();
+  const winnerCount  = Object.values(winners).filter(w => w.bidder_number).length;
+  const paidCount    = Object.values(payments).filter(p => p.paid).length;
+  const metrics = [
+    { label: 'Items Loaded',     value: items.length },
+    { label: 'Bidders',          value: bidders.length },
+    { label: 'Winners Recorded', value: winnerCount },
+    { label: 'Paid & Picked Up', value: paidCount },
+  ];
+  el.innerHTML = metrics.map(m => `
+    <div class="metric-card">
+      <div class="m-label">${m.label}</div>
+      <div class="m-value accent">${m.value}</div>
+    </div>`).join('');
+}
+
 function navigate(screenId) {
   navItems.forEach(n => n.classList.remove('active'));
   screens.forEach(s => s.classList.remove('active'));
@@ -2223,6 +2295,7 @@ function navigate(screenId) {
   const navItem = document.querySelector(`.nav-item[data-screen="${screenId}"]`);
   if (navItem) navItem.classList.add('active');
 
+  if (screenId === 'home')           refreshHomeMetrics();
   if (screenId === 'item-load')      renderEmailTable(scannedEmails);
   if (screenId === 'settings')       loadSettingsForm();
   if (screenId === 'bidding-sheets') refreshBsItemsTable();
@@ -2287,13 +2360,15 @@ function navigate(screenId) {
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
       closeBtn.replaceWith(fresh);
-      fresh.addEventListener('click', () => navigate('item-load'));
+      fresh.addEventListener('click', () => navigate('home'));
     }
     refreshPaymentTable();
   }
 }
 
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
+
+refreshHomeMetrics();
 
 // Manual
 const overlay   = document.getElementById('manual-overlay');
