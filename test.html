@@ -66,7 +66,28 @@ const DB = {
   saveSettings(v) { localStorage.setItem('sam_settings', JSON.stringify(v)); },
   getFieldMap()   { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
   saveFieldMap(v) { localStorage.setItem('sam_fieldmap', JSON.stringify(v)); },
+  getBidders()    { return JSON.parse(localStorage.getItem('sam_bidders')  || '[]'); },
+  saveBidders(v)  { localStorage.setItem('sam_bidders',  JSON.stringify(v)); },
 };
+
+const Bidders = {
+  getAll()   { return DB.getBidders(); },
+  save(list) { DB.saveBidders(list); },
+  nextNumber() {
+    const list = DB.getBidders();
+    return list.length ? Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1 : 1;
+  },
+  add(b)    { const list = DB.getBidders(); list.push(b); DB.saveBidders(list); },
+  remove(n) { DB.saveBidders(DB.getBidders().filter(b => b.bidder_number !== n)); },
+  clear()   { DB.saveBidders([]); },
+};
+
+function fmtPhone(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  if (d.length === 11 && d[0] === '1') return `+1 (${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`;
+  return raw || '';
+}
 
 const DEFAULT_FIELD_MAP = [
   { label: 'Category',        selectBy: 'Next Line',             column: 'category'        },
@@ -412,6 +433,70 @@ function runAll() {
     assertEqual('bidCount=25 first bid',                bids25[0], 30),
     assertEqual('bidCount=25 last bid',                 bids25[24], 150),
     assert('bidCount=25 all ascending',                 bids25.every((v, i) => i === 0 || v >= bids25[i - 1])),
+  ]);
+
+  // ── 18. fmtPhone ─────────────────────────────────────────────────────────
+  renderSuite('fmtPhone', [
+    assertEqual('10 digits',          fmtPhone('5551234567'),       '(555) 123-4567'),
+    assertEqual('dashes input',       fmtPhone('555-123-4567'),     '(555) 123-4567'),
+    assertEqual('parens input',       fmtPhone('(555) 123-4567'),   '(555) 123-4567'),
+    assertEqual('11 digits with 1',   fmtPhone('15551234567'),      '+1 (555) 123-4567'),
+    assertEqual('empty string',       fmtPhone(''),                 ''),
+    assertEqual('null',               fmtPhone(null),               ''),
+    assertEqual('non-numeric passes through', fmtPhone('ext 123'), 'ext 123'),
+  ]);
+
+  // ── 19. Bidders CRUD ─────────────────────────────────────────────────────
+  _store['sam_bidders'] = null;
+  Bidders.clear();
+  renderSuite('Bidders — empty store', [
+    assertEqual('getAll returns []',      Bidders.getAll().length, 0),
+    assertEqual('nextNumber starts at 1', Bidders.nextNumber(),    1),
+  ]);
+
+  Bidders.add({ bidder_number: 1, last_name: 'Smith', first_name: 'John', email: 'j@t.com', phone: '' });
+  Bidders.add({ bidder_number: 2, last_name: 'Jones', first_name: 'Sue',  email: 's@t.com', phone: '' });
+  renderSuite('Bidders — add / getAll', [
+    assertEqual('count after 2 adds',     Bidders.getAll().length,          2),
+    assertEqual('first last_name',        Bidders.getAll()[0].last_name,    'Smith'),
+    assertEqual('second first_name',      Bidders.getAll()[1].first_name,   'Sue'),
+    assertEqual('nextNumber after 2',     Bidders.nextNumber(),              3),
+  ]);
+
+  Bidders.remove(1);
+  renderSuite('Bidders — remove', [
+    assertEqual('count after remove',     Bidders.getAll().length,          1),
+    assertEqual('remaining is #2',        Bidders.getAll()[0].bidder_number, 2),
+    assertEqual('nextNumber after remove', Bidders.nextNumber(),             3),
+  ]);
+
+  Bidders.clear();
+  renderSuite('Bidders — clear', [
+    assertEqual('count is 0 after clear', Bidders.getAll().length, 0),
+    assertEqual('nextNumber resets to 1', Bidders.nextNumber(),    1),
+  ]);
+
+  // ── 20. Bidders.nextNumber — max logic ───────────────────────────────────
+  Bidders.clear();
+  Bidders.add({ bidder_number: 5,  last_name: 'A', first_name: 'B', email: 'a@b.com', phone: '' });
+  Bidders.add({ bidder_number: 12, last_name: 'C', first_name: 'D', email: 'c@d.com', phone: '' });
+  Bidders.add({ bidder_number: 3,  last_name: 'E', first_name: 'F', email: 'e@f.com', phone: '' });
+  renderSuite('Bidders.nextNumber — max logic', [
+    assertEqual('next is max+1 (12+1=13)', Bidders.nextNumber(), 13),
+  ]);
+
+  // ── 21. Bid base value — reserve vs value fallback ───────────────────────
+  function bidBase(item) {
+    const r = parseFloat(String(item.reserve_amount || '0').replace(/[^0-9.]/g, '')) || 0;
+    const v = parseFloat(String(item.value          || '0').replace(/[^0-9.]/g, '')) || 0;
+    return r || v;
+  }
+  renderSuite('Bid base — reserve_amount vs value fallback', [
+    assertEqual('uses reserve when set',        bidBase({ reserve_amount: '50', value: '35' }),  50),
+    assertEqual('falls back to value when 0',   bidBase({ reserve_amount: '0',  value: '35' }),  35),
+    assertEqual('falls back to value when missing', bidBase({ value: '40' }),                    40),
+    assertEqual('zero when both missing',       bidBase({}),                                      0),
+    assertEqual('handles $ in reserve',         bidBase({ reserve_amount: '$75.00', value: '35' }), 75),
   ]);
 
   // ── Summary ───────────────────────────────────────────────────────────────

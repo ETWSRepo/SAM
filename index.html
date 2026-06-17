@@ -605,10 +605,64 @@
       </div>
     </section>
 
-    <!-- ══ Step 3: Bidder Registration ══ -->
+    <!-- ══ Step 3: Register Bidders ══ -->
     <section class="screen" id="screen-bidder-reg">
-      <div class="page-header"><h2>Step 3 — Bidder Registration</h2><p>Register bidders, import member numbers, send emails.</p></div>
-      <div class="placeholder-box"><div class="icon">📋</div>Coming soon</div>
+      <div class="page-header"><h2>Step 3 — Register Bidders</h2><p>Add and manage auction bidders.</p></div>
+      <!-- Edit Bidder Modal -->
+      <div id="bidder-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg);border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+          <h3 style="margin:0 0 16px;font-size:16px;">Edit Bidder</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div>
+              <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Bidder #</label>
+              <input id="edit-bidder-num" type="text" readonly style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-section);color:var(--text-secondary);">
+            </div>
+            <div></div>
+            <div>
+              <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Last Name</label>
+              <input id="edit-bidder-last" type="text" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">First Name</label>
+              <input id="edit-bidder-first" type="text" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            </div>
+            <div style="grid-column:1/-1;">
+              <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Email</label>
+              <input id="edit-bidder-email" type="email" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            </div>
+            <div style="grid-column:1/-1;">
+              <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Phone</label>
+              <input id="edit-bidder-phone" type="tel" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button class="btn" onclick="closeBidderEditModal()">Cancel</button>
+            <button class="btn primary" onclick="saveBidderEdit()">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="bidders-card">
+        <div id="bidders-toolbar-wrap"></div>
+        <div style="overflow-x:auto;max-height:370px;overflow-y:auto;">
+          <table class="tablekit" id="bidders-table" style="table-layout:fixed;width:100%;">
+            <colgroup>
+              <col style="width:90px;"><col style="width:160px;"><col style="width:160px;">
+              <col style="width:200px;"><col style="width:150px;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Bidder #</th>
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+              </tr>
+            </thead>
+            <tbody id="bidders-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- ══ Step 4: Auction Close ══ -->
@@ -871,12 +925,14 @@ const DEFAULT_SETTINGS = {
 //  LOCAL STORAGE DB
 // ══════════════════════════════════════
 const DB = {
-  getItems()     { return JSON.parse(localStorage.getItem('sam_items')    || '[]'); },
-  saveItems(v)   { localStorage.setItem('sam_items',    JSON.stringify(v)); },
-  getSettings()  { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('sam_settings')  || '{}')); },
-  saveSettings(v){ localStorage.setItem('sam_settings', JSON.stringify(v)); },
-  getFieldMap()  { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
-  saveFieldMap(v){ localStorage.setItem('sam_fieldmap', JSON.stringify(v)); },
+  getItems()      { return JSON.parse(localStorage.getItem('sam_items')    || '[]'); },
+  saveItems(v)    { localStorage.setItem('sam_items',    JSON.stringify(v)); },
+  getSettings()   { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('sam_settings')  || '{}')); },
+  saveSettings(v) { localStorage.setItem('sam_settings', JSON.stringify(v)); },
+  getFieldMap()   { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
+  saveFieldMap(v) { localStorage.setItem('sam_fieldmap', JSON.stringify(v)); },
+  getBidders()    { return JSON.parse(localStorage.getItem('sam_bidders')  || '[]'); },
+  saveBidders(v)  { localStorage.setItem('sam_bidders',  JSON.stringify(v)); },
 };
 
 // ══════════════════════════════════════
@@ -908,6 +964,21 @@ const Items = {
   },
 
   clear() { DB.saveItems([]); },
+};
+
+// ══════════════════════════════════════
+//  BIDDERS HELPERS
+// ══════════════════════════════════════
+const Bidders = {
+  getAll() { return DB.getBidders(); },
+  save(list) { DB.saveBidders(list); },
+  nextNumber() {
+    const list = DB.getBidders();
+    return list.length ? Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1 : 1;
+  },
+  add(b)    { const list = DB.getBidders(); list.push(b); DB.saveBidders(list); },
+  remove(n) { DB.saveBidders(DB.getBidders().filter(b => b.bidder_number !== n)); },
+  clear()   { DB.saveBidders([]); },
 };
 
 // ══════════════════════════════════════
@@ -1284,7 +1355,9 @@ function printBiddingSheets() {
   const selected = items.filter(i => selectedNums.has(String(i.item_number)));
 
   const sheets = selected.map(item => {
-    const itemVal   = parseFloat(String(item.value || '0').replace(/[^0-9.]/g, '')) || 0;
+    const reserveRaw = parseFloat(String(item.reserve_amount || '0').replace(/[^0-9.]/g, '')) || 0;
+    const valueRaw   = parseFloat(String(item.value  || '0').replace(/[^0-9.]/g, '')) || 0;
+    const itemVal    = reserveRaw || valueRaw;
     const firstBid  = Math.round(itemVal * startPct * 100) / 100;
     const lastBid   = Math.round(itemVal * finalPct  * 100) / 100;
     const increment = bidCount > 1 ? (lastBid - firstBid) / (bidCount - 1) : 0;
@@ -1350,6 +1423,149 @@ function bsCheckAll() {
 
 function bsClearAll() {
   document.querySelectorAll('#bs-items-tbody .bs-chk').forEach(c => c.checked = false);
+}
+
+// ══════════════════════════════════════
+//  RENDER — Bidders table
+// ══════════════════════════════════════
+function refreshBiddersTable() {
+  const list  = Bidders.getAll();
+  const tbody = document.getElementById('bidders-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-secondary);">No bidders registered yet. Use the toolbar to add bidders.</td></tr>';
+    return;
+  }
+
+  const tdStyle = 'font-size:13px;padding:6px 8px;';
+
+  list.forEach(b => {
+    const tr = document.createElement('tr');
+    tr.dataset.num = b.bidder_number;
+    tr.innerHTML = `
+      <td style="${tdStyle}font-weight:600;">${escHtml(String(b.bidder_number))}</td>
+      <td style="${tdStyle}">${escHtml(b.last_name  || '')}</td>
+      <td style="${tdStyle}">${escHtml(b.first_name || '')}</td>
+      <td style="${tdStyle}">${escHtml(b.email      || '')}</td>
+      <td style="${tdStyle}">${escHtml(fmtPhone(b.phone))}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="btn" data-edit="${b.bidder_number}" style="font-size:11px;padding:2px 8px;margin-right:4px;">Edit</button>
+        <button class="btn danger" data-num="${b.bidder_number}" style="font-size:11px;padding:2px 8px;">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('button[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openBidderEditModal(parseInt(btn.dataset.edit, 10)));
+  });
+
+  const numInput = document.getElementById('new-bidder-num');
+  if (numInput) numInput.value = Bidders.nextNumber();
+
+  tbody.querySelectorAll('button.danger[data-num]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Remove this bidder?')) return;
+      Bidders.remove(parseInt(btn.dataset.num, 10));
+      refreshBiddersTable();
+    });
+  });
+}
+
+function openBidderEditModal(num) {
+  const b = Bidders.getAll().find(x => x.bidder_number === num);
+  if (!b) return;
+  document.getElementById('edit-bidder-num').value   = b.bidder_number;
+  document.getElementById('edit-bidder-last').value  = b.last_name   || '';
+  document.getElementById('edit-bidder-first').value = b.first_name  || '';
+  document.getElementById('edit-bidder-email').value = b.email       || '';
+  document.getElementById('edit-bidder-phone').value = b.phone       || '';
+  const modal = document.getElementById('bidder-edit-modal');
+  modal.style.display = 'flex';
+  const phoneEl = document.getElementById('edit-bidder-phone');
+  phoneEl.onblur = () => { phoneEl.value = fmtPhone(phoneEl.value); };
+  document.getElementById('edit-bidder-last').focus();
+}
+
+function closeBidderEditModal() {
+  document.getElementById('bidder-edit-modal').style.display = 'none';
+}
+
+function saveBidderEdit() {
+  const num     = parseInt(document.getElementById('edit-bidder-num').value, 10);
+  const bidders = Bidders.getAll();
+  const idx     = bidders.findIndex(b => b.bidder_number === num);
+  if (idx === -1) return;
+  const lastEl  = document.getElementById('edit-bidder-last');
+  const firstEl = document.getElementById('edit-bidder-first');
+  const emailEl = document.getElementById('edit-bidder-email');
+  const last  = lastEl.value.trim();
+  const first = firstEl.value.trim();
+  const email = emailEl.value.trim();
+  [lastEl, firstEl, emailEl].forEach(el => el.style.borderColor = '');
+  const missing = [];
+  if (!last)  { missing.push('Last Name');  lastEl.style.borderColor  = 'var(--danger)'; }
+  if (!first) { missing.push('First Name'); firstEl.style.borderColor = 'var(--danger)'; }
+  if (!email) { missing.push('Email');      emailEl.style.borderColor = 'var(--danger)'; }
+  if (missing.length) { alert(`Required: ${missing.join(', ')}`); return; }
+  bidders[idx].last_name  = last;
+  bidders[idx].first_name = first;
+  bidders[idx].email      = document.getElementById('edit-bidder-email').value.trim();
+  bidders[idx].phone      = document.getElementById('edit-bidder-phone').value.trim();
+  Bidders.save(bidders);
+  closeBidderEditModal();
+  refreshBiddersTable();
+}
+
+function addBidder() {
+  const tbody = document.getElementById('bidders-tbody');
+  if (!tbody) return;
+  // Only one new row at a time
+  if (tbody.querySelector('tr.new-bidder-row')) return;
+  const nextNum = Bidders.nextNumber();
+  const inp = 'width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);';
+  const tr = document.createElement('tr');
+  tr.className = 'new-bidder-row';
+  tr.style.background = '#fffbe6';
+  tr.innerHTML = `
+    <td style="font-weight:600;font-size:13px;padding:6px 8px;">${nextNum}</td>
+    <td style="padding:4px 6px;"><input class="nb-last"  style="${inp}" placeholder="Last Name"></td>
+    <td style="padding:4px 6px;"><input class="nb-first" style="${inp}" placeholder="First Name"></td>
+    <td style="padding:4px 6px;"><input class="nb-email" style="${inp}" placeholder="Email" type="email"></td>
+    <td style="padding:4px 6px;"><input class="nb-phone" style="${inp}" placeholder="Phone" type="tel"></td>
+    <td style="text-align:center;white-space:nowrap;padding:4px 6px;">
+      <button class="btn primary nb-save" style="font-size:11px;padding:2px 8px;margin-right:4px;">Save</button>
+      <button class="btn nb-cancel" style="font-size:11px;padding:2px 8px;">Cancel</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelector('.nb-last').focus();
+
+  tr.querySelector('.nb-phone').addEventListener('blur', e => { e.target.value = fmtPhone(e.target.value); });
+  tr.querySelector('.nb-save').addEventListener('click', () => {
+    const lastEl  = tr.querySelector('.nb-last');
+    const firstEl = tr.querySelector('.nb-first');
+    const emailEl = tr.querySelector('.nb-email');
+    const last  = lastEl.value.trim();
+    const first = firstEl.value.trim();
+    const email = emailEl.value.trim();
+    const phone = tr.querySelector('.nb-phone').value.trim();
+    [lastEl, firstEl, emailEl].forEach(el => el.style.borderColor = '');
+    const missing = [];
+    if (!last)  { missing.push('Last Name');  lastEl.style.borderColor  = 'var(--danger)'; }
+    if (!first) { missing.push('First Name'); firstEl.style.borderColor = 'var(--danger)'; }
+    if (!email) { missing.push('Email');      emailEl.style.borderColor = 'var(--danger)'; }
+    if (missing.length) { alert(`Required: ${missing.join(', ')}`); return; }
+    Bidders.add({ bidder_number: nextNum, last_name: last, first_name: first, email, phone });
+    refreshBiddersTable();
+  });
+
+  tr.querySelector('.nb-cancel').addEventListener('click', () => {
+    tr.remove();
+    if (!tbody.rows.length) refreshBiddersTable();
+  });
 }
 
 function refreshBsItemsTable() {
@@ -1526,6 +1742,13 @@ function saveSettings() {
 // ══════════════════════════════════════
 //  UTILITIES
 // ══════════════════════════════════════
+function fmtPhone(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  if (d.length === 11 && d[0] === '1') return `+1 (${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`;
+  return raw || '';
+}
+
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -1561,6 +1784,28 @@ function navigate(screenId) {
   if (screenId === 'item-load')      renderEmailTable(scannedEmails);
   if (screenId === 'settings')       loadSettingsForm();
   if (screenId === 'bidding-sheets') refreshBsItemsTable();
+  if (screenId === 'bidder-reg') {
+    if (!navigate._biddersToolbarInited) {
+      PageToolbar.init({ title: 'Register Bidders', logoText: 'ETCC' });
+      const tb   = document.getElementById('page-toolbar');
+      const card = document.getElementById('bidders-card');
+      if (tb && card) {
+        const wrap = card.querySelector('div[style*="overflow-x"]');
+        // Action bar between toolbar and column headers
+        const actionBar = document.createElement('div');
+        actionBar.style.cssText = 'display:flex;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--bg);';
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn primary';
+        addBtn.textContent = '+ Add Bidder';
+        addBtn.addEventListener('click', addBidder);
+        actionBar.appendChild(addBtn);
+        card.insertBefore(actionBar, wrap);
+        card.insertBefore(tb, actionBar);
+      }
+      navigate._biddersToolbarInited = true;
+    }
+    refreshBiddersTable();
+  }
 }
 
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
