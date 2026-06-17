@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SAM Regression Tests</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f5f5f7; color: #1d1d1f; }
+  header { background: #1d1d1f; color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 18px; }
+  #summary { padding: 16px 24px; background: #fff; border-bottom: 1px solid #d2d2d7; display: flex; gap: 24px; align-items: center; }
+  .stat { font-size: 14px; }
+  .stat span { font-weight: 700; font-size: 20px; display: block; }
+  .pass-count { color: #1a7f37; }
+  .fail-count { color: #c62828; }
+  #results { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  .suite { background: #fff; border-radius: 8px; border: 1px solid #d2d2d7; overflow: hidden; }
+  .suite-header { padding: 10px 16px; font-weight: 700; font-size: 14px; background: #dbeafe; border-bottom: 1px solid #d2d2d7; display: flex; justify-content: space-between; }
+  .test { display: flex; gap: 12px; padding: 8px 16px; border-bottom: 1px solid #f0f0f2; font-size: 13px; align-items: flex-start; }
+  .test:last-child { border-bottom: none; }
+  .test.pass .icon::before { content: '✓'; color: #1a7f37; font-weight: 700; }
+  .test.fail .icon::before { content: '✗'; color: #c62828; font-weight: 700; }
+  .test-name { flex: 1; }
+  .test-detail { font-size: 11px; color: #6e6e73; margin-top: 2px; font-family: monospace; }
+  .test.fail .test-detail { color: #c62828; }
+  button { background: #0071e3; color: #fff; border: none; border-radius: 6px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
+  button:hover { background: #0077ed; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Silent Auction Manager — Regression Tests</h1>
+  <div style="display:flex;gap:8px;">
+    <button onclick="runAll()">▶ Run All</button>
+    <button onclick="window.close()" style="background:#c62828;">✕ Close</button>
+  </div>
+</header>
+<div id="summary">
+  <div class="stat"><span id="s-pass" class="pass-count">—</span>Passed</div>
+  <div class="stat"><span id="s-fail" class="fail-count">—</span>Failed</div>
+  <div class="stat"><span id="s-total">—</span>Total</div>
+  <div class="stat" id="s-status" style="font-size:13px;color:#6e6e73;"></div>
+</div>
+<div id="results"></div>
+
+<script>
+// ─── Minimal stubs so helpers can run standalone ───────────────────────────
+const _store = {};
+const localStorage = { getItem: k => _store[k] ?? null, setItem: (k,v) => _store[k] = v };
+
+const CATEGORIES = {
+  100: 'General Auto Repair / Car Items', 200: 'Corvette Items',
+  300: "Men's Items", 400: "Women's Items", 500: 'General Household',
+  600: 'Framed Artwork or other Artwork to be Hung', 700: 'Baskets / Gift Sets',
+  800: 'Gift Certificates', 900: 'Miscellaneous / Other'
+};
+
+const DEFAULT_SETTINGS = {
+  gmailClientId: '', inboxEmail: 'etccwebsite.auction@gmail.com',
+  debugMode: false, startingBidPct: 30, finalBidPct: 150, bidCount: 25,
+};
+
+const DB = {
+  getItems()      { return JSON.parse(localStorage.getItem('sam_items')    || '[]'); },
+  saveItems(v)    { localStorage.setItem('sam_items', JSON.stringify(v)); },
+  getSettings()   { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('sam_settings') || '{}')); },
+  saveSettings(v) { localStorage.setItem('sam_settings', JSON.stringify(v)); },
+  getFieldMap()   { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
+  saveFieldMap(v) { localStorage.setItem('sam_fieldmap', JSON.stringify(v)); },
+};
+
+const DEFAULT_FIELD_MAP = [
+  { label: 'Category',        selectBy: 'Next Line',             column: 'category'        },
+  { label: 'Description',     selectBy: 'Next Line',             column: 'description'     },
+  { label: 'Value',           selectBy: 'Next Line',             column: 'value'           },
+  { label: 'Reserve',         selectBy: 'Next Line',             column: 'reserve_amount'  },
+  { label: 'Donor Name',      selectBy: 'Next Line',             column: 'donor_name'      },
+  { label: 'Status',          selectBy: 'Current Line to End',   column: 'status'          },
+  { label: 'ItemCategory',    selectBy: 'Current Line to End',   column: 'item_category'   },
+  { label: 'ItemValue',       selectBy: 'Current Line to End',   column: 'item_value'      },
+];
+
+const Items = {
+  getAll()          { return DB.getItems(); },
+  existsByMsgId(id) { return DB.getItems().some(i => i.email_message_id === id); },
+  nextItemNumber(categoryCode) {
+    const items = DB.getItems();
+    const code   = String(categoryCode || '0');
+    const prefix = code + '-';
+    let max = 0;
+    items.forEach(i => {
+      const num = String(i.item_number || '');
+      if (num.startsWith(prefix)) {
+        const seq = parseInt(num.substring(prefix.length), 10);
+        if (!isNaN(seq) && seq > max) max = seq;
+      }
+    });
+    return `${code}-${max + 1}`;
+  },
+  add(item) { const items = DB.getItems(); items.push(item); DB.saveItems(items); },
+  clear()   { DB.saveItems([]); },
+};
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDollar(val) {
+  const n = parseFloat(String(val ?? '').replace(/[$,]/g, ''));
+  if (isNaN(n)) return escHtml(val || '');
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function categoryFromValue(val) {
+  if (!val) return null;
+  const num = parseInt(String(val).replace(/\D/g, ''), 10);
+  if (!isNaN(num) && CATEGORIES[Math.floor(num / 100) * 100]) return Math.floor(num / 100) * 100;
+  for (const [code, name] of Object.entries(CATEGORIES)) {
+    if (name.toLowerCase().includes(String(val).toLowerCase())) return parseInt(code, 10);
+  }
+  return null;
+}
+
+function parseEmailBody(body, fieldMap) {
+  const result   = {};
+  const errors   = [];
+  const rawLines = body.replace(/\r/g, '').split('\n');
+  fieldMap.forEach(({ label, column, selectBy }) => {
+    const searchLower = label.trim().toLowerCase();
+    const mode        = selectBy || 'Next Line';
+    let foundLineIdx = -1, valueStart = -1;
+    for (let i = 0; i < rawLines.length; i++) {
+      const lineLower  = rawLines[i].toLowerCase();
+      const withColon  = searchLower + ':';
+      let pos = lineLower.indexOf(withColon);
+      if (pos !== -1) { foundLineIdx = i; valueStart = pos + withColon.length; break; }
+      pos = lineLower.indexOf(searchLower);
+      if (pos !== -1) {
+        foundLineIdx = i; valueStart = pos + searchLower.length;
+        const rest = rawLines[i].substring(valueStart).trimStart();
+        if (rest.startsWith(':')) valueStart = rawLines[i].indexOf(':', valueStart) + 1;
+        break;
+      }
+    }
+    if (foundLineIdx === -1) { errors.push(`"${label}" not found`); return; }
+    const line = rawLines[foundLineIdx];
+    if      (mode === 'Next Line')             result[column] = (rawLines[foundLineIdx + 1] || '').trim();
+    else if (mode === 'Current Line to End')   result[column] = line.substring(valueStart).trim();
+    else if (mode === 'Current Line to Comma') { const seg = line.substring(valueStart).trim(); const ci = seg.indexOf(','); result[column] = ci !== -1 ? seg.substring(0, ci).trim() : seg; }
+    else result[column] = line.substring(valueStart).trim();
+  });
+  result._parseErrors = errors;
+  return result;
+}
+
+// ─── Test Runner ──────────────────────────────────────────────────────────
+let passCount = 0, failCount = 0;
+
+function assert(name, condition, detail = '') {
+  return { name, pass: !!condition, detail: detail || (condition ? '' : 'Assertion failed') };
+}
+
+function assertEqual(name, actual, expected) {
+  const pass = JSON.stringify(actual) === JSON.stringify(expected);
+  return { name, pass, detail: pass ? '' : `Expected: ${JSON.stringify(expected)}  Got: ${JSON.stringify(actual)}` };
+}
+
+function renderSuite(title, tests) {
+  const passed = tests.filter(t => t.pass).length;
+  const div = document.createElement('div');
+  div.className = 'suite';
+  div.innerHTML = `
+    <div class="suite-header">
+      <span>${escHtml(title)}</span>
+      <span style="color:${passed===tests.length?'#1a7f37':'#c62828'}">${passed}/${tests.length}</span>
+    </div>
+    ${tests.map(t => `
+      <div class="test ${t.pass?'pass':'fail'}">
+        <span class="icon"></span>
+        <div class="test-name">
+          ${escHtml(t.name)}
+          ${t.detail ? `<div class="test-detail">${escHtml(t.detail)}</div>` : ''}
+        </div>
+      </div>`).join('')}
+  `;
+  document.getElementById('results').appendChild(div);
+  passCount += passed;
+  failCount += tests.length - passed;
+}
+
+function runAll() {
+  passCount = 0; failCount = 0;
+  document.getElementById('results').innerHTML = '';
+
+  // Reset storage between suites
+  _store['sam_items'] = null;
+
+  // ── 1. escHtml ──────────────────────────────────────────────────────────
+  renderSuite('escHtml', [
+    assertEqual('escapes &',        escHtml('a & b'),       'a &amp; b'),
+    assertEqual('escapes <',        escHtml('<div>'),        '&lt;div&gt;'),
+    assertEqual('escapes "',        escHtml('"hi"'),         '&quot;hi&quot;'),
+    assertEqual('handles null',     escHtml(null),           ''),
+    assertEqual('handles number',   escHtml(42),             '42'),
+  ]);
+
+  // ── 2. fmtDollar ────────────────────────────────────────────────────────
+  renderSuite('fmtDollar', [
+    assertEqual('integer value',    fmtDollar(25),           '$25.00'),
+    assertEqual('string dollar',    fmtDollar('$1,250.00'),  '$1,250.00'),
+    assertEqual('decimal value',    fmtDollar(9.5),          '$9.50'),
+    assertEqual('zero',             fmtDollar(0),            '$0.00'),
+    assertEqual('empty string',     fmtDollar(''),           ''),
+  ]);
+
+  // ── 3. categoryFromValue ─────────────────────────────────────────────────
+  renderSuite('categoryFromValue', [
+    assertEqual('numeric 200',          categoryFromValue('200'),             200),
+    assertEqual('numeric 900',          categoryFromValue('900'),             900),
+    assertEqual('name match Corvette',  categoryFromValue('Corvette Items'),  200),
+    assertEqual('name match Gift Cert', categoryFromValue('Gift Certificates'), 800),
+    assertEqual('null on empty',        categoryFromValue(''),                null),
+    assertEqual('null on unknown',      categoryFromValue('Fictional Category'), null),
+  ]);
+
+  // ── 4. parseEmailBody — Next Line ────────────────────────────────────────
+  const body1 = `Category:\n200 Corvette Items\nDescription:\n1991 Dealer Brochure\nValue:\n$25.00`;
+  const fm1 = [
+    { label: 'Category',    selectBy: 'Next Line', column: 'category'    },
+    { label: 'Description', selectBy: 'Next Line', column: 'description' },
+    { label: 'Value',       selectBy: 'Next Line', column: 'value'       },
+  ];
+  const r1 = parseEmailBody(body1, fm1);
+  renderSuite('parseEmailBody — Next Line', [
+    assertEqual('category',    r1.category,    '200 Corvette Items'),
+    assertEqual('description', r1.description, '1991 Dealer Brochure'),
+    assertEqual('value',       r1.value,       '$25.00'),
+    assertEqual('no errors',   r1._parseErrors.length, 0),
+  ]);
+
+  // ── 5. parseEmailBody — Current Line to End ──────────────────────────────
+  const body2 = `Status: Approved\nItemCategory: 200 Corvette Items\nItemValue: $50.00`;
+  const fm2 = [
+    { label: 'Status',       selectBy: 'Current Line to End', column: 'status'        },
+    { label: 'ItemCategory', selectBy: 'Current Line to End', column: 'item_category' },
+    { label: 'ItemValue',    selectBy: 'Current Line to End', column: 'item_value'    },
+  ];
+  const r2 = parseEmailBody(body2, fm2);
+  renderSuite('parseEmailBody — Current Line to End', [
+    assertEqual('status',        r2.status,        'Approved'),
+    assertEqual('item_category', r2.item_category, '200 Corvette Items'),
+    assertEqual('item_value',    r2.item_value,    '$50.00'),
+    assertEqual('no errors',     r2._parseErrors.length, 0),
+  ]);
+
+  // ── 6. parseEmailBody — Current Line to Comma ────────────────────────────
+  const body3 = `ItemCategory: 200 Corvette Items, Extra Text`;
+  const fm3 = [{ label: 'ItemCategory', selectBy: 'Current Line to Comma', column: 'item_category' }];
+  const r3 = parseEmailBody(body3, fm3);
+  renderSuite('parseEmailBody — Current Line to Comma', [
+    assertEqual('stops at comma', r3.item_category, '200 Corvette Items'),
+  ]);
+
+  // ── 7. parseEmailBody — missing field error ───────────────────────────────
+  const r4 = parseEmailBody('Nothing here', [{ label: 'Category', selectBy: 'Next Line', column: 'category' }]);
+  renderSuite('parseEmailBody — missing field', [
+    assert('error reported',   r4._parseErrors.length === 1),
+    assert('error names field', r4._parseErrors[0].includes('Category')),
+  ]);
+
+  // ── 8. Items.nextItemNumber ───────────────────────────────────────────────
+  Items.clear();
+  renderSuite('Items.nextItemNumber — empty store', [
+    assertEqual('200 starts at 200-1', Items.nextItemNumber(200), '200-1'),
+    assertEqual('900 starts at 900-1', Items.nextItemNumber(900), '900-1'),
+  ]);
+
+  Items.clear();
+  Items.add({ item_number: '200-1' });
+  Items.add({ item_number: '200-3' });
+  Items.add({ item_number: '900-1' });
+  renderSuite('Items.nextItemNumber — with existing items', [
+    assertEqual('200 next is 200-4', Items.nextItemNumber(200), '200-4'),
+    assertEqual('900 next is 900-2', Items.nextItemNumber(900), '900-2'),
+    assertEqual('100 starts at 100-1', Items.nextItemNumber(100), '100-1'),
+  ]);
+
+  // ── 9. DB settings defaults ───────────────────────────────────────────────
+  _store['sam_settings'] = null;
+  const s = DB.getSettings();
+  renderSuite('DEFAULT_SETTINGS', [
+    assertEqual('startingBidPct default 30',  s.startingBidPct, 30),
+    assertEqual('finalBidPct default 150',    s.finalBidPct,    150),
+    assertEqual('bidCount default 25',        s.bidCount,       25),
+    assertEqual('inboxEmail default',         s.inboxEmail,     'etccwebsite.auction@gmail.com'),
+    assertEqual('debugMode default false',    s.debugMode,      false),
+  ]);
+
+  // ── 10. Settings round-trip ───────────────────────────────────────────────
+  const saved = { gmailClientId: 'abc', inboxEmail: 'test@test.com', debugMode: true, startingBidPct: 25, finalBidPct: 200, bidCount: 30 };
+  DB.saveSettings(saved);
+  const loaded = DB.getSettings();
+  renderSuite('Settings save/load round-trip', [
+    assertEqual('startingBidPct', loaded.startingBidPct, 25),
+    assertEqual('finalBidPct',    loaded.finalBidPct,    200),
+    assertEqual('bidCount',       loaded.bidCount,       30),
+    assertEqual('gmailClientId',  loaded.gmailClientId,  'abc'),
+    assertEqual('debugMode',      loaded.debugMode,      true),
+  ]);
+
+  // ── 11. Bid calculation ───────────────────────────────────────────────────
+  function calcBids(itemValue, startPct, finalPct, count) {
+    const first = Math.round(itemValue * (startPct / 100) * 100) / 100;
+    const last  = Math.round(itemValue * (finalPct  / 100) * 100) / 100;
+    const inc   = count > 1 ? (last - first) / (count - 1) : 0;
+    return Array.from({ length: count }, (_, i) => Math.round((first + inc * i) * 100) / 100);
+  }
+  const bids100 = calcBids(100, 30, 150, 5);
+  renderSuite('Bid calculation', [
+    assertEqual('first bid = 30% of $100',  bids100[0],  30),
+    assertEqual('last bid  = 150% of $100', bids100[4],  150),
+    assert('bids are ascending', bids100.every((v, i) => i === 0 || v > bids100[i - 1])),
+    assertEqual('correct count', bids100.length, 5),
+    assertEqual('first bid $25 item (30%)', calcBids(25, 30, 150, 1)[0], 7.5),
+  ]);
+
+  // ── 12. Items.add / existsByMsgId ─────────────────────────────────────────
+  Items.clear();
+  Items.add({ item_number: '200-1', email_message_id: 'msg-abc' });
+  renderSuite('Items.add / existsByMsgId', [
+    assert('finds existing msg id',     Items.existsByMsgId('msg-abc')),
+    assert('returns false for unknown', !Items.existsByMsgId('msg-xyz')),
+    assertEqual('item count after add', Items.getAll().length, 1),
+  ]);
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  const total = passCount + failCount;
+  document.getElementById('s-pass').textContent  = passCount;
+  document.getElementById('s-fail').textContent  = failCount;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-status').textContent = failCount === 0
+    ? `✓ All ${total} tests passed`
+    : `${failCount} test${failCount > 1 ? 's' : ''} failed`;
+  document.getElementById('s-status').style.color = failCount === 0 ? '#1a7f37' : '#c62828';
+}
+
+window.onload = runAll;
+</script>
+</body>
+</html>

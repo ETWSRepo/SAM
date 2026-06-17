@@ -634,36 +634,6 @@
     <section class="screen" id="screen-settings">
       <div class="page-header"><h2>Settings</h2><p>Configure Gmail access and email field extraction mapping.</p></div>
 
-      <!-- Debug Mode Banner -->
-      <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:20px;background:var(--bg-dark);border-radius:8px;border:2px solid var(--accent);">
-        <input type="checkbox" id="inp-debug-mode" style="width:20px;height:20px;margin:0;accent-color:var(--accent);cursor:pointer;" />
-        <div>
-          <label for="inp-debug-mode" style="margin:0;font-size:15px;font-weight:700;color:#ffffff;cursor:pointer;">Debug Mode</label>
-          <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;">Show the process log panel during scan and email loading operations.</div>
-        </div>
-      </div>
-
-      <!-- Gmail credentials -->
-      <div class="card" style="margin-bottom:20px;">
-        <div class="card-header">Gmail OAuth</div>
-        <div style="padding:16px;">
-          <div class="form-row">
-            <label for="inp-client-id">Google OAuth Client ID</label>
-            <input type="text" id="inp-client-id" value="215529370659-28knl9jlure9gells5aedltglbpdrgt4.apps.googleusercontent.com" style="font-family:monospace; font-size:12px;" />
-            <span class="form-hint">Create a Web Application credential in Google Cloud Console → APIs &amp; Services → Credentials. Add http://localhost:3000 to Authorized JavaScript Origins.</span>
-          </div>
-          <div class="form-row">
-            <label for="inp-inbox-email">Auction Email Account</label>
-            <input type="text" id="inp-inbox-email" value="etccwebsite.auction@gmail.com" />
-          </div>
-          <div class="form-row">
-            <label for="inp-email-folder">Auction Email Folder</label>
-            <input type="text" id="inp-email-folder" value="INBOX" />
-            <span class="form-hint">Gmail label/folder to scan (e.g. INBOX, or a custom label name).</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Bid Sheet Setup -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">Bid Sheet Setup</div>
@@ -712,9 +682,45 @@
         </div>
       </div>
 
+      <!-- Developer Tools -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Developer Tools</div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <input type="checkbox" id="inp-debug-mode" style="width:18px;height:18px;margin:0;accent-color:var(--accent);cursor:pointer;" />
+            <label for="inp-debug-mode" style="margin:0;font-size:13px;font-weight:600;cursor:pointer;">Debug Mode</label>
+            <span style="font-size:12px;color:var(--text-secondary);">Show the process log panel during scan and email loading operations.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn" onclick="window.open('test.html','_blank')">▶ Run Regression Tests</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Opens the automated test suite in a new tab.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gmail credentials -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Gmail OAuth</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-client-id">Google OAuth Client ID</label>
+            <input type="text" id="inp-client-id" value="215529370659-28knl9jlure9gells5aedltglbpdrgt4.apps.googleusercontent.com" style="font-family:monospace; font-size:12px;" />
+            <span class="form-hint">Create a Web Application credential in Google Cloud Console → APIs &amp; Services → Credentials. Add http://localhost:3000 to Authorized JavaScript Origins.</span>
+          </div>
+          <div class="form-row">
+            <label for="inp-inbox-email">Auction Email Account</label>
+            <input type="text" id="inp-inbox-email" value="etccwebsite.auction@gmail.com" />
+          </div>
+          <div class="form-row">
+            <label for="inp-email-folder">Auction Email Folder</label>
+            <input type="text" id="inp-email-folder" value="INBOX" />
+            <span class="form-hint">Gmail label/folder to scan (e.g. INBOX, or a custom label name).</span>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex; gap:10px;">
         <button class="btn primary" id="btn-save-settings">Save Settings</button>
-        <button class="btn" id="btn-reset-fieldmap">Reset Field Map to Defaults</button>
       </div>
       <div id="settings-saved-msg" style="display:none; margin-top:10px;" class="alert success">Settings saved.</div>
     </section>
@@ -1554,7 +1560,7 @@ function escHtml(str) {
 }
 
 function fmtDollar(val) {
-  const n = parseFloat(String(val || '').replace(/[$,]/g, ''));
+  const n = parseFloat(String(val ?? '').replace(/[$,]/g, ''));
   if (isNaN(n)) return escHtml(val || '');
   return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
@@ -1661,10 +1667,7 @@ document.getElementById('btn-add-field').addEventListener('click', () => {
   renderFieldMapTable();
 });
 
-document.getElementById('btn-reset-fieldmap').addEventListener('click', () => {
-  if (!confirm('Reset field mapping to defaults?')) return;
-  DB.saveFieldMap(DEFAULT_FIELD_MAP);
-  renderFieldMapTable();
+// (reset fieldmap removed)
 });
 
 // ══════════════════════════════════════
