@@ -436,12 +436,10 @@
             <table class="tablekit" id="email-table" data-tk-sort="false">
               <thead>
                 <tr>
-                  <th style="width:32px;"><input type="checkbox" id="chk-all-emails" title="Select all" /></th>
                   <th>Date</th>
                   <th>From</th>
                   <th>Subject</th>
-                  <th>Status</th>
-                  <th>Action</th>
+                  <th>Preview</th>
                 </tr>
               </thead>
               <tbody id="email-tbody"></tbody>
@@ -454,13 +452,17 @@
       <div class="card" id="items-card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
           <span>Loaded Items</span>
-          <button class="btn danger" id="btn-clear-items" style="font-size:11px; padding:4px 10px;">Clear All</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn primary" id="btn-load-items" style="font-size:11px; padding:4px 10px;">Update Item Table from Emails</button>
+            <button class="btn danger" id="btn-clear-items" style="font-size:11px; padding:4px 10px;">Clear All</button>
+          </div>
         </div>
         <div style="overflow-x:auto;">
           <table class="tablekit" id="items-table">
             <thead>
               <tr>
                 <th>Item #</th>
+                <th>Submission Date</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th>Value</th>
@@ -549,7 +551,7 @@
                 <th style="width:28px;"></th>
                 <th>Email Label</th>
                 <th style="width:200px;">Select By</th>
-                <th>Database Name</th>
+                <th>Database Column</th>
                 <th style="width:60px; text-align:center;">Edit</th>
                 <th style="width:60px; text-align:center;">Remove</th>
               </tr>
@@ -567,6 +569,21 @@
     </section>
 
   </main>
+</div>
+
+<!-- ══ Email Preview Modal ══ -->
+<div id="email-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:var(--bg);border-radius:10px;width:680px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <div id="email-modal-subject" style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;"></div>
+        <div id="email-modal-from" style="font-size:12px;color:var(--text-secondary);"></div>
+        <div id="email-modal-date" style="font-size:11px;color:var(--text-tertiary);margin-top:2px;"></div>
+      </div>
+      <button onclick="closeEmailModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div id="email-modal-body" style="padding:20px;overflow-y:auto;font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;flex:1;"></div>
+  </div>
 </div>
 
 <!-- User Manual -->
@@ -644,7 +661,7 @@ const DEFAULT_FIELD_MAP = [
   { label: 'Status',          selectBy: 'Current Line to End',   column: 'status'           },
   { label: 'Response',        selectBy: 'Current Line to End',   column: 'response'         },
   { label: 'ItemCategory',    selectBy: 'Current Line to End',   column: 'item_category'    },
-  { label: 'ItemDescription', selectBy: 'Current Line to End',   column: 'item_description' },
+  { label: 'ItemDescription', selectBy: 'Next Line',             column: 'description' },
   { label: 'ItemValue',       selectBy: 'Current Line to End',   column: 'item_value'       },
   { label: 'ItemReserveAmount', selectBy: 'Current Line to End', column: 'reserve_amount'   },
   { label: 'DonorName',       selectBy: 'Current Line to End',   column: 'donor_name'       },
@@ -678,10 +695,10 @@ const Items = {
   existsByMsgId(id){ return DB.getItems().some(i => i.email_message_id === id); },
 
   nextItemNumber(categoryCode) {
-    const items = DB.getItems();
-    const code  = parseInt(categoryCode, 10);
-    const inCat = items.filter(i => Math.floor(parseInt(i.item_number, 10) / 100) * 100 === code);
-    return code + inCat.length + 1;
+    const items  = DB.getItems();
+    const code   = String(categoryCode || '0');
+    const inCat  = items.filter(i => String(i.category_code) === code);
+    return `${code}-${inCat.length + 1}`;
   },
 
   add(item) {
@@ -697,21 +714,60 @@ const Items = {
 //  EMAIL PARSER
 // ══════════════════════════════════════
 function parseEmailBody(body, fieldMap) {
-  const result = {};
-  const lines  = body.replace(/\r/g, '').split('\n');
+  const result   = {};
+  const errors   = [];
+  const rawLines = body.replace(/\r/g, '').split('\n');
 
-  fieldMap.forEach(({ label, column }) => {
-    const prefix = label.toLowerCase().replace(/:$/, '').trim();
-    for (const line of lines) {
-      const lower = line.toLowerCase().trim();
-      if (lower.startsWith(prefix + ':') || lower.startsWith(prefix + ' :')) {
-        const colon = line.indexOf(':');
-        result[column] = line.substring(colon + 1).trim();
+  fieldMap.forEach(({ label, column, selectBy }) => {
+    const searchLower = label.trim().toLowerCase();
+    const mode        = selectBy || 'Next Line';
+
+    let foundLineIdx = -1;
+    let valueStart   = -1;
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const lineLower = rawLines[i].toLowerCase();
+
+      // Try "Label:" first, then bare "Label"
+      const withColon = searchLower + ':';
+      let pos = lineLower.indexOf(withColon);
+      if (pos !== -1) {
+        foundLineIdx = i;
+        valueStart   = pos + withColon.length;
+        break;
+      }
+      pos = lineLower.indexOf(searchLower);
+      if (pos !== -1) {
+        foundLineIdx = i;
+        valueStart   = pos + searchLower.length;
+        // skip optional colon after bare label
+        const rest = rawLines[i].substring(valueStart).trimStart();
+        if (rest.startsWith(':')) valueStart = rawLines[i].indexOf(':', valueStart) + 1;
         break;
       }
     }
+
+    if (foundLineIdx === -1) {
+      errors.push(`"${label}" not found`);
+      return;
+    }
+
+    const line = rawLines[foundLineIdx];
+
+    if (mode === 'Next Line') {
+      result[column] = (rawLines[foundLineIdx + 1] || '').trim();
+    } else if (mode === 'Current Line to End') {
+      result[column] = line.substring(valueStart).trim();
+    } else if (mode === 'Current Line to Comma') {
+      const segment  = line.substring(valueStart).trim();
+      const commaIdx = segment.indexOf(',');
+      result[column] = commaIdx !== -1 ? segment.substring(0, commaIdx).trim() : segment;
+    } else {
+      result[column] = line.substring(valueStart).trim();
+    }
   });
 
+  result._parseErrors = errors;
   return result;
 }
 
@@ -838,11 +894,15 @@ async function doScanInbox() {
       const getH = name => (headers.find(h => h.name.toLowerCase() === name.toLowerCase()) || {}).value || '';
 
       const body = extractBody(r.payload);
+      const bodyText = body.replace(/\s+/g, ' ').trim();
+      const preview  = bodyText.slice(0, 120);
       scannedEmails.push({
         id:      r.id,
         date:    new Date(parseInt(r.internalDate)).toLocaleString(),
         from:    getH('From'),
         subject: getH('Subject'),
+        preview,
+        body:    bodyText,
         body,
         status:  Items.existsByMsgId(r.id) ? 'loaded' : 'new',
       });
@@ -883,24 +943,33 @@ function processEmails(emails) {
   emails.forEach(email => {
     if (email.status === 'loaded') { skipped++; return; }
     try {
-      const fields = parseEmailBody(email.body, fieldMap);
-      const catCode = categoryFromValue(fields.category);
+      const fields   = parseEmailBody(email.body || '', fieldMap);
+      const parseErr = fields._parseErrors || [];
+      delete fields._parseErrors;
 
-      const item = {
-        item_number:      catCode ? Items.nextItemNumber(catCode) : 'TBD',
+      if (parseErr.length) {
+        log(`⚠️ "${email.subject}" — missing fields: ${parseErr.join(', ')}`);
+      }
+
+      const catVal  = fields.category || fields.item_category || '';
+      const catCode = categoryFromValue(catVal);
+
+      const item = Object.assign({
+        item_number:      Items.nextItemNumber(catCode),
         category_code:    catCode || '',
-        category_name:    catCode ? CATEGORIES[catCode] : (fields.category || ''),
-        description:      fields.description  || '',
-        value:            fields.value         || '',
-        reserve_amount:   fields.reserve_amount || '',
-        donor_name:       fields.donor_name    || '',
-        donor_email:      fields.donor_email   || '',
-        donor_phone:      fields.donor_phone   || '',
+        category_name:    catCode ? CATEGORIES[catCode] : catVal,
         email_message_id: email.id,
         email_from:       email.from,
         email_date:       email.date,
         loaded_date:      new Date().toLocaleString(),
-      };
+      }, fields);
+
+      // Trim all string values
+      Object.keys(item).forEach(k => { if (typeof item[k] === 'string') item[k] = item[k].replace(/^[\s\t\r\n\x00-\x1F\x7F]+|[\s\t\r\n\x00-\x1F\x7F]+$/g, ''); });
+      // Strip currency symbols from dollar fields
+      ['value', 'reserve_amount', 'item_value'].forEach(k => {
+        if (item[k]) item[k] = String(item[k]).replace(/[$,]/g, '').trim();
+      });
 
       Items.add(item);
       email.status = 'loaded';
@@ -921,34 +990,47 @@ function processEmails(emails) {
 
 // ══════════════════════════════════════
 //  RENDER — Email table
+function showEmailModal(idx) {
+  const email = scannedEmails[idx];
+  document.getElementById('email-modal-subject').textContent = email.subject || '(no subject)';
+  document.getElementById('email-modal-from').textContent    = email.from    || '';
+  document.getElementById('email-modal-date').textContent    = email.date    || '';
+  document.getElementById('email-modal-body').textContent    = email.body    || email.preview || '(empty)';
+  const modal = document.getElementById('email-modal');
+  modal.style.display = 'flex';
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').style.display = 'none';
+}
+
+document.getElementById('email-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEmailModal();
+});
+
 // ══════════════════════════════════════
 function renderEmailTable(emails) {
   const tbody = document.getElementById('email-tbody');
   tbody.innerHTML = '';
 
   if (!emails.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-secondary);">No emails found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-secondary);">No emails found.</td></tr>';
     return;
   }
 
   emails.forEach((email, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="checkbox" class="email-chk" data-idx="${idx}" ${email.status === 'loaded' ? 'disabled' : ''} /></td>
-      <td style="font-size:11px;white-space:nowrap;">${email.date}</td>
-      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${escHtml(email.from)}</td>
-      <td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;">${escHtml(email.subject)}</td>
-      <td><span class="badge ${email.status}">${email.status}</span></td>
-      <td>${email.status !== 'loaded'
-        ? `<button class="btn" style="font-size:11px;padding:3px 9px;" onclick="processEmails([scannedEmails[${idx}]])">Load</button>`
-        : '—'}</td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(email.date)}</td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.from)}</td>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.subject)}</td>
+      <td style="width:60px;text-align:center;">
+        <span onclick="showEmailModal(${idx})" title="View email" style="cursor:pointer;font-size:22px;color:var(--text-secondary);transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">✉</span>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 
-  document.getElementById('chk-all-emails').addEventListener('change', function() {
-    document.querySelectorAll('.email-chk:not(:disabled)').forEach(c => c.checked = this.checked);
-  });
 }
 
 // ══════════════════════════════════════
@@ -960,7 +1042,7 @@ function refreshItemsTable() {
   tbody.innerHTML = '';
 
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet.</td></tr>';
     return;
   }
 
@@ -969,10 +1051,11 @@ function refreshItemsTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.submission_date || '')}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
       <td>${escHtml(item.description)}</td>
-      <td>${escHtml(item.value)}</td>
-      <td>${escHtml(item.reserve_amount)}</td>
+      <td>${fmtDollar(item.value)}</td>
+      <td>${parseFloat(item.reserve_amount || 0) === 0 ? '' : fmtDollar(item.reserve_amount)}</td>
       <td>${escHtml(item.donor_name)}</td>
       <td style="font-size:11px;">${escHtml(item.donor_email)}</td>
       <td style="font-size:11px;">${escHtml(item.donor_phone)}</td>
@@ -1151,6 +1234,12 @@ function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function fmtDollar(val) {
+  const n = parseFloat(String(val || '').replace(/[$,]/g, ''));
+  if (isNaN(n)) return escHtml(val || '');
+  return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 function log(msg) {
   const el = document.getElementById('process-log');
   el.classList.add('visible');
@@ -1224,6 +1313,12 @@ document.getElementById('btn-process-selected').addEventListener('click', () => 
   const selected = [...document.querySelectorAll('.email-chk:checked')].map(c => scannedEmails[parseInt(c.dataset.idx)]);
   if (!selected.length) { log('ℹ️ No emails selected.'); return; }
   processEmails(selected);
+});
+
+document.getElementById('btn-load-items').addEventListener('click', () => {
+  const newEmails = scannedEmails.filter(e => e.status !== 'loaded');
+  if (!newEmails.length) { log('ℹ️ No new emails to load. Scan inbox first.'); return; }
+  processEmails(newEmails);
 });
 
 document.getElementById('btn-clear-items').addEventListener('click', () => {
