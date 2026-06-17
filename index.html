@@ -269,6 +269,13 @@
     #items-tbody td {
       border-bottom: 1px solid #e8e0b8;
     }
+    /* Alternating row colors — all tables */
+    table tbody tr:nth-child(even) {
+      background: #f0f7ff;
+    }
+    table tbody tr:nth-child(odd) {
+      background: #ffffff;
+    }
 
     /* ── Table header override ── */
     table.tablekit thead th {
@@ -651,8 +658,8 @@
         <div style="overflow-x:auto;max-height:370px;overflow-y:auto;">
           <table class="tablekit" id="bidders-table" style="table-layout:fixed;width:100%;">
             <colgroup>
-              <col style="width:90px;"><col style="width:160px;"><col style="width:160px;">
-              <col style="width:200px;"><col style="width:150px;">
+              <col style="width:100px;"><col style="width:200px;"><col style="width:200px;">
+              <col style="width:280px;"><col style="width:180px;"><col style="width:160px;">
             </colgroup>
             <thead>
               <tr>
