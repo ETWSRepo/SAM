@@ -452,9 +452,9 @@
 
       <!-- Metric summary -->
       <div class="metric-row" id="load-metrics">
-        <div class="metric-card"><div class="m-label">Total Items</div><div class="m-value" id="m-total">0</div></div>
-        <div class="metric-card"><div class="m-label">New This Session</div><div class="m-value accent" id="m-new">0</div></div>
-        <div class="metric-card"><div class="m-label">Categories</div><div class="m-value" id="m-cats">0</div></div>
+        <div class="metric-card"><div class="m-label">Total Emails</div><div class="m-value" id="m-total">0</div></div>
+        <div class="metric-card"><div class="m-label">New Items</div><div class="m-value" id="m-new">0</div></div>
+        <div class="metric-card"><div class="m-label">Total Items</div><div class="m-value" id="m-cats">0</div></div>
         <div class="metric-card"><div class="m-label">Total Value</div><div class="m-value" id="m-value">$0</div></div>
       </div>
 
@@ -464,7 +464,7 @@
           <span class="dot"></span>
           <span id="gmail-status-text">Not connected to Gmail</span>
         </div>
-        <button class="btn primary" id="btn-scan">📧 Scan</button>
+        <button class="btn primary" id="btn-scan" style="display:none;">📧 Scan</button>
         <button class="btn" id="btn-process-all" disabled>✅ Process All New</button>
         <button class="btn" id="btn-process-selected" disabled>Process Selected</button>
         <div class="spacer"></div>
@@ -480,11 +480,12 @@
       <div id="process-log"></div>
 
       <!-- Email list -->
-      <div id="email-list-wrap" style="display:none;">
+      <div id="email-list-wrap">
         <div class="card">
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
             <span>Inbox Emails</span>
             <div style="display:flex;gap:8px;">
+              <button class="btn primary" id="btn-scan-inline" style="font-size:11px;padding:3px 10px;">📧 Scan</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('emails')">View All</button>
               <button class="btn danger" style="font-size:11px;padding:3px 10px;" onclick="clearInboxEmails()">Clear All</button>
             </div>
@@ -510,8 +511,9 @@
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
           <span>Loaded Items</span>
           <div style="display:flex;gap:8px;">
+            <button class="btn primary" id="btn-load-items" style="font-size:11px; padding:4px 10px;">Update Items</button>
+            <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showCategories()">View Categories</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('items')">View All</button>
-            <button class="btn primary" id="btn-load-items" style="font-size:11px; padding:4px 10px;">Update Item Table from Emails</button>
             <button class="btn danger" id="btn-clear-items" style="font-size:11px; padding:4px 10px;">Clear All</button>
           </div>
         </div>
@@ -705,6 +707,28 @@
   <div id="view-all-toolbar-wrap"></div>
   <div style="flex:1;overflow:auto;padding:16px;">
     <table class="tablekit" id="view-all-table" style="width:100%;"></table>
+  </div>
+</div>
+
+<!-- ══ Categories Modal ══ -->
+<div id="cat-modal" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+  <div id="cat-toolbar-wrap"></div>
+  <div style="flex:1;overflow:auto;padding:16px;">
+    <table class="tablekit" id="cat-table" style="width:600px;">
+      <thead><tr><th style="width:80px;text-align:center;">Items</th><th>Category</th><th style="width:80px;"></th></tr></thead>
+      <tbody id="cat-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ Category Items Modal ══ -->
+<div id="cat-items-modal" style="display:none;position:fixed;inset:0;z-index:950;background:var(--bg);flex-direction:column;">
+  <div id="cat-items-toolbar-wrap"></div>
+  <div style="flex:1;overflow:auto;padding:16px;">
+    <table class="tablekit" id="cat-items-table" style="width:100%;">
+      <thead><tr><th>Item #</th><th>Submission Date</th><th>Description</th><th>Value</th><th>Reserve</th><th>Donor Name</th></tr></thead>
+      <tbody id="cat-items-tbody"></tbody>
+    </table>
   </div>
 </div>
 
@@ -1055,13 +1079,14 @@ async function doScanInbox() {
       });
     }
 
-    log(`✅ Fetched ${scannedEmails.length} emails.`);
+    const scanCount = scannedEmails.length;
+    log(`✅ Fetched ${scanCount} emails.`);
     renderEmailTable(scannedEmails);
-    document.getElementById('email-list-wrap').style.display = '';
     document.getElementById('btn-process-all').disabled = false;
     document.getElementById('btn-process-selected').disabled = false;
-    document.getElementById('scan-note').textContent =
-      'Scanned ' + new Date().toLocaleTimeString();
+    document.getElementById('scan-note').textContent = 'Scanned ' + new Date().toLocaleTimeString();
+    document.getElementById('m-total').textContent = scanCount;
+    alert(`Scan complete — ${scanCount} email${scanCount !== 1 ? 's' : ''} found.`);
 
   } catch (err) {
     log('❌ Scan error: ' + (err.result?.error?.message || err.message || err));
@@ -1132,6 +1157,7 @@ function processEmails(emails) {
   log(`✅ Done — ${loaded} loaded, ${skipped} skipped, ${errors} errors.`);
   renderEmailTable(scannedEmails);
   refreshItemsTable();
+  alert(`Update complete — ${loaded} new item${loaded !== 1 ? 's' : ''} added.`);
   refreshMetrics();
 }
 
@@ -1322,13 +1348,12 @@ function refreshBsItemsTable() {
 function refreshMetrics() {
   const items = Items.getAll();
   const total = items.length;
-  const cats  = new Set(items.map(i => i.category_code)).size;
+  const cats  = total;
   const value = items.reduce((s, i) => {
     const n = parseFloat(String(i.value).replace(/[^0-9.]/g, ''));
     return s + (isNaN(n) ? 0 : n);
   }, 0);
 
-  document.getElementById('m-total').textContent  = total;
   document.getElementById('m-new').textContent    = sessionNewCount;
   document.getElementById('m-cats').textContent   = cats;
   document.getElementById('m-value').textContent  = '$' + value.toLocaleString('en-US', {minimumFractionDigits:0});
@@ -1513,6 +1538,7 @@ function navigate(screenId) {
   const navItem = document.querySelector(`.nav-item[data-screen="${screenId}"]`);
   if (navItem) navItem.classList.add('active');
 
+  if (screenId === 'item-load')      renderEmailTable(scannedEmails);
   if (screenId === 'settings')       loadSettingsForm();
   if (screenId === 'bidding-sheets') refreshBsItemsTable();
 }
@@ -1528,6 +1554,7 @@ overlay.addEventListener('click', e => { if (e.target === overlay) overlay.class
 // ══════════════════════════════════════
 //  BUTTON WIRING
 // ══════════════════════════════════════
+document.getElementById('btn-scan-inline').addEventListener('click', () => document.getElementById('btn-scan').click());
 document.getElementById('btn-scan').addEventListener('click', () => {
   const settings = DB.getSettings();
   if (!settings.gmailClientId) {
@@ -1575,7 +1602,7 @@ document.getElementById('btn-process-selected').addEventListener('click', () => 
 
 document.getElementById('btn-load-items').addEventListener('click', () => {
   const newEmails = scannedEmails.filter(e => e.status !== 'loaded');
-  if (!newEmails.length) { log('ℹ️ No new emails to load. Scan inbox first.'); return; }
+  if (!newEmails.length) { alert('Update complete — 0 new items added.'); return; }
   processEmails(newEmails);
 });
 
@@ -1668,7 +1695,6 @@ function clearInboxEmails() {
   if (!confirm('Clear all scanned emails from the list?')) return;
   scannedEmails = [];
   renderEmailTable([]);
-  document.getElementById('email-list-wrap').style.display = 'none';
 }
 
 function closeViewAll() {
@@ -1676,9 +1702,84 @@ function closeViewAll() {
 }
 
 // ══════════════════════════════════════
+//  CATEGORIES MODAL
+// ══════════════════════════════════════
+function showCategories() {
+  const items = Items.getAll();
+  const map = {};
+  items.forEach(i => {
+    const key = String(i.category_code || '?').trim();
+    const name = i.category_name || key;
+    if (!map[key]) map[key] = { code: key, name, count: 0 };
+    map[key].count++;
+  });
+
+  const tbody = document.getElementById('cat-tbody');
+  tbody.innerHTML = '';
+  Object.values(map).sort((a, b) => String(a.code).localeCompare(String(b.code))).forEach(cat => {
+    const tr = document.createElement('tr');
+    tr.dataset.code = cat.code;
+    tr.dataset.name = cat.name;
+    tr.innerHTML = `
+      <td style="text-align:center;font-weight:600;">${cat.count}</td>
+      <td><strong>${escHtml(cat.code)}</strong> — ${escHtml(cat.name)}</td>
+      <td><button class="btn cat-view-btn" style="font-size:11px;padding:2px 8px;">View</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const catModal = document.getElementById('cat-modal');
+  catModal.style.display = 'flex';
+
+  const catWrap = document.getElementById('cat-toolbar-wrap');
+  catWrap.innerHTML = '';
+  PageToolbar.init({ title: 'Item Categories', logoText: 'ETCC', tableSelector: '#cat-table' });
+  const catTb = document.getElementById('page-toolbar');
+  if (catTb) catWrap.appendChild(catTb);
+  const catClose = catWrap.querySelector('.tk-btn-close');
+  if (catClose) { const f = catClose.cloneNode(true); catClose.replaceWith(f); f.addEventListener('click', () => catModal.style.display = 'none'); }
+}
+
+document.getElementById('cat-modal').addEventListener('click', e => {
+  if (!e.target.classList.contains('cat-view-btn')) return;
+  const tr = e.target.closest('tr');
+  showCategoryItems(tr.dataset.code, tr.dataset.name);
+});
+
+function showCategoryItems(code, name) {
+  const items = Items.getAll().filter(i => String(i.category_code || '?').trim() === code);
+  const tbody = document.getElementById('cat-items-tbody');
+  tbody.innerHTML = '';
+  items.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escHtml(String(item.item_number || ''))}</td>
+      <td>${escHtml(item.submission_date || '')}</td>
+      <td>${escHtml(item.description || '')}</td>
+      <td>${fmtDollar(item.value)}</td>
+      <td>${parseFloat(item.reserve_amount || 0) === 0 ? '' : fmtDollar(item.reserve_amount)}</td>
+      <td>${escHtml(item.donor_name || '')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const catItemsModal = document.getElementById('cat-items-modal');
+  catItemsModal.style.display = 'flex';
+
+  const ciWrap = document.getElementById('cat-items-toolbar-wrap');
+  ciWrap.innerHTML = '';
+  PageToolbar.init({ title: `${code} — ${name}`, logoText: 'ETCC', tableSelector: '#cat-items-table' });
+  const ciTb = document.getElementById('page-toolbar');
+  if (ciTb) ciWrap.appendChild(ciTb);
+  const ciClose = ciWrap.querySelector('.tk-btn-close');
+  if (ciClose) { const f = ciClose.cloneNode(true); ciClose.replaceWith(f); f.addEventListener('click', () => catItemsModal.style.display = 'none'); }
+}
+
+// ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
 (function init() {
+  renderEmailTable(scannedEmails);
   refreshItemsTable();
   refreshMetrics();
   TableKit.initAll();
