@@ -262,8 +262,12 @@
       line-height: 1.3;
       height: auto;
     }
-    #email-table tbody tr {
+    #email-table tbody tr,
+    #items-tbody tr {
       height: 28px;
+    }
+    #items-tbody td {
+      border-bottom: 1px solid #e8e0b8;
     }
 
     /* ── Table header override ── */
@@ -1297,7 +1301,7 @@ function renderEmailTable(emails) {
       <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.from)}</td>
       <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.subject)}</td>
       <td style="width:60px;text-align:center;">
-        <span onclick="showEmailModal(${idx})" title="View email" style="cursor:pointer;font-size:14px;color:var(--text-secondary);transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">✉</span>
+        <span onclick="showEmailModal(${idx})" title="View email" style="cursor:pointer;display:inline-flex;align-items:center;color:var(--text-secondary);transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'"><svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" stroke-width="1.4" xmlns="http://www.w3.org/2000/svg"><rect x="0.7" y="0.7" width="12.6" height="9.6" rx="1"/><path d="M0.7 2l6.3 4.5L13.3 2"/></svg></span>
       </td>
     `;
     tbody.appendChild(tr);
@@ -2032,19 +2036,6 @@ function showCategoryItems(code, name) {
   refreshItemsTable();
   refreshMetrics();
   TableKit.initAll();
-  PageToolbar.init({
-    title:         'Loaded Items',
-    logoText:      'ETCC',
-    tableSelector: '#items-table',
-    onRefresh:     refreshItemsTable,
-  });
-  // Relocate the toolbar inside the items card, above the table
-  const toolbar = document.getElementById('page-toolbar');
-  const itemsCard = document.getElementById('items-card');
-  if (toolbar && itemsCard) {
-    const tableWrap = itemsCard.querySelector('div[style*="overflow-x"]');
-    itemsCard.insertBefore(toolbar, tableWrap);
-  }
 
   const settings = DB.getSettings();
   if (!settings.gmailClientId) {
