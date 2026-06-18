@@ -2176,17 +2176,18 @@ function printInvoice(bidderNum) {
       <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Cancel</button>
     </div>
   </div>
-  <div style="margin-bottom:20px;font-size:14px;">
-    <strong>Bidder #${bidderNum}</strong> — ${escHtml(bidder.first_name || '')} ${escHtml(bidder.last_name || '')}<br>
-    <span style="color:#555;font-size:12px;">Payment Method: ${escHtml(method)}</span>
+  <div style="margin-bottom:20px;">
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">${escHtml(bidder.first_name || '')} ${escHtml(bidder.last_name || '')}</div>
+    <div style="font-size:13px;color:#555;">Bidder #${bidderNum} &nbsp;|&nbsp; Payment Method: ${escHtml(method)}</div>
   </div>
   <table>
     <thead><tr><th style="width:100px;">Item #</th><th>Description</th><th style="width:120px;text-align:right;">Amount</th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot>
-      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Subtotal</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
-      ${ccRow}
-      <tr style="background:#f0f4ff;"><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;font-size:15px;">Total Due</td><td style="padding:8px 10px;text-align:right;font-weight:700;font-size:15px;">${fmtDollar(amtDue)}</td></tr>
+<tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Cash / Check Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
+      <tr><td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">Credit Card Fee (${settings.squarePct || 0}% + $${(sqFee).toFixed(2)})</td><td style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">${fmtDollar(ccTrans)}</td></tr>
+      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Credit Card Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
+      <tr><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;">Paid</td><td style="padding:8px 10px;text-align:center;"><input type="checkbox" style="width:20px;height:20px;cursor:pointer;accent-color:#1a7f37;"></td></tr>
     </tfoot>
   </table>
   <div style="margin-top:32px;padding:16px 20px;border:1px solid #000;border-radius:6px;text-align:center;">
@@ -2920,12 +2921,45 @@ function navigate(screenId) {
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('payment-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
+    navigate._payDirty = false;
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
       closeBtn.replaceWith(fresh);
-      fresh.addEventListener('click', () => navigate('home'));
+      fresh.addEventListener('click', () => {
+        if (navigate._payDirty && !confirm('You have unsaved changes. Close without saving?')) return;
+        navigate._payDirty = false;
+        navigate('home');
+      });
     }
+    // Add Save button action bar
+    const card = document.getElementById('payment-card');
+    if (card && !document.getElementById('pay-action-bar')) {
+      const bar = document.createElement('div');
+      bar.id = 'pay-action-bar';
+      bar.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--bg);';
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'btn primary';
+      saveBtn.textContent = 'Save';
+      saveBtn.style.cssText = 'font-size:12px;padding:4px 16px;';
+      saveBtn.addEventListener('click', () => {
+        document.querySelectorAll('.pay-checknum, .pay-method, .pay-paid, .pay-other, .pay-other-reason').forEach(el => {
+          el.dispatchEvent(new Event('change'));
+        });
+        navigate._payDirty = false;
+        saveBtn.textContent = 'Saved ✓';
+        setTimeout(() => { saveBtn.textContent = 'Save'; }, 1500);
+      });
+      bar.appendChild(saveBtn);
+      const tableWrap = card.querySelector('div[style*="overflow-x"]');
+      if (tableWrap) card.insertBefore(bar, tableWrap);
+      else card.appendChild(bar);
+    }
+    // Mark dirty on any field interaction
+    const payCard = document.getElementById('payment-card');
+    const markDirty = () => { navigate._payDirty = true; };
+    payCard.addEventListener('change', markDirty, { capture: true });
+    payCard.addEventListener('input',  markDirty, { capture: true });
     refreshPaymentTable();
   }
   if (screenId === 'post-auction') {
