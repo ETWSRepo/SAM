@@ -2177,16 +2177,14 @@ function printInvoice(bidderNum) {
     </div>
   </div>
   <div style="margin-bottom:20px;">
-    <div style="font-size:20px;font-weight:800;margin-bottom:4px;">${escHtml(bidder.first_name || '')} ${escHtml(bidder.last_name || '')}</div>
-    <div style="font-size:13px;color:#555;">Bidder #${bidderNum} &nbsp;|&nbsp; Payment Method: ${escHtml(method)}</div>
+    <div style="font-size:18px;font-weight:800;">${escHtml(bidder.first_name || '')} ${escHtml(bidder.last_name || '')} &nbsp;|&nbsp; Bidder #${bidderNum} &nbsp;|&nbsp; ${escHtml(method)}</div>
   </div>
   <table>
     <thead><tr><th style="width:100px;">Item #</th><th>Description</th><th style="width:120px;text-align:right;">Amount</th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot>
 <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Cash / Check Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
-      <tr><td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">Credit Card Fee (${settings.squarePct || 0}% + $${(sqFee).toFixed(2)})</td><td style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">${fmtDollar(ccTrans)}</td></tr>
-      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Credit Card Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
+      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;"><span style="font-weight:400;color:#888;font-size:11px;">(Includes transaction fee of ${settings.squarePct || 0}% and $${sqFee.toFixed(2)})&nbsp;&nbsp;</span>Credit Card Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
       <tr><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;">Paid</td><td style="padding:8px 10px;text-align:center;"><input type="checkbox" style="width:20px;height:20px;cursor:pointer;accent-color:#1a7f37;"></td></tr>
     </tfoot>
   </table>
