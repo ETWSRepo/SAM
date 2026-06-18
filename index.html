@@ -699,7 +699,7 @@
         </div>
         <!-- Footer -->
         <div style="padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);">
-          <button class="btn primary" onclick="addCheckedToWalkins()">Add to Walk-ins</button>
+          <button class="btn primary" onclick="addCheckedToWalkins()">Add to Bidders</button>
           <span id="member-db-walkin-status" style="font-size:12px;color:var(--text-secondary);"></span>
         </div>
       </div>
@@ -713,7 +713,14 @@
               <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Bidder #</label>
               <input id="edit-bidder-num" type="text" readonly style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-section);color:var(--text-secondary);">
             </div>
-            <div></div>
+            <div>
+              <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Bidder Type</label>
+              <select id="edit-bidder-type" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);">
+                <option value="walk-in">walk-in</option>
+                <option value="member">member</option>
+                <option value="pre-registration">pre-registration</option>
+              </select>
+            </div>
             <div>
               <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Last Name</label>
               <input id="edit-bidder-last" type="text" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
@@ -743,12 +750,13 @@
         <div style="overflow-x:auto;max-height:calc(100vh - 330px);overflow-y:auto;">
           <table class="tablekit" id="bidders-table" style="table-layout:fixed;width:100%;">
             <colgroup>
-              <col style="width:100px;"><col style="width:200px;"><col style="width:200px;">
-              <col style="width:280px;"><col style="width:180px;"><col style="width:160px;">
+              <col style="width:100px;"><col style="width:130px;"><col style="width:180px;"><col style="width:180px;">
+              <col style="width:240px;"><col style="width:160px;"><col style="width:160px;">
             </colgroup>
             <thead>
               <tr>
                 <th>Bidder #</th>
+                <th>Bidder Type</th>
                 <th>Last Name</th>
                 <th>First Name</th>
                 <th>Email</th>
@@ -897,7 +905,7 @@
           <div class="form-row">
             <label for="inp-walk-in-start">Walk-in Bidder Start #</label>
             <input type="number" id="inp-walk-in-start" min="1" step="1" style="width:100px;" />
-            <span class="form-hint">Starting bidder number assigned to walk-in (non-pre-registered) bidders. Default: 1000.</span>
+            <span class="form-hint">Starting bidder number assigned to walk-in (non-pre-registration) bidders. Default: 1000.</span>
           </div>
           <div style="margin-top:12px;">
             <button class="btn primary" onclick="saveSettings()">Save Settings</button>
@@ -968,9 +976,12 @@
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <input type="file" id="inp-member-csv" accept=".csv" style="font-size:13px;" />
             <button class="btn primary" onclick="importMemberCSV()">Import CSV</button>
-            <button class="btn danger" onclick="clearMemberDB()" id="btn-clear-members" style="display:none;">Clear Members</button>
           </div>
-          <div id="member-import-status" style="margin-top:10px;font-size:12px;color:var(--text-secondary);"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+            <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">Last Imported:</label>
+            <input type="text" id="member-import-date" readonly style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-section);color:var(--text-secondary);width:220px;">
+          </div>
+          <div id="member-import-status" style="margin-top:6px;font-size:12px;color:var(--text-secondary);"></div>
         </div>
       </div>
 
@@ -979,14 +990,35 @@
         <div class="card-header">Registration Database</div>
         <div style="padding:16px;">
           <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
-            Import pre-registered bidders from a <strong>Club Express Registrant Data</strong> CSV export. Expected columns: <code>member_number</code>, <code>last_name</code>, <code>first_name</code>, <code>email</code>, <code>cell_phone</code>.
+            Import pre-registration bidders from a <strong>Club Express Registrant Data</strong> CSV export. Expected columns: <code>member_number</code>, <code>last_name</code>, <code>first_name</code>, <code>email</code>, <code>cell_phone</code>.
           </p>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <input type="file" id="inp-reg-csv" accept=".csv" style="font-size:13px;" />
             <button class="btn primary" onclick="importRegCSV()">Import CSV</button>
-            <button class="btn danger" onclick="clearRegDB()" id="btn-clear-reg" style="display:none;">Clear Registration</button>
           </div>
-          <div id="reg-import-status" style="margin-top:10px;font-size:12px;color:var(--text-secondary);"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+            <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">Last Imported:</label>
+            <input type="text" id="reg-import-date" readonly style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-section);color:var(--text-secondary);width:220px;">
+          </div>
+          <div id="reg-import-status" style="margin-top:6px;font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
+      <!-- Bidder Database -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Bidder Database</div>
+        <div style="padding:16px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">Select bidders to delete:</label>
+            <select id="sel-clear-bidders" style="font-size:13px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+              <option value="all">Entire Table</option>
+              <option value="walkins">Walk-ins</option>
+              <option value="members">Members</option>
+              <option value="preregistration">Pre-registration</option>
+            </select>
+            <button class="btn danger" onclick="clearBiddersBySelection()">Delete Bidders</button>
+          </div>
+          <div id="bidder-db-status" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>
         </div>
       </div>
 
@@ -1183,7 +1215,9 @@ const DEFAULT_SETTINGS = {
   emailFolder:    'INBOX',
   squarePct:       2.6,
   squareFee:       0.10,
-  walkInStart:     1000,
+  walkInStart:        1000,
+  memberImportDate:   '',
+  regImportDate:      '',
 };
 
 // ══════════════════════════════════════
@@ -1751,17 +1785,21 @@ function refreshBiddersTable() {
   tbody.innerHTML = '';
 
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-secondary);">No bidders registered yet. Use the toolbar to add bidders.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-secondary);">No bidders registered yet. Use the toolbar to add bidders.</td></tr>';
     return;
   }
 
   const tdStyle = 'font-size:12px;padding:2px 8px;';
+  const typeOpts = ['walk-in', 'member', 'pre-registration'];
+  const selStyle = 'font-size:11px;padding:1px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);width:100%;';
 
   list.forEach(b => {
     const tr = document.createElement('tr');
     tr.dataset.num = b.bidder_number;
+    const optHtml = typeOpts.map(t => `<option value="${t}"${(b.bidder_type||'walk-in')===t?' selected':''}>${t}</option>`).join('');
     tr.innerHTML = `
       <td style="${tdStyle}font-weight:600;">${escHtml(String(b.bidder_number))}</td>
+      <td style="${tdStyle}">${escHtml(b.bidder_type || 'walk-in')}</td>
       <td style="${tdStyle}">${escHtml(b.last_name  || '')}</td>
       <td style="${tdStyle}">${escHtml(b.first_name || '')}</td>
       <td style="${tdStyle}">${escHtml(b.email      || '')}</td>
@@ -1790,36 +1828,12 @@ function refreshBiddersTable() {
   });
 }
 
-// ══════════════════════════════════════
-//  RENDER — Registration DB table
-// ══════════════════════════════════════
-function refreshRegDBTable() {
-  const tbody = document.getElementById('regdb-tbody');
-  if (!tbody) return;
-  const records = DB.getRegDB();
-  tbody.innerHTML = '';
-  if (!records.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-secondary);">No registrations loaded. Import a CSV in Settings.</td></tr>';
-    return;
-  }
-  const tdStyle = 'font-size:12px;padding:2px 8px;';
-  records.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="${tdStyle}">${escHtml(r.member_number || '')}</td>
-      <td style="${tdStyle}">${escHtml(r.last_name     || '')}</td>
-      <td style="${tdStyle}">${escHtml(r.first_name    || '')}</td>
-      <td style="${tdStyle}">${escHtml(r.email         || '')}</td>
-      <td style="${tdStyle}">${escHtml(r.cell_phone    || '')}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
 
 function openBidderEditModal(num) {
   const b = Bidders.getAll().find(x => x.bidder_number === num);
   if (!b) return;
   document.getElementById('edit-bidder-num').value   = b.bidder_number;
+  document.getElementById('edit-bidder-type').value  = b.bidder_type || 'walk-in';
   document.getElementById('edit-bidder-last').value  = b.last_name   || '';
   document.getElementById('edit-bidder-first').value = b.first_name  || '';
   document.getElementById('edit-bidder-email').value = b.email       || '';
@@ -1906,7 +1920,8 @@ function addCheckedToWalkins() {
         last_name:     m.last_name     || '',
         first_name:    m.first_name    || '',
         email:         m.primary_email || '',
-        phone:         m.cell_phone    || ''
+        phone:         m.cell_phone    || '',
+        bidder_type:   'member'
       });
       cb.checked = false;
       added++;
@@ -1936,6 +1951,7 @@ function saveBidderEdit() {
   if (!first) { missing.push('First Name'); firstEl.style.borderColor = 'var(--danger)'; }
   if (!email) { missing.push('Email');      emailEl.style.borderColor = 'var(--danger)'; }
   if (missing.length) { alert(`Required: ${missing.join(', ')}`); return; }
+  bidders[idx].bidder_type = document.getElementById('edit-bidder-type').value;
   bidders[idx].last_name  = last;
   bidders[idx].first_name = first;
   bidders[idx].email      = document.getElementById('edit-bidder-email').value.trim();
@@ -1957,6 +1973,7 @@ function addBidder() {
   tr.style.background = '#fffbe6';
   tr.innerHTML = `
     <td style="font-weight:600;font-size:13px;padding:6px 8px;">${nextNum}</td>
+    <td style="font-size:12px;padding:4px 6px;color:var(--text-secondary);">walk-in</td>
     <td style="padding:4px 6px;"><input class="nb-last"  style="${inp}" placeholder="Last Name"></td>
     <td style="padding:4px 6px;"><input class="nb-first" style="${inp}" placeholder="First Name"></td>
     <td style="padding:4px 6px;"><input class="nb-email" style="${inp}" placeholder="Email" type="email"></td>
@@ -1987,7 +2004,7 @@ function addBidder() {
     if (!first) { missing.push('First Name'); firstEl.style.borderColor = 'var(--danger)'; }
     if (!email) { missing.push('Email');      emailEl.style.borderColor = 'var(--danger)'; }
     if (missing.length) { alert(`Required: ${missing.join(', ')}`); return; }
-    Bidders.add({ bidder_number: nextNum, last_name: last, first_name: first, email, phone });
+    Bidders.add({ bidder_number: nextNum, last_name: last, first_name: first, email, phone, bidder_type: 'walk-in' });
     refreshBiddersTable();
   });
 
@@ -2435,20 +2452,20 @@ function refreshMetrics() {
 // ══════════════════════════════════════
 function loadSettingsForm() {
   const members = DB.getMembers();
-  const clearBtn = document.getElementById('btn-clear-members');
   const statusEl = document.getElementById('member-import-status');
+  const s = DB.getSettings();
+  const memberDateEl = document.getElementById('member-import-date');
+  if (memberDateEl) memberDateEl.value = s.memberImportDate || '';
   if (members.length) {
-    if (clearBtn) clearBtn.style.display = '';
     if (statusEl) statusEl.textContent = members.length + ' members in database.';
   }
   const regDB = DB.getRegDB();
-  const regClearBtn = document.getElementById('btn-clear-reg');
   const regStatusEl = document.getElementById('reg-import-status');
+  const regDateEl = document.getElementById('reg-import-date');
+  if (regDateEl) regDateEl.value = s.regImportDate || '';
   if (regDB.length) {
-    if (regClearBtn) regClearBtn.style.display = '';
     if (regStatusEl) regStatusEl.textContent = regDB.length + ' registrations in database.';
   }
-  const s = DB.getSettings();
   document.getElementById('inp-client-id').value       = s.gmailClientId  || '';
   document.getElementById('inp-inbox-email').value     = s.inboxEmail     || '';
   document.getElementById('inp-email-folder').value    = s.emailFolder    || 'INBOX';
@@ -2787,6 +2804,7 @@ refreshHomeMetrics();
 function importMemberCSV() {
   const file = document.getElementById('inp-member-csv').files[0];
   if (!file) { document.getElementById('member-import-status').textContent = 'Please select a CSV file first.'; return; }
+  DB.saveMembers([]);
   const reader = new FileReader();
   reader.onload = function(e) {
     const text = e.target.result;
@@ -2822,8 +2840,11 @@ function importMemberCSV() {
     }
 
     DB.saveMembers(members);
-    document.getElementById('member-import-status').textContent = members.length + ' members imported successfully.';
-    document.getElementById('btn-clear-members').style.display = '';
+    const memberImportDate = new Date().toLocaleString();
+    DB.saveSettings(Object.assign(DB.getSettings(), { memberImportDate }));
+    const mDateEl = document.getElementById('member-import-date');
+    if (mDateEl) mDateEl.value = memberImportDate;
+    document.getElementById('member-import-status').textContent = members.length + ' members imported.';
     document.getElementById('inp-member-csv').value = '';
   };
   reader.readAsText(file);
@@ -2842,11 +2863,35 @@ function parseCSVLine(line) {
   return result;
 }
 
-function clearMemberDB() {
-  if (!confirm('Clear all imported members? This cannot be undone.')) return;
-  DB.saveMembers([]);
-  document.getElementById('member-import-status').textContent = 'Member database cleared.';
-  document.getElementById('btn-clear-members').style.display = 'none';
+
+// ══════════════════════════════════════
+//  BIDDER DATABASE
+// ══════════════════════════════════════
+function clearBiddersBySelection() {
+  const sel = document.getElementById('sel-clear-bidders').value;
+  const walkInStart = DB.getSettings().walkInStart ?? 1000;
+  const labels = { all: 'all bidders', walkins: 'walk-in bidders', members: 'member bidders', preregistration: 'pre-registration bidders' };
+  if (!confirm('Clear ' + labels[sel] + '? This cannot be undone.')) return;
+  const all = Bidders.getAll();
+  let remaining, removed;
+  if (sel === 'all') {
+    removed = all.length;
+    Bidders.clear();
+  } else if (sel === 'walkins') {
+    remaining = all.filter(b => (b.bidder_type || 'walk-in') !== 'walk-in');
+    removed = all.length - remaining.length;
+    DB.saveBidders(remaining);
+  } else if (sel === 'members') {
+    remaining = all.filter(b => (b.bidder_type || 'walk-in') !== 'member');
+    removed = all.length - remaining.length;
+    DB.saveBidders(remaining);
+  } else if (sel === 'preregistration') {
+    remaining = all.filter(b => (b.bidder_type || 'walk-in') !== 'pre-registration');
+    removed = all.length - remaining.length;
+    DB.saveBidders(remaining);
+  }
+  refreshBiddersTable();
+  document.getElementById('bidder-db-status').textContent = removed + ' bidder' + (removed !== 1 ? 's' : '') + ' removed.';
 }
 
 // ══════════════════════════════════════
@@ -2855,6 +2900,7 @@ function clearMemberDB() {
 function importRegCSV() {
   const file = document.getElementById('inp-reg-csv').files[0];
   if (!file) { document.getElementById('reg-import-status').textContent = 'Please select a CSV file first.'; return; }
+  DB.saveRegDB([]);
   const reader = new FileReader();
   reader.onload = function(e) {
     const text = e.target.result;
@@ -2890,33 +2936,44 @@ function importRegCSV() {
 
     DB.saveRegDB(records);
 
-    // Add all imported registrants as walk-in bidders
+    // Add registrants as walk-in bidders, skipping duplicates
+    const existing = Bidders.getAll();
+    const existingEmails = new Set(existing.map(b => (b.email || '').toLowerCase().trim()).filter(Boolean));
+    const existingNames  = new Set(existing.map(b => (b.last_name + '|' + b.first_name).toLowerCase().trim()));
     let walkInsAdded = 0;
     records.forEach(r => {
+      const email = (r.email || '').toLowerCase().trim();
+      const name  = (r.last_name + '|' + r.first_name).toLowerCase().trim();
+      if ((email && existingEmails.has(email)) || existingNames.has(name)) return;
       Bidders.add({
         bidder_number: Bidders.nextNumber(),
         last_name:     r.last_name  || '',
         first_name:    r.first_name || '',
         email:         r.email      || '',
-        phone:         r.cell_phone || ''
+        phone:         r.cell_phone || '',
+        bidder_type:   'pre-registration'
       });
+      existingEmails.add(email);
+      existingNames.add(name);
       walkInsAdded++;
     });
     refreshBiddersTable();
 
-    document.getElementById('reg-import-status').textContent = records.length + ' registrations imported; ' + walkInsAdded + ' added to Walk-ins.';
-    document.getElementById('btn-clear-reg').style.display = '';
+    const regImportDate = new Date().toLocaleString();
+    DB.saveSettings(Object.assign(DB.getSettings(), { regImportDate }));
+    const rDateEl = document.getElementById('reg-import-date');
+    if (rDateEl) rDateEl.value = regImportDate;
+    const dupes = records.length - walkInsAdded;
+    document.getElementById('reg-import-status').textContent =
+      records.length + ' members imported; ' +
+      walkInsAdded + ' added as bidders' +
+      (dupes ? '; ' + dupes + ' duplicate' + (dupes !== 1 ? 's' : '') + ' skipped' : '');
     document.getElementById('inp-reg-csv').value = '';
   };
   reader.readAsText(file);
 }
 
-function clearRegDB() {
-  if (!confirm('Clear all imported registrations? This cannot be undone.')) return;
-  DB.saveRegDB([]);
-  document.getElementById('reg-import-status').textContent = 'Registration database cleared.';
-  document.getElementById('btn-clear-reg').style.display = 'none';
-}
+
 
 // Manual
 const overlay   = document.getElementById('manual-overlay');
