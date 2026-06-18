@@ -955,6 +955,34 @@ function runUITests() {
       // Close modal
       try { d.getElementById('member-db-modal').style.display = 'none'; } catch(e) {}
 
+      // ── Edit bidder modal opens ───────────────────────────────────────────
+      nav('bidder-reg');
+      await delay(60);
+      try {
+        w.localStorage.setItem('sam_bidders', JSON.stringify([
+          { bidder_number: 1001, last_name: 'TestLast', first_name: 'TestFirst', email: '', phone: '', bidder_type: 'walk-in' }
+        ]));
+        w.refreshBiddersTable();
+        await delay(60);
+        const editBtn = d.querySelector('#bidders-tbody button[data-edit]');
+        if (editBtn) editBtn.click();
+        await delay(60);
+        const modal = d.getElementById('bidder-edit-modal');
+        const modalOpen = modal && modal.style.display === 'flex';
+        const numVal   = d.getElementById('edit-bidder-num')?.value;
+        await suite('Edit bidder modal', () => [
+          uiAssert('Edit button present in row',  !!editBtn,   'No button[data-edit] found in bidders-tbody'),
+          uiAssert('Modal opens on Edit click',   modalOpen,   'bidder-edit-modal not visible after click'),
+          uiAssert('Modal populated with bidder', numVal === '1001', `edit-bidder-num = "${numVal}"`),
+        ]);
+        if (modal) modal.style.display = 'none';
+        w.localStorage.removeItem('sam_bidders');
+        w.refreshBiddersTable();
+      } catch(e) {
+        renderSuite('UI — Edit bidder modal', [{ name: 'edit modal test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
       // ── Member search filter ───────────────────────────────────────────────
       nav('bidder-reg');
       await delay(60);

@@ -1822,7 +1822,7 @@ function refreshBiddersTable() {
 
 
 function openBidderEditModal(num) {
-  const b = Bidders.getAll().find(x => x.bidder_number === num);
+  const b = Bidders.getAll().find(x => String(x.bidder_number) === String(num));
   if (!b) return;
   document.getElementById('edit-bidder-num').value   = b.bidder_number;
   document.getElementById('edit-bidder-type').value  = b.bidder_type || 'walk-in';
