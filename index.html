@@ -293,6 +293,11 @@
     }
     /* Suppress TableKit duplicate sort arrow on label */
     .tk-th-label::after { display: none !important; }
+    .pa-card { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px; cursor:pointer; transition:box-shadow .15s,border-color .15s; }
+    .pa-card:hover { border-color:var(--accent); box-shadow:0 2px 10px rgba(0,113,227,.15); }
+    .pa-card-icon { font-size:22px; margin-bottom:8px; }
+    .pa-card-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px; }
+    .pa-card-desc { font-size:11px; color:var(--text-secondary); line-height:1.4; }
     /* Move drop arrow immediately after header text */
     .tk-th-label { flex: none !important; }
     /* Alternating row colors — all tables */
@@ -880,35 +885,35 @@
       <div class="card" id="post-auction-card">
         <div id="post-auction-toolbar-wrap"></div>
         <div style="padding:20px;">
-          <div class="card-header" style="margin:-20px -20px 16px;padding:10px 20px;">Reports</div>
-          <div style="display:flex;flex-direction:column;gap:12px;max-width:500px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);">Auction Summary Report</div>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Bidder list, items donated, winners, and total income</div>
-              </div>
-              <button class="btn primary" onclick="printAuctionSummary()" style="white-space:nowrap;">🖨 Print</button>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:10px;">Reports</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px;">
+            <div onclick="printAuctionSummary()" class="pa-card">
+              <div class="pa-card-icon">🖨</div>
+              <div class="pa-card-title">Auction Summary</div>
+              <div class="pa-card-desc">Bidders, items, winners, total income</div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);">Winning Bidder Report</div>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Each winner's items and total amount due</div>
-              </div>
-              <button class="btn primary" onclick="printWinningBidderReport()" style="white-space:nowrap;">🖨 Print</button>
+            <div onclick="printWinningBidderReport()" class="pa-card">
+              <div class="pa-card-icon">🖨</div>
+              <div class="pa-card-title">Winning Bidder</div>
+              <div class="pa-card-desc">Each winner's items and amount due</div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);">Donor Report</div>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Items donated by each donor and auction income generated</div>
-              </div>
-              <button class="btn primary" onclick="printDonorReport()" style="white-space:nowrap;">🖨 Print</button>
+            <div onclick="printDonorReport()" class="pa-card">
+              <div class="pa-card-icon">🖨</div>
+              <div class="pa-card-title">Donor Report</div>
+              <div class="pa-card-desc">Items donated and income per donor</div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);">Club Financial Summary Report</div>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Payments received by cash, check, credit card, and other</div>
-              </div>
-              <button class="btn primary" onclick="printClubIncomeReport()" style="white-space:nowrap;">🖨 Print</button>
+            <div onclick="printClubIncomeReport()" class="pa-card">
+              <div class="pa-card-icon">🖨</div>
+              <div class="pa-card-title">Club Financial Summary</div>
+              <div class="pa-card-desc">Cash, check, credit card, other</div>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:10px;">Email</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+            <div onclick="openEmailBiddersPage()" class="pa-card">
+              <div class="pa-card-icon">✉</div>
+              <div class="pa-card-title">Email Bidders</div>
+              <div class="pa-card-desc">Select bidders and open email client</div>
             </div>
           </div>
         </div>
@@ -1895,6 +1900,8 @@ function showMemberDBModal() {
   const tb   = document.getElementById('page-toolbar');
   const wrap = document.getElementById('member-db-toolbar-wrap');
   if (tb && wrap) wrap.appendChild(tb);
+  // Remove non-essential toolbar buttons, keep Close
+  if (tb) tb.querySelectorAll('.tk-btn:not(.tk-btn-close)').forEach(b => b.remove());
   const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
   if (closeBtn) {
     const fresh = closeBtn.cloneNode(true);
@@ -1961,12 +1968,16 @@ function addCheckedToWalkins() {
       setStatus('No members selected. Check a row first.');
       return;
     }
-    const members = DB.getMembers();
-    let added = 0;
+    const members  = DB.getMembers();
+    const existing = Bidders.getAll();
+    const existingKeys = new Set(existing.map(b => `${(b.last_name||'').trim().toLowerCase()}|${(b.first_name||'').trim().toLowerCase()}`));
+    let added = 0, dupes = 0;
     checked.forEach(cb => {
       const idx = parseInt(cb.getAttribute('data-idx'), 10);
       const m = members[idx];
       if (!m) return;
+      const key = `${(m.last_name||'').trim().toLowerCase()}|${(m.first_name||'').trim().toLowerCase()}`;
+      if (existingKeys.has(key)) { dupes++; return; }
       Bidders.add({
         bidder_number: Bidders.nextNumber(),
         last_name:     m.last_name     || '',
@@ -1975,11 +1986,14 @@ function addCheckedToWalkins() {
         phone:         m.cell_phone    || '',
         bidder_type:   'member'
       });
+      existingKeys.add(key);
       cb.checked = false;
       added++;
     });
     refreshBiddersTable();
-    setStatus(added ? `${added} member${added !== 1 ? 's' : ''} added as bidders.` : 'No members added.', added ? 'var(--success)' : null);
+    let msg = added ? `${added} member${added !== 1 ? 's' : ''} added as bidders.` : 'No new members added.';
+    if (dupes) msg += ` ${dupes} duplicate${dupes !== 1 ? 's' : ''} skipped.`;
+    setStatus(msg, added ? 'var(--success)' : 'var(--text-secondary)');
     setTimeout(() => { setStatus(''); }, 5000);
   } catch(e) {
     setStatus('Error: ' + e.message, 'var(--danger)');
@@ -2895,6 +2909,121 @@ function navigate(screenId) {
       fresh.addEventListener('click', () => navigate('home'));
     }
   }
+}
+
+function openEmailBiddersPage() {
+  const bidders = Bidders.getAll();
+  if (!bidders.length) { alert('No bidders registered yet.'); return; }
+
+  const rows = bidders.map((b, i) => `
+    <tr>
+      <td style="text-align:center;padding:3px 8px;"><input type="checkbox" class="bidder-cb" data-idx="${i}" style="width:15px;height:15px;accent-color:#0071e3;cursor:pointer;" checked></td>
+      <td style="font-size:12px;padding:3px 8px;">${escHtml(String(b.bidder_number))}</td>
+      <td style="font-size:12px;padding:3px 8px;">${escHtml(b.last_name || '')}, ${escHtml(b.first_name || '')}</td>
+      <td style="font-size:12px;padding:3px 8px;">${escHtml(b.email || '')}</td>
+      <td style="font-size:12px;padding:3px 8px;">${escHtml(b.phone || '')}</td>
+    </tr>`).join('');
+
+  const biddersJson = JSON.stringify(bidders.map(b => ({ email: b.email || '', name: `${b.first_name} ${b.last_name}`.trim() })));
+  const logoUrl = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  const html = `<!DOCTYPE html><html><head><title>Email Bidders</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:system-ui,sans-serif; color:#1d1d1f; font-size:12px; display:flex; justify-content:center; background:#e8e8ed; height:100vh; overflow:hidden; }
+    .page { display:flex; flex-direction:column; width:820px; max-width:100%; height:80vh; margin-top:40px; background:#fff; box-shadow:0 0 20px rgba(0,0,0,.2); border-radius:8px; overflow:hidden; }
+    .top-bar { display:flex; align-items:center; gap:10px; padding:6px 12px; background:#1d1d1f; color:#fff; flex-shrink:0; }
+    .top-bar img { height:30px; }
+    .top-bar span { flex:1; font-size:13px; font-weight:700; color:#fff; }
+    .top-bar button { padding:4px 12px; border:none; border-radius:5px; cursor:pointer; font-size:12px; font-weight:600; }
+    .btn-close { background:transparent; border:1px solid #c62828 !important; color:#c62828; }
+    .btn-close:hover { background:#c62828; color:#fff; }
+    .ctrl-bar { display:flex; align-items:center; gap:8px; padding:5px 10px; background:#f5f5f7; border-bottom:1px solid #d2d2d7; flex-shrink:0; }
+    .ctrl-bar input[type="text"] { padding:3px 8px; border:1px solid #d2d2d7; border-radius:5px; font-size:12px; }
+    .ctrl-bar label { font-size:12px; font-weight:600; white-space:nowrap; margin-left:8px; }
+    .ctrl-bar .subj { flex:1; padding:3px 8px; border:1px solid #d2d2d7; border-radius:5px; font-size:12px; }
+    .ctrl-bar .status { font-size:11px; color:#555; white-space:nowrap; margin-left:4px; }
+    .ctrl-bar button { padding:3px 10px; border:none; border-radius:5px; cursor:pointer; font-size:11px; font-weight:600; background:#e0e0e0; color:#1d1d1f; }
+    .ctrl-bar button:hover { background:#ccc; }
+    .table-wrap { flex:1; overflow-y:auto; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#dbeafe; padding:4px 8px; text-align:left; border-bottom:2px solid #d2d2d7; font-size:11px; position:sticky; top:0; z-index:5; }
+    tbody td { padding:2px 8px; border-bottom:1px solid #e8e8ed; }
+    tbody tr:nth-child(even) td { background:#f0f7ff; }
+    tbody tr:hover td { background:#dbeafe; }
+    .footer { display:flex; align-items:center; gap:8px; padding:7px 12px; background:#f5f5f7; border-top:1px solid #d2d2d7; flex-shrink:0; }
+    .footer button { padding:5px 14px; border:none; border-radius:5px; cursor:pointer; font-size:12px; font-weight:600; }
+    .btn-primary { background:#0071e3; color:#fff; }
+    .btn-primary:hover { background:#0077ed; }
+    .btn-sec { background:#e0e0e0; color:#1d1d1f; }
+    .btn-sec:hover { background:#ccc; }
+  </style>
+  </head><body><div class="page">
+  <div class="top-bar">
+    <img src="${logoUrl}" alt="ETCC">
+    <span>Email Bidders — East Tennessee Corvette Club</span>
+    <button class="btn-close" onclick="window.close()">✕ Close</button>
+  </div>
+  <div class="ctrl-bar">
+    <input type="text" id="search-name" placeholder="Search last name…" style="width:160px;" oninput="filterRows(this.value)">
+    <label for="email-subject">Subject:</label>
+    <input id="email-subject" type="text" class="subj" value="East Tennessee Corvette Club Silent Auction">
+    <span class="status" id="sel-status">${bidders.length} of ${bidders.length} selected</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:30px;text-align:center;"><input type="checkbox" id="cb-all" checked onchange="selectAll(this.checked)" style="accent-color:#0071e3;cursor:pointer;"></th>
+        <th style="width:70px;">Bidder #</th>
+        <th style="width:180px;">Name</th>
+        <th>Email</th>
+        <th style="width:120px;">Phone</th>
+      </tr></thead>
+      <tbody id="bidder-tbody">${rows}</tbody>
+    </table>
+  </div>
+  <div class="footer">
+    <button class="btn-primary" onclick="sendEmail()">✉ Open Email Client</button>
+    <button class="btn-sec" onclick="selectAll(true)">Select All</button>
+    <button class="btn-sec" onclick="selectAll(false)">Clear All</button>
+  </div>
+  <script>
+    const allBidders = ${biddersJson};
+    function updateStatus() {
+      const total   = document.querySelectorAll('.bidder-cb').length;
+      const checked = document.querySelectorAll('.bidder-cb:checked').length;
+      document.getElementById('sel-status').textContent = checked + ' of ' + total + ' selected';
+      document.getElementById('cb-all').checked = checked === total;
+    }
+    function selectAll(val) {
+      document.querySelectorAll('.bidder-cb:not([style*="display:none"])').forEach(cb => {
+        const tr = cb.closest('tr');
+        if (!tr || tr.style.display !== 'none') cb.checked = val;
+      });
+      updateStatus();
+    }
+    function filterRows(q) {
+      const lq = q.trim().toLowerCase();
+      document.querySelectorAll('#bidder-tbody tr').forEach(tr => {
+        const name = tr.cells[2] ? tr.cells[2].textContent.toLowerCase() : '';
+        tr.style.display = (!lq || name.startsWith(lq)) ? '' : 'none';
+      });
+      updateStatus();
+    }
+    document.querySelectorAll('.bidder-cb').forEach(cb => cb.addEventListener('change', updateStatus));
+    function sendEmail() {
+      const checked = [...document.querySelectorAll('.bidder-cb:checked')].map(cb => parseInt(cb.dataset.idx));
+      const addrs = checked.map(i => allBidders[i].email).filter(Boolean);
+      if (!addrs.length) { alert('No bidders selected, or selected bidders have no email address.'); return; }
+      const subject = encodeURIComponent(document.getElementById('email-subject').value.trim());
+      window.location.href = 'mailto:?bcc=' + encodeURIComponent(addrs.join(',')) + '&subject=' + subject;
+    }
+  <\/script>
+  </div></body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 function printAuctionSummary() {
