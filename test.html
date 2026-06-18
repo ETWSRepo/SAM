@@ -923,7 +923,11 @@ function runUITests() {
       nav('post-auction');
       await delay(60);
       await suite('Post Auction screen', () => [
-        uiCheck(d, 'screen is active',          '#screen-post-auction.active'),
+        uiCheck(d,    'screen is active',                   '#screen-post-auction.active'),
+        uiAnyContains(d, 'Auction Summary Report present',  '#post-auction-card', 'Auction Summary Report'),
+        uiAnyContains(d, 'Winning Bidder Report present',   '#post-auction-card', 'Winning Bidder Report'),
+        uiAnyContains(d, 'Donor Report present',            '#post-auction-card', 'Donor Report'),
+        uiAnyContains(d, 'Club Financial Summary present',  '#post-auction-card', 'Club Financial Summary Report'),
       ]);
 
       // ── Nav: Settings ─────────────────────────────────────────────────────

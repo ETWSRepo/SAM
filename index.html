@@ -272,6 +272,7 @@
       padding: 4px 12px;
       height: auto;
       line-height: 1.3;
+      font-size: 12px;
     }
     #items-table thead th {
       text-align: left !important;
@@ -279,6 +280,16 @@
     #items-table .tk-th-inner {
       width: 100%;
       justify-content: flex-start;
+    }
+    #winners-tbody td {
+      padding: 2px 8px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    #winners-tbody input, #winners-tbody select {
+      padding: 1px 4px !important;
+      font-size: 12px !important;
+      height: 22px;
     }
     /* Suppress TableKit duplicate sort arrow on label */
     .tk-th-label::after { display: none !important; }
@@ -682,7 +693,7 @@
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Walk-In</th><th>Member #</th><th>Last Name</th><th>First Name</th><th>Email</th><th>Phone</th>
+                    <th>Select</th><th>Member #</th><th>Last Name</th><th>First Name</th><th>Email</th><th>Phone</th>
                   </tr>
                 </thead>
                 <tbody id="member-db-modal-tbody"></tbody>
@@ -769,7 +780,7 @@
       <div class="card" id="winners-card">
         <div id="winners-toolbar-wrap"></div>
         <div style="padding:4px 16px;min-height:20px;"><span id="winners-save-note" style="font-size:12px;"></span></div>
-        <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
+        <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto;">
           <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;">
             <colgroup>
               <col style="width:90px;">
@@ -868,7 +879,39 @@
       </div>
       <div class="card" id="post-auction-card">
         <div id="post-auction-toolbar-wrap"></div>
-        <div style="height:12px;"></div>
+        <div style="padding:20px;">
+          <div class="card-header" style="margin:-20px -20px 16px;padding:10px 20px;">Reports</div>
+          <div style="display:flex;flex-direction:column;gap:12px;max-width:500px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);">Auction Summary Report</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Bidder list, items donated, winners, and total income</div>
+              </div>
+              <button class="btn primary" onclick="printAuctionSummary()" style="white-space:nowrap;">🖨 Print</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);">Winning Bidder Report</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Each winner's items and total amount due</div>
+              </div>
+              <button class="btn primary" onclick="printWinningBidderReport()" style="white-space:nowrap;">🖨 Print</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);">Donor Report</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Items donated by each donor and auction income generated</div>
+              </div>
+              <button class="btn primary" onclick="printDonorReport()" style="white-space:nowrap;">🖨 Print</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);">Club Financial Summary Report</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">Payments received by cash, check, credit card, and other</div>
+              </div>
+              <button class="btn primary" onclick="printClubIncomeReport()" style="white-space:nowrap;">🖨 Print</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1406,10 +1449,13 @@ function maybeInitTokenClient() {
   if (!gapiReady || !gisReady) return;
   const clientId = DB.getSettings().gmailClientId;
   if (!clientId) return;
+  const inboxEmail = DB.getSettings().inboxEmail || '';
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: 'https://www.googleapis.com/auth/gmail.readonly',
     callback: onTokenReceived,
+    hint: inboxEmail,
+    prompt: '',
   });
   log('✅ OAuth client ready. Click Scan Inbox to connect.');
 }
@@ -1418,10 +1464,13 @@ function reinitTokenClient() {
   if (!gapiReady || !gisReady) return;
   const clientId = DB.getSettings().gmailClientId;
   if (!clientId) return;
+  const inboxEmail = DB.getSettings().inboxEmail || '';
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: 'https://www.googleapis.com/auth/gmail.readonly',
     callback: onTokenReceived,
+    hint: inboxEmail,
+    prompt: '',
   });
 }
 
@@ -1664,15 +1713,15 @@ function refreshItemsTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
-      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.email_date || '')}</td>
+      <td style="white-space:nowrap;">${escHtml(item.email_date || '')}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
       <td>${escHtml(item.description)}</td>
       <td>${fmtDollar(item.item_value)}</td>
       <td>${escHtml(item.reserve_amount || '')}</td>
       <td>${escHtml(item.donor_name)}</td>
-      <td style="font-size:11px;">${escHtml(item.donor_email)}</td>
-      <td style="font-size:11px;">${escHtml(item.donor_phone)}</td>
-      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.loaded_date)}</td>
+      <td>${escHtml(item.donor_email)}</td>
+      <td>${escHtml(item.donor_phone)}</td>
+      <td style="white-space:nowrap;">${escHtml(item.loaded_date)}</td>
       <td style="text-align:center;">${previewCell}</td>
     `;
     tbody.appendChild(tr);
@@ -1724,7 +1773,7 @@ function printBiddingSheets() {
       </table>
       <table class="bid-table">
         <thead><tr><th>#</th><th>Bid Amount</th><th>Bidder #</th><th>Bidder Initials</th><th>Bid Amount</th></tr></thead>
-        <tbody>${bidRows}</tbody>
+        <tbody>${bidRows}<tr><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr></tbody>
       </table>
     </div>
   `;
@@ -1930,7 +1979,7 @@ function addCheckedToWalkins() {
       added++;
     });
     refreshBiddersTable();
-    setStatus(added ? `${added} member${added !== 1 ? 's' : ''} added to Walk-ins.` : 'No members added.', added ? 'var(--success)' : null);
+    setStatus(added ? `${added} member${added !== 1 ? 's' : ''} added as bidders.` : 'No members added.', added ? 'var(--success)' : null);
     setTimeout(() => { setStatus(''); }, 5000);
   } catch(e) {
     setStatus('Error: ' + e.message, 'var(--danger)');
@@ -2837,6 +2886,8 @@ function navigate(screenId) {
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('post-auction-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
+    // Remove every button except Close
+    tb.querySelectorAll('.tk-btn:not(.tk-btn-close)').forEach(b => b.remove());
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
@@ -2844,6 +2895,512 @@ function navigate(screenId) {
       fresh.addEventListener('click', () => navigate('home'));
     }
   }
+}
+
+function printAuctionSummary() {
+  const items    = Items.getAll();
+  const bidders  = Bidders.getAll();
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const logoUrl  = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  // Build bidder lookup
+  const bidderMap = {};
+  bidders.forEach(b => { bidderMap[String(b.bidder_number)] = b; });
+
+  // Total income
+  let totalIncome = 0;
+  Object.values(winners).forEach(w => {
+    const bid = parseFloat(String(w.winning_bid || '').replace(/[^0-9.]/g, ''));
+    if (!isNaN(bid)) totalIncome += bid;
+  });
+
+  // ── Section 1: Registered Bidders ─────────────────────────────────────────
+  const bidderRows = bidders.length
+    ? bidders.map(b => `<tr>
+        <td>${escHtml(String(b.bidder_number))}</td>
+        <td>${escHtml(b.last_name || '')}, ${escHtml(b.first_name || '')}</td>
+        <td>${escHtml(b.email || '')}</td>
+        <td>${escHtml(b.bidder_type || 'walk-in')}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:#888;">No bidders registered.</td></tr>';
+
+  // ── Section 2: Donated Items ───────────────────────────────────────────────
+  const itemRows = items.length
+    ? items.map(item => {
+        const key = String(item.item_number);
+        const w   = winners[key] || {};
+        const winnerName = w.bidder_name || (w.bidder_number ? `Bidder #${w.bidder_number}` : '—');
+        const winBid = w.winning_bid ? fmtDollar(w.winning_bid) : '—';
+        return `<tr>
+          <td>${escHtml(key)}</td>
+          <td>${escHtml(item.description || '')}</td>
+          <td>${escHtml(item.donor_name || '')}</td>
+          <td>${fmtDollar(item.item_value)}</td>
+          <td>${escHtml(winnerName)}</td>
+          <td style="text-align:right;">${winBid}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:#888;">No items loaded.</td></tr>';
+
+  // ── Section 3: Winner Summary ──────────────────────────────────────────────
+  const winnerGroups = {};
+  Object.entries(winners).forEach(([itemKey, w]) => {
+    if (!w.bidder_number) return;
+    const k = String(w.bidder_number);
+    if (!winnerGroups[k]) winnerGroups[k] = { name: w.bidder_name || `Bidder #${w.bidder_number}`, items: [] };
+    winnerGroups[k].items.push({ itemKey, bid: w.winning_bid });
+  });
+
+  const winnerRows = Object.values(winnerGroups).length
+    ? Object.values(winnerGroups).map(g => {
+        const subtotal = g.items.reduce((s, i) => s + (parseFloat(String(i.bid || '').replace(/[^0-9.]/g, '')) || 0), 0);
+        const itemList = g.items.map(i => `${escHtml(i.itemKey)}: ${fmtDollar(i.bid)}`).join(', ');
+        return `<tr>
+          <td>${escHtml(g.name)}</td>
+          <td>${escHtml(itemList)}</td>
+          <td style="text-align:right;font-weight:600;">${fmtDollar(subtotal)}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="3" style="text-align:center;color:#888;">No winners recorded.</td></tr>';
+
+  const auctionDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const html = `<!DOCTYPE html><html><head><title>Auction Summary Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px auto; max-width: 900px; color: #1d1d1f; font-size: 13px; }
+    h1 { margin: 0 0 2px; font-size: 20px; }
+    h2 { font-size: 14px; font-weight: 700; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #1d1d1f; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th { background: #dbeafe; padding: 6px 10px; text-align: left; border: 1px solid #000; font-size: 12px; }
+    td { padding: 5px 10px; border: 1px solid #000; vertical-align: top; }
+    tr:nth-child(even) td { background: #f5f9ff; }
+    .total-row td { font-weight: 700; font-size: 14px; background: #dbeafe !important; }
+    .subtitle { font-size: 12px; color: #555; margin-bottom: 4px; }
+    @media print { button { display: none; } }
+  </style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="${logoUrl}" alt="ETCC Logo" style="height:60px;">
+      <div>
+        <h1>Auction Summary Report</h1>
+        <div class="subtitle">East Tennessee Corvette Club &nbsp;|&nbsp; ${escHtml(auctionDate)}</div>
+        <div class="subtitle">Items: ${items.length} &nbsp;|&nbsp; Bidders: ${bidders.length} &nbsp;|&nbsp; Winners: ${Object.values(winners).filter(w=>w.bidder_number).length} &nbsp;|&nbsp; Total Income: <strong>${fmtDollar(totalIncome)}</strong></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+
+  <h2>Registered Bidders (${bidders.length})</h2>
+  <table>
+    <thead><tr><th style="width:80px;">Bidder #</th><th>Name</th><th>Email</th><th style="width:120px;">Type</th></tr></thead>
+    <tbody>${bidderRows}</tbody>
+  </table>
+
+  <h2>Donated Items (${items.length})</h2>
+  <table>
+    <thead><tr><th style="width:80px;">Item #</th><th>Description</th><th style="width:160px;">Donor</th><th style="width:80px;">Value</th><th style="width:160px;">Winner</th><th style="width:90px;text-align:right;">Winning Bid</th></tr></thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+
+  <h2>Winner Summary</h2>
+  <table>
+    <thead><tr><th>Bidder Name</th><th>Items Won</th><th style="width:100px;text-align:right;">Total Paid</th></tr></thead>
+    <tbody>${winnerRows}</tbody>
+    <tr class="total-row"><td colspan="2" style="text-align:right;">Total Auction Income</td><td style="text-align:right;">${fmtDollar(totalIncome)}</td></tr>
+  </table>
+
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printWinningBidderReport() {
+  const items    = Items.getAll();
+  const winners  = DB.getWinners();
+  const bidders  = Bidders.getAll();
+  const logoUrl  = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  const itemMap = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  const bidderMap = {};
+  bidders.forEach(b => { bidderMap[String(b.bidder_number)] = b; });
+
+  // Group winners by bidder
+  const groups = {};
+  Object.entries(winners).forEach(([itemKey, w]) => {
+    if (!w.bidder_number) return;
+    const k = String(w.bidder_number);
+    if (!groups[k]) {
+      const b = bidderMap[k];
+      groups[k] = {
+        bidder_number: w.bidder_number,
+        name: b ? `${b.first_name} ${b.last_name}`.trim() : (w.bidder_name || `Bidder #${w.bidder_number}`),
+        items: []
+      };
+    }
+    const item = itemMap[itemKey] || {};
+    const bid  = parseFloat(String(w.winning_bid || '').replace(/[^0-9.]/g, '')) || 0;
+    groups[k].items.push({ itemKey, description: item.description || '', bid });
+  });
+
+  const sortedGroups = Object.values(groups).sort((a, b) => a.bidder_number - b.bidder_number);
+
+  if (!sortedGroups.length) {
+    alert('No winners recorded yet.');
+    return;
+  }
+
+  const auctionDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const groupHtml = sortedGroups.map(g => {
+    const subtotal = g.items.reduce((s, i) => s + i.bid, 0);
+    const rows = g.items.map(i => `
+      <tr>
+        <td>${escHtml(i.itemKey)}</td>
+        <td>${escHtml(i.description)}</td>
+        <td style="text-align:right;">${fmtDollar(i.bid)}</td>
+      </tr>`).join('');
+    return `
+      <div class="bidder-block">
+        <div class="bidder-header">
+          <span>Bidder #${escHtml(String(g.bidder_number))} &nbsp;—&nbsp; ${escHtml(g.name)}</span>
+          <span class="bidder-total">Total Due: ${fmtDollar(subtotal)}</span>
+        </div>
+        <table>
+          <thead><tr><th style="width:80px;">Item #</th><th>Description</th><th style="width:110px;text-align:right;">Winning Bid</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tr class="subtotal-row"><td colspan="2" style="text-align:right;">Total</td><td style="text-align:right;">${fmtDollar(subtotal)}</td></tr>
+        </table>
+      </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><title>Winning Bidder Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px auto; max-width: 860px; color: #1d1d1f; font-size: 13px; }
+    h1 { margin: 0 0 2px; font-size: 20px; }
+    .subtitle { font-size: 12px; color: #555; margin-bottom: 2px; }
+    .bidder-block { margin-bottom: 24px; page-break-inside: avoid; }
+    .bidder-header { display:flex; justify-content:space-between; align-items:center; background:#1d1d1f; color:#fff; padding:7px 12px; border-radius:6px 6px 0 0; font-weight:600; font-size:13px; }
+    .bidder-total { font-size:14px; font-weight:700; color:#90caf9; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#dbeafe; padding:5px 10px; text-align:left; border:1px solid #000; font-size:12px; }
+    td { padding:4px 10px; border:1px solid #000; }
+    tr:nth-child(even) td { background:#f5f9ff; }
+    .subtotal-row td { font-weight:700; background:#dbeafe !important; }
+    @media print { button { display:none; } .bidder-block { page-break-inside: avoid; } }
+  </style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="${logoUrl}" alt="ETCC Logo" style="height:60px;">
+      <div>
+        <h1>Winning Bidder Report</h1>
+        <div class="subtitle">East Tennessee Corvette Club &nbsp;|&nbsp; ${escHtml(auctionDate)}</div>
+        <div class="subtitle">${sortedGroups.length} winner(s)</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  ${groupHtml}
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printDonorReport() {
+  const items   = Items.getAll();
+  const winners = DB.getWinners();
+  const logoUrl = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  if (!items.length) { alert('No items loaded yet.'); return; }
+
+  // Group items by donor name
+  const groups = {};
+  items.forEach(item => {
+    const donor = (item.donor_name || '(Unknown Donor)').trim();
+    if (!groups[donor]) groups[donor] = { email: item.donor_email || '', phone: item.donor_phone || '', items: [] };
+    const w = winners[String(item.item_number)] || {};
+    const winBid = parseFloat(String(w.winning_bid || '').replace(/[^0-9.]/g, '')) || 0;
+    const itemVal = parseFloat(String(item.item_value || '').replace(/[^0-9.]/g, '')) || 0;
+    groups[donor].items.push({ item_number: item.item_number, description: item.description || '', item_value: itemVal, win_bid: winBid, sold: !!w.bidder_number });
+  });
+
+  const sortedDonors = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+  const auctionDate  = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  let grandValue = 0, grandIncome = 0;
+
+  const donorHtml = sortedDonors.map(donor => {
+    const g = groups[donor];
+    const donorValue  = g.items.reduce((s, i) => s + i.item_value, 0);
+    const donorIncome = g.items.reduce((s, i) => s + i.win_bid, 0);
+    grandValue  += donorValue;
+    grandIncome += donorIncome;
+    const rows = g.items.map(i => `
+      <tr>
+        <td>${escHtml(String(i.item_number))}</td>
+        <td>${escHtml(i.description)}</td>
+        <td style="text-align:right;">${i.item_value ? fmtDollar(i.item_value) : '—'}</td>
+        <td style="text-align:center;">${i.sold ? '✓' : ''}</td>
+        <td style="text-align:right;font-weight:${i.win_bid ? '600' : '400'};">${i.win_bid ? fmtDollar(i.win_bid) : '—'}</td>
+      </tr>`).join('');
+    const contact = [g.email, g.phone].filter(Boolean).join(' &nbsp;|&nbsp; ');
+    return `
+      <div class="donor-block">
+        <div class="donor-header">
+          <div>
+            <span class="donor-name">${escHtml(donor)}</span>
+            ${contact ? `<span class="donor-contact">${escHtml(g.email)}${g.email && g.phone ? ' | ' : ''}${escHtml(g.phone)}</span>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:#aaa;">Donated Value / Income</div>
+            <div style="font-size:14px;font-weight:700;color:#90caf9;">${fmtDollar(donorValue)} &nbsp;/&nbsp; ${fmtDollar(donorIncome)}</div>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th style="width:80px;">Item #</th><th>Description</th><th style="width:90px;text-align:right;">Est. Value</th><th style="width:60px;text-align:center;">Sold</th><th style="width:100px;text-align:right;">Winning Bid</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tr class="total-row">
+            <td colspan="2" style="text-align:right;">Totals</td>
+            <td style="text-align:right;">${fmtDollar(donorValue)}</td>
+            <td></td>
+            <td style="text-align:right;">${fmtDollar(donorIncome)}</td>
+          </tr>
+        </table>
+      </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><title>Donor Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px auto; max-width: 860px; color: #1d1d1f; font-size: 13px; }
+    h1 { margin: 0 0 2px; font-size: 20px; }
+    .subtitle { font-size: 12px; color: #555; margin-bottom: 2px; }
+    .donor-block { margin-bottom: 24px; page-break-inside: avoid; }
+    .donor-header { display:flex; justify-content:space-between; align-items:center; background:#1d1d1f; color:#fff; padding:7px 12px; border-radius:6px 6px 0 0; }
+    .donor-name { font-weight:700; font-size:14px; }
+    .donor-contact { margin-left:12px; font-size:11px; color:#aaa; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#dbeafe; padding:5px 10px; text-align:left; border:1px solid #000; font-size:12px; }
+    td { padding:4px 10px; border:1px solid #000; }
+    tr:nth-child(even) td { background:#f5f9ff; }
+    .total-row td { font-weight:700; background:#dbeafe !important; }
+    .summary-box { display:flex; gap:16px; margin-bottom:24px; }
+    .summary-tile { flex:1; border:1px solid #000; border-radius:6px; padding:12px 16px; }
+    .summary-tile .label { font-size:11px; color:#555; margin-bottom:4px; }
+    .summary-tile .value { font-size:18px; font-weight:700; color:#0071e3; }
+    @media print { button { display:none; } .donor-block { page-break-inside: avoid; } }
+  </style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="${logoUrl}" alt="ETCC Logo" style="height:60px;">
+      <div>
+        <h1>Donor Report</h1>
+        <div class="subtitle">East Tennessee Corvette Club &nbsp;|&nbsp; ${escHtml(auctionDate)}</div>
+        <div class="subtitle">${sortedDonors.length} donor(s) &nbsp;|&nbsp; ${items.length} item(s)</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  <div class="summary-box">
+    <div class="summary-tile"><div class="label">Total Donors</div><div class="value">${sortedDonors.length}</div></div>
+    <div class="summary-tile"><div class="label">Total Items</div><div class="value">${items.length}</div></div>
+    <div class="summary-tile"><div class="label">Total Donated Value</div><div class="value">${fmtDollar(grandValue)}</div></div>
+    <div class="summary-tile"><div class="label">Total Auction Income</div><div class="value">${fmtDollar(grandIncome)}</div></div>
+  </div>
+  ${donorHtml}
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printClubIncomeReport() {
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const bidders  = Bidders.getAll();
+  const items    = Items.getAll();
+  const s        = DB.getSettings();
+  const sqPct    = (s.squarePct || 2.6) / 100;
+  const sqFee    = s.squareFee  || 0.10;
+  const logoUrl  = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  const bidderMap = {};
+  bidders.forEach(b => { bidderMap[String(b.bidder_number)] = b; });
+
+  const itemMap = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  // Build per-bidder totals from winners
+  const bidderTotals = {};
+  Object.entries(winners).forEach(([itemKey, w]) => {
+    if (!w.bidder_number) return;
+    const k = String(w.bidder_number);
+    const bid = parseFloat(String(w.winning_bid || '').replace(/[^0-9.]/g, '')) || 0;
+    if (!bidderTotals[k]) bidderTotals[k] = { total: 0, items: [] };
+    bidderTotals[k].total += bid;
+    bidderTotals[k].items.push({ itemKey, bid });
+  });
+
+  // Sections: Cash, Check, Credit Card, Other
+  const sections = { Cash: [], Check: [], 'Credit Card': [], Other: [] };
+
+  Object.entries(bidderTotals).forEach(([k, data]) => {
+    const pay    = payments[k] || payments[parseInt(k, 10)] || {};
+    const method = pay.method || 'Credit Card';
+    const b      = bidderMap[k];
+    const name   = b ? `${b.first_name} ${b.last_name}`.trim() : `Bidder #${k}`;
+    const total  = data.total;
+    const ccFee  = method === 'Credit Card' ? total * sqPct + sqFee : 0;
+    const amtDue = method === 'Credit Card' ? total + ccFee : total;
+    const entry  = { bidder_number: k, name, total, ccFee, amtDue, checknum: pay.checknum || '', otherReason: pay.otherReason || '', paid: pay.paid || false };
+    const sec    = sections[method] !== undefined ? method : 'Other';
+    sections[sec].push(entry);
+  });
+
+  const auctionDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  function buildSection(label, entries, showCheck, showCC, showOther) {
+    if (!entries.length) return `<div class="section"><div class="section-header">${label} <span class="count">(0)</span></div><p style="color:#888;font-size:12px;padding:8px 0;">No payments in this category.</p></div>`;
+    const sectionTotal = entries.reduce((s, e) => s + e.amtDue, 0);
+    const rows = entries.map(e => `
+      <tr>
+        <td>${escHtml(String(e.bidder_number))}</td>
+        <td>${escHtml(e.name)}</td>
+        ${showCheck ? `<td>${escHtml(e.checknum)}</td>` : ''}
+        ${showCC    ? `<td style="text-align:right;">${fmtDollar(e.ccFee)}</td>` : ''}
+        ${showOther ? `<td>${escHtml(e.otherReason)}</td>` : ''}
+        <td style="text-align:right;">${fmtDollar(e.total)}</td>
+        <td style="text-align:right;font-weight:600;">${fmtDollar(e.amtDue)}</td>
+        <td style="text-align:center;">${e.paid ? '✓' : ''}</td>
+      </tr>`).join('');
+    const extraTh = showCheck ? '<th>Check #</th>' : showCC ? '<th style="text-align:right;">CC Fee</th>' : showOther ? '<th>Reason</th>' : '';
+    return `
+      <div class="section">
+        <div class="section-header">${label} <span class="count">(${entries.length})</span><span class="section-total">${fmtDollar(sectionTotal)}</span></div>
+        <table>
+          <thead><tr><th style="width:70px;">Bidder #</th><th>Name</th>${extraTh}<th style="text-align:right;">Winning Bids</th><th style="text-align:right;">Amount Due</th><th style="width:50px;text-align:center;">Paid</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tr class="total-row"><td colspan="${showCheck||showCC||showOther ? 4 : 3}" style="text-align:right;">Section Total</td><td style="text-align:right;">${fmtDollar(sectionTotal)}</td><td></td></tr>
+        </table>
+      </div>`;
+  }
+
+  const grandTotal = Object.values(sections).flat().reduce((s, e) => s + e.amtDue, 0);
+  const cashTotal  = sections['Cash'].reduce((s, e) => s + e.amtDue, 0);
+  const checkTotal = sections['Check'].reduce((s, e) => s + e.amtDue, 0);
+  const ccTotal    = sections['Credit Card'].reduce((s, e) => s + e.amtDue, 0);
+  const otherTotal = sections['Other'].reduce((s, e) => s + e.amtDue, 0);
+
+  // Income by category
+  const catGroups = {};
+  items.forEach(item => {
+    const cat  = (item.category_name || 'Miscellaneous / Other').trim();
+    const code = item.category_code || '900';
+    if (!catGroups[cat]) catGroups[cat] = { code, value: 0, income: 0, sold: 0, total: 0 };
+    const w = winners[String(item.item_number)] || {};
+    const winBid  = parseFloat(String(w.winning_bid || '').replace(/[^0-9.]/g, '')) || 0;
+    const itemVal = parseFloat(String(item.item_value || '').replace(/[^0-9.]/g, '')) || 0;
+    catGroups[cat].value  += itemVal;
+    catGroups[cat].income += winBid;
+    catGroups[cat].total++;
+    if (w.bidder_number) catGroups[cat].sold++;
+  });
+  const sortedCats = Object.keys(catGroups).sort((a, b) => parseInt(catGroups[a].code) - parseInt(catGroups[b].code));
+  const catRows = sortedCats.map(cat => {
+    const g = catGroups[cat];
+    return `<tr>
+      <td>${escHtml(g.code)}</td>
+      <td>${escHtml(cat)}</td>
+      <td style="text-align:center;">${g.total}</td>
+      <td style="text-align:center;">${g.sold}</td>
+      <td style="text-align:right;">${fmtDollar(g.value)}</td>
+      <td style="text-align:right;font-weight:600;">${fmtDollar(g.income)}</td>
+    </tr>`;
+  }).join('');
+  const catGrandValue  = sortedCats.reduce((s, c) => s + catGroups[c].value, 0);
+  const catGrandIncome = sortedCats.reduce((s, c) => s + catGroups[c].income, 0);
+  const catGrandSold   = sortedCats.reduce((s, c) => s + catGroups[c].sold, 0);
+  const catGrandTotal  = sortedCats.reduce((s, c) => s + catGroups[c].total, 0);
+  const catSectionHtml = `
+    <div class="section">
+      <div class="section-header">Income by Category <span class="section-total">${fmtDollar(catGrandIncome)}</span></div>
+      <table>
+        <thead><tr><th style="width:60px;">Code</th><th>Category</th><th style="width:60px;text-align:center;">Items</th><th style="width:60px;text-align:center;">Sold</th><th style="width:100px;text-align:right;">Est. Value</th><th style="width:110px;text-align:right;">Auction Income</th></tr></thead>
+        <tbody>${catRows}</tbody>
+        <tr class="total-row"><td colspan="2" style="text-align:right;">Total</td><td style="text-align:center;">${catGrandTotal}</td><td style="text-align:center;">${catGrandSold}</td><td style="text-align:right;">${fmtDollar(catGrandValue)}</td><td style="text-align:right;">${fmtDollar(catGrandIncome)}</td></tr>
+      </table>
+    </div>`;
+
+  const html = `<!DOCTYPE html><html><head><title>Club Financial Summary Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px auto; max-width: 900px; color: #1d1d1f; font-size: 13px; }
+    h1 { margin: 0 0 2px; font-size: 20px; }
+    .subtitle { font-size: 12px; color: #555; margin-bottom: 2px; }
+    .section { margin-bottom: 28px; page-break-inside: avoid; }
+    .section-header { display:flex; align-items:center; gap:8px; background:#1d1d1f; color:#fff; padding:7px 12px; border-radius:6px 6px 0 0; font-weight:600; font-size:13px; }
+    .section-total { margin-left:auto; color:#90caf9; font-size:14px; font-weight:700; }
+    .count { font-weight:400; font-size:12px; color:#aaa; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#dbeafe; padding:5px 10px; text-align:left; border:1px solid #000; font-size:12px; }
+    td { padding:4px 10px; border:1px solid #000; }
+    tr:nth-child(even) td { background:#f5f9ff; }
+    .total-row td { font-weight:700; background:#dbeafe !important; }
+    .summary-box { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:28px; }
+    .summary-tile { flex:1; min-width:140px; border:1px solid #000; border-radius:6px; padding:12px 16px; }
+    .summary-tile .label { font-size:11px; color:#555; margin-bottom:4px; }
+    .summary-tile .value { font-size:18px; font-weight:700; color:#0071e3; }
+    .summary-tile.grand .value { color:#1a7f37; font-size:22px; }
+    @media print { button { display:none; } .section { page-break-inside: avoid; } }
+  </style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="${logoUrl}" alt="ETCC Logo" style="height:60px;">
+      <div>
+        <h1>Club Financial Summary Report</h1>
+        <div class="subtitle">East Tennessee Corvette Club &nbsp;|&nbsp; ${escHtml(auctionDate)}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  <div class="summary-box">
+    <div class="summary-tile"><div class="label">Cash</div><div class="value">${fmtDollar(cashTotal)}</div></div>
+    <div class="summary-tile"><div class="label">Check</div><div class="value">${fmtDollar(checkTotal)}</div></div>
+    <div class="summary-tile"><div class="label">Credit Card</div><div class="value">${fmtDollar(ccTotal)}</div></div>
+    <div class="summary-tile"><div class="label">Other</div><div class="value">${fmtDollar(otherTotal)}</div></div>
+    <div class="summary-tile grand"><div class="label">Grand Total</div><div class="value">${fmtDollar(grandTotal)}</div></div>
+  </div>
+  ${buildSection('Cash', sections['Cash'], false, false, false)}
+  ${buildSection('Check', sections['Check'], true, false, false)}
+  ${buildSection('Credit Card', sections['Credit Card'], false, true, false)}
+  ${buildSection('Other', sections['Other'], false, false, true)}
+  ${catSectionHtml}
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
