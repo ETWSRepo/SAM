@@ -563,6 +563,7 @@
           <span class="dot"></span>
           <span id="gmail-status-text">Not connected to Gmail</span>
         </div>
+        <span id="gmail-login-note" style="font-size:12px;color:#633806;background:#faeeda;border:1px solid #fac775;border-radius:8px;padding:10px 14px;"><strong>Note:</strong> The first time emails are scanned, you will be required to log in to the auction email account <strong id="gmail-login-email"></strong>. Please obtain the credentials from your administrator.</span>
         <button class="btn primary" id="btn-scan" style="display:none;">📧 Scan</button>
         <div class="spacer"></div>
         <span id="scan-note" style="font-size:11px; color:var(--text-tertiary);"></span>
@@ -2808,7 +2809,11 @@ function navigate(screenId) {
   if (navItem) navItem.classList.add('active');
 
   if (screenId === 'home')           refreshHomeMetrics();
-  if (screenId === 'item-load')      renderEmailTable(scannedEmails);
+  if (screenId === 'item-load') {
+    renderEmailTable(scannedEmails);
+    const emailEl = document.getElementById('gmail-login-email');
+    if (emailEl) emailEl.textContent = DB.getSettings().inboxEmail || '(not set in Settings)';
+  }
   if (screenId === 'settings')       loadSettingsForm();
   if (screenId === 'bidding-sheets') {
     PageToolbar.init({ title: '', tableSelector: '#bs-items-table' });
