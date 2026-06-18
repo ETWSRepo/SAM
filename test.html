@@ -41,6 +41,7 @@
   <div class="stat" id="s-status" style="font-size:13px;color:#6e6e73;"></div>
 </div>
 <div id="results"></div>
+<iframe id="ui-iframe" src="index.html" style="position:absolute;left:-9999px;width:1280px;height:800px;border:none;" sandbox="allow-scripts allow-same-origin"></iframe>
 
 <script>
 // ─── Minimal stubs so helpers can run standalone ───────────────────────────
@@ -786,7 +787,14 @@ function runAll() {
     ]);
   }
 
-  // ── Summary ───────────────────────────────────────────────────────────────
+  updateSummary();
+
+  // ── UI Tests (iframe) ─────────────────────────────────────────────────────
+  document.getElementById('s-status').textContent = 'Running UI tests…';
+  runUITests();
+}
+
+function updateSummary() {
   const total = passCount + failCount;
   document.getElementById('s-pass').textContent  = passCount;
   document.getElementById('s-fail').textContent  = failCount;
@@ -795,6 +803,195 @@ function runAll() {
     ? `✓ All ${total} tests passed`
     : `${failCount} test${failCount > 1 ? 's' : ''} failed`;
   document.getElementById('s-status').style.color = failCount === 0 ? '#1a7f37' : '#c62828';
+}
+
+// ── UI test helpers ───────────────────────────────────────────────────────────
+function uiAssert(name, condition, detail) {
+  return { name, pass: !!condition, detail: detail || (condition ? '' : 'Condition false') };
+}
+
+function uiCheck(d, name, selector, expectedText) {
+  const el = d.querySelector(selector);
+  if (!el) return { name, pass: false, detail: `Not found: ${selector}` };
+  if (expectedText !== undefined) {
+    const actual = el.textContent.trim();
+    const pass = actual.includes(expectedText);
+    return { name, pass, detail: pass ? '' : `Expected "${expectedText}" in "${actual.slice(0,60)}"` };
+  }
+  return { name, pass: true, detail: '' };
+}
+
+function uiCount(d, name, selector, min) {
+  const count = d.querySelectorAll(selector).length;
+  return { name, pass: count >= min, detail: count >= min ? '' : `Found ${count}, expected ≥${min}` };
+}
+
+function uiAnyContains(d, name, selector, text) {
+  const found = [...d.querySelectorAll(selector)].some(el => el.textContent.includes(text));
+  return { name, pass: found, detail: found ? '' : `No "${selector}" contains "${text}"` };
+}
+
+function runUITests() {
+  const iframe = document.getElementById('ui-iframe');
+
+  function onReady() {
+    const w = iframe.contentWindow;
+    const d = iframe.contentDocument;
+
+    function nav(id) { try { w.navigate(id); } catch(e) {} }
+
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function suite(title, fn) {
+      const tests = await fn();
+      renderSuite('UI — ' + title, tests);
+      updateSummary();
+    }
+
+    (async () => {
+      // ── Nav: Home ──────────────────────────────────────────────────────────
+      nav('home');
+      await delay(60);
+      await suite('Home screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-home.active'),
+        uiCheck(d, 'logo image present',        '#screen-home img'),
+        uiCheck(d, 'home metrics container',    '#home-metrics'),
+        uiCheck(d, 'new items metric',          '#m-new'),
+        uiCheck(d, 'categories metric',         '#m-cats'),
+        uiCheck(d, 'workflow card present',     '#screen-home .card'),
+      ]);
+
+      // ── Nav: Load Items ────────────────────────────────────────────────────
+      nav('item-load');
+      await delay(60);
+      await suite('Load Items screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-item-load.active'),
+        uiCheck(d, 'items table present',       '#items-table'),
+        uiAnyContains(d, 'Item # column header',   '#items-table .tk-th-label', 'Item #'),
+        uiAnyContains(d, 'Category column header', '#items-table .tk-th-label', 'Category'),
+        uiAnyContains(d, 'Value column header',    '#items-table .tk-th-label', 'Value'),
+        uiCheck(d, 'items tbody present',       '#items-tbody'),
+        uiCheck(d, 'email table present',       '#email-table'),
+      ]);
+
+      // ── Nav: Bid Sheets ────────────────────────────────────────────────────
+      nav('bidding-sheets');
+      await delay(60);
+      await suite('Bid Sheets screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-bidding-sheets.active'),
+        uiCheck(d, 'bs-items table present',    '#bs-items-table'),
+        uiAnyContains(d, 'Item # column header',   '#bs-items-table .tk-th-label', 'Item #'),
+        uiAnyContains(d, 'Category column header', '#bs-items-table .tk-th-label', 'Category'),
+        uiCheck(d, 'bs-items tbody present',    '#bs-items-tbody'),
+      ]);
+
+      // ── Nav: Register Bidders ──────────────────────────────────────────────
+      nav('bidder-reg');
+      await delay(60);
+      await suite('Register Bidders screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-bidder-reg.active'),
+        uiCheck(d, 'bidders table present',     '#bidders-table'),
+        uiAnyContains(d, 'Bidder # column header', '#bidders-table .tk-th-label', 'Bidder #'),
+        uiAnyContains(d, 'Bidder Type column',    '#bidders-table .tk-th-label', 'Bidder Type'),
+        uiCheck(d, 'bidders tbody present',     '#bidders-tbody'),
+        uiCheck(d, 'member-db modal present',   '#member-db-modal'),
+        uiCheck(d, 'member search input',       '#member-search'),
+      ]);
+
+      // ── Nav: Auction Close ─────────────────────────────────────────────────
+      nav('auction-close');
+      await delay(60);
+      await suite('Auction Close screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-auction-close.active'),
+      ]);
+
+      // ── Nav: Winner Announce ───────────────────────────────────────────────
+      nav('winner-announce');
+      await delay(60);
+      await suite('Announce Winners screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-winner-announce.active'),
+      ]);
+
+      // ── Nav: Pay & Pickup ──────────────────────────────────────────────────
+      nav('payment-pickup');
+      await delay(60);
+      await suite('Pay & Pickup screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-payment-pickup.active'),
+      ]);
+
+      // ── Nav: Post Auction ──────────────────────────────────────────────────
+      nav('post-auction');
+      await delay(60);
+      await suite('Post Auction screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-post-auction.active'),
+      ]);
+
+      // ── Nav: Settings ─────────────────────────────────────────────────────
+      nav('settings');
+      await delay(60);
+      await suite('Settings screen', () => [
+        uiCheck(d, 'screen is active',          '#screen-settings.active'),
+        uiCheck(d, 'bidder DB card present',    '#sel-clear-bidders'),
+        uiCheck(d, 'member import date field',  '#member-import-date'),
+        uiCheck(d, 'reg import date field',     '#reg-import-date'),
+        uiCheck(d, 'walk-in start field',       '#inp-walk-in-start'),
+        uiCheck(d, 'starting bid % field',      '#inp-starting-bid-pct'),
+        uiCheck(d, 'bid count field',           '#inp-bid-count'),
+      ]);
+
+      // ── Member DB modal ────────────────────────────────────────────────────
+      nav('bidder-reg');
+      await delay(60);
+      try { w.showMemberDBModal(); } catch(e) {}
+      await delay(80);
+      await suite('Member DB modal', () => [
+        uiAssert('modal is visible',
+          d.getElementById('member-db-modal')?.style.display !== 'none',
+          'member-db-modal not visible'),
+        uiCheck(d, 'modal table present',       '#member-db-modal-table'),
+        uiAnyContains(d, 'Add to Bidders button', '#member-db-modal button', 'Add to Bidders'),
+        uiCheck(d, 'search box present',        '#member-search'),
+      ]);
+      // Close modal
+      try { d.getElementById('member-db-modal').style.display = 'none'; } catch(e) {}
+
+      // ── Member search filter ───────────────────────────────────────────────
+      nav('bidder-reg');
+      await delay(60);
+      // Seed two members directly into the app's DB
+      try {
+        w.localStorage.setItem('sam_members', JSON.stringify([
+          { member_number: '1', last_name: 'Adams',  first_name: 'Alice', primary_email: '', cell_phone: '' },
+          { member_number: '2', last_name: 'Baker',  first_name: 'Bob',   primary_email: '', cell_phone: '' },
+          { member_number: '3', last_name: 'Clarke', first_name: 'Carol', primary_email: '', cell_phone: '' },
+        ]));
+        w.showMemberDBModal();
+        await delay(80);
+        w.filterMemberTable('b');
+        await delay(30);
+        const rows = d.querySelectorAll('#member-db-modal-tbody tr');
+        const visible = [...rows].filter(r => r.style.display !== 'none');
+        await suite('Member search filter', () => [
+          uiAssert('3 rows total seeded',   rows.length === 3,   `Got ${rows.length} rows`),
+          uiAssert('1 row visible for "b"', visible.length === 1, `Got ${visible.length} visible`),
+          uiAssert('visible row is Baker',  visible[0]?.cells[2]?.textContent.trim() === 'Baker', 'Wrong row visible'),
+        ]);
+        d.getElementById('member-db-modal').style.display = 'none';
+      } catch(e) {
+        renderSuite('UI — Member search filter', [{ name: 'filter test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      updateSummary();
+      document.getElementById('s-status').textContent +=  ' (incl. UI)';
+    })();
+  }
+
+  if (iframe.contentDocument?.readyState === 'complete') {
+    onReady();
+  } else {
+    iframe.onload = onReady;
+  }
 }
 
 window.onload = runAll;
