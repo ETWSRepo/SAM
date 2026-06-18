@@ -629,7 +629,7 @@
       <div class="card" id="bs-items-card">
         <div id="bs-toolbar-wrap"></div>
         <div style="height:12px;"></div>
-        <div style="overflow-x:auto;">
+        <div style="overflow:auto;max-height:420px;">
           <table class="tablekit" id="bs-items-table" style="table-layout:fixed;width:100%;">
             <colgroup>
               <col style="width:32px;"><col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
@@ -652,18 +652,8 @@
                 <th>Date Loaded</th>
               </tr>
             </thead>
+            <tbody id="bs-items-tbody"></tbody>
           </table>
-          <div style="overflow-y:auto;max-height:370px;">
-            <table style="table-layout:fixed;width:100%;border-collapse:collapse;font-size:13px;">
-              <colgroup>
-                <col style="width:32px;"><col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
-                <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
-                <col style="width:130px;"><col style="width:160px;"><col style="width:120px;">
-                <col style="width:130px;">
-              </colgroup>
-              <tbody id="bs-items-tbody"></tbody>
-            </table>
-          </div>
         </div>
       </div>
     </section>
@@ -678,7 +668,9 @@
         <!-- Card -->
         <div style="padding:20px 20px 0 20px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
           <div style="border:1px solid var(--border);border-radius:10px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
-            <div class="card-header" style="text-align:center;flex-shrink:0;">Member Database</div>
+            <div class="card-header" style="display:flex;align-items:center;flex-shrink:0;padding:8px 16px;">
+              <input id="member-search" type="text" placeholder="Search last name…" oninput="filterMemberTable(this.value)" style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);width:200px;">
+            </div>
             <div style="overflow-y:auto;flex:1;">
               <table class="tablekit" id="member-db-modal-table" style="table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0;">
                 <colgroup>
@@ -1881,6 +1873,9 @@ function showMemberDBModal() {
       tbody.appendChild(tr);
     });
   }
+  const searchEl = document.getElementById('member-search');
+  if (searchEl) searchEl.value = '';
+
   document.getElementById('member-db-modal').style.display = 'flex';
 
   // Force sticky header: override tk-wrap overflow and set inline sticky on each th
@@ -1891,6 +1886,14 @@ function showMemberDBModal() {
     th.style.top = '0';
     th.style.zIndex = '10';
     th.style.background = '#dbeafe';
+  });
+}
+
+function filterMemberTable(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll('#member-db-modal-tbody tr').forEach(tr => {
+    const lastName = (tr.cells[2] ? tr.cells[2].textContent : '').toLowerCase();
+    tr.style.display = (!q || lastName.startsWith(q)) ? '' : 'none';
   });
 }
 
@@ -3071,7 +3074,6 @@ function showViewAll(type) {
     theadClone.querySelectorAll('th').forEach(th => { th.removeAttribute('data-tk'); });
     destTable.appendChild(theadClone);
   }
-  // For items table, tbody lives in a separate element due to split-scroll layout
   const tbodyId = type === 'emails' ? 'email-tbody' : type === 'bs-items' ? 'bs-items-tbody' : 'items-tbody';
   const tbody = document.getElementById(tbodyId);
   if (tbody) destTable.appendChild(tbody.cloneNode(true));
