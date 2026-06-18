@@ -269,6 +269,9 @@
     #items-tbody td {
       border-bottom: 1px solid #e8e0b8;
       text-align: left;
+      padding: 4px 12px;
+      height: auto;
+      line-height: 1.3;
     }
     #items-table thead th {
       text-align: left !important;
@@ -765,6 +768,7 @@
       <div class="page-header"><h2>Step 4 — Record Winning Bidders</h2><p>Enter the winning bidder number for each auction item.</p></div>
       <div class="card" id="winners-card">
         <div id="winners-toolbar-wrap"></div>
+        <div style="padding:4px 16px;min-height:20px;"><span id="winners-save-note" style="font-size:12px;"></span></div>
         <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
           <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;">
             <colgroup>
@@ -773,8 +777,7 @@
               <col style="width:90px;">
               <col style="width:90px;">
               <col style="width:110px;">
-              <col style="width:100px;">
-              <col style="width:200px;">
+              <col style="width:280px;">
               <col style="width:80px;">
             </colgroup>
             <thead>
@@ -784,8 +787,7 @@
                 <th>Value</th>
                 <th>Reserve</th>
                 <th>Winning Bid</th>
-                <th>Bidder #</th>
-                <th>Bidder Name</th>
+                <th>Bidder</th>
                 <th></th>
               </tr>
             </thead>
@@ -2070,10 +2072,13 @@ function printInvoice(bidderNum) {
     <tr><td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">CC Transaction Fee</td><td style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">${fmtDollar(ccTrans)}</td></tr>` : '';
 
   const html = `<!DOCTYPE html><html><head><title>Invoice — Bidder ${bidderNum}</title>
-  <style>body{font-family:system-ui,sans-serif;margin:40px auto;max-width:520px;color:#1d1d1f;}h2{margin:0 0 4px;}table{width:100%;border-collapse:collapse;}th{background:#dbeafe;padding:8px 10px;text-align:left;}@media print{button{display:none;}}</style>
+  <style>body{font-family:system-ui,sans-serif;margin:40px auto;max-width:520px;color:#1d1d1f;}h2{margin:0 0 4px;}table{width:100%;border-collapse:collapse;border:1px solid #000;}th{background:#dbeafe;padding:8px 10px;text-align:left;border:1px solid #000;}td{border:1px solid #000;}@media print{button{display:none;}}</style>
   </head><body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
-    <div><h2>Silent Auction Invoice</h2><div style="font-size:13px;color:#555;">East Tennessee Corvette Club</div></div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <img src="${new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href}" alt="ETCC Logo" style="height:60px;">
+      <div><h2>Silent Auction Invoice</h2><div style="font-size:13px;color:#555;">East Tennessee Corvette Club</div></div>
+    </div>
     <div style="display:flex;gap:8px;">
       <button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
       <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Cancel</button>
@@ -2092,6 +2097,10 @@ function printInvoice(bidderNum) {
       <tr style="background:#f0f4ff;"><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;font-size:15px;">Total Due</td><td style="padding:8px 10px;text-align:right;font-weight:700;font-size:15px;">${fmtDollar(amtDue)}</td></tr>
     </tfoot>
   </table>
+  <div style="margin-top:32px;padding:16px 20px;border:1px solid #000;border-radius:6px;text-align:center;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Thank You for Your Support!</div>
+    <div style="font-size:13px;color:#333;line-height:1.6;">The East Tennessee Corvette Club sincerely appreciates your participation in our Silent Auction. Your generosity helps support our club and the charitable organizations we proudly serve.</div>
+  </div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -2293,6 +2302,43 @@ function refreshAnnounceTable() {
 }
 
 // ══════════════════════════════════════
+function saveAllWinners() {
+  const winners = DB.getWinners();
+  let saved = 0, errors = 0;
+  document.querySelectorAll('#winners-tbody tr[data-item-key]').forEach(tr => {
+    const key    = tr.dataset.itemKey;
+    const bidEl  = tr.querySelector('.win-bid');
+    const selEl  = tr.querySelector('.win-num');
+    const bid    = bidEl ? bidEl.value.trim() : '';
+    const num    = selEl ? parseInt(selEl.value, 10) : 0;
+    bidEl.style.borderColor = '';
+    selEl.style.borderColor = '';
+    if (!bid && !num) { delete winners[key]; return; }
+    if (num && !bid) {
+      bidEl.style.borderColor = 'var(--danger)';
+      selEl.style.borderColor = 'var(--danger)';
+      errors++;
+      return;
+    }
+    const bidder = num ? Bidders.getAll().find(b => b.bidder_number === num) : null;
+    const name   = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '';
+    winners[key] = Object.assign(winners[key] || {}, {
+      winning_bid:    bid,
+      bidder_number:  num || '',
+      bidder_name:    name,
+    });
+    saved++;
+  });
+  DB.saveWinners(winners);
+  refreshMetrics();
+  const note = document.getElementById('winners-save-note');
+  if (note) {
+    note.textContent = errors ? `${errors} row(s) missing winning bid — not saved.` : `${saved} winner(s) saved.`;
+    note.style.color = errors ? 'var(--danger)' : 'var(--success)';
+    setTimeout(() => { note.textContent = ''; }, 4000);
+  }
+}
+
 function refreshWinnersTable() {
   const items   = Items.getAll();
   const winners = DB.getWinners();
@@ -2306,12 +2352,16 @@ function refreshWinnersTable() {
   }
 
   const inpStyle = 'width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);';
+  const selStyle = inpStyle + 'cursor:pointer;';
+  const bidders  = Bidders.getAll();
+  const bidderOptions = bidders.map(b =>
+    `<option value="${b.bidder_number}">${b.bidder_number} — ${escHtml(b.last_name)}, ${escHtml(b.first_name)}</option>`
+  ).join('');
 
   items.forEach(item => {
     const key      = String(item.item_number);
     const w        = winners[key] || {};
     const bidderNum = w.bidder_number || '';
-    const bidderName = w.bidder_name  || '';
     const tr = document.createElement('tr');
     tr.dataset.itemKey = key;
     tr.innerHTML = `
@@ -2320,10 +2370,12 @@ function refreshWinnersTable() {
       <td style="font-size:12px;">${fmtDollar(item.value)}</td>
       <td style="font-size:12px;">${parseFloat(item.reserve_amount||0) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(w.winning_bid || ''))}" placeholder="$0.00"></td>
-      <td><input class="win-num" style="${inpStyle}text-align:center;" value="${escHtml(String(bidderNum))}" placeholder="#"></td>
-      <td><span class="win-name" style="font-size:12px;">${escHtml(bidderName)}</span></td>
+      <td><select class="win-num" style="${selStyle}"><option value="">— select bidder —</option>${bidderOptions}</select></td>
       <td style="text-align:center;"><button class="btn danger win-clear" style="font-size:11px;padding:2px 8px;">Clear</button></td>
     `;
+    // Set selected option after insertion
+    const sel = tr.querySelector('.win-num');
+    if (bidderNum) sel.value = String(bidderNum);
     tbody.appendChild(tr);
   });
 
@@ -2336,36 +2388,28 @@ function refreshWinnersTable() {
       DB.saveWinners(winners);
       // Clear error state so user can re-submit bidder number cleanly
       inp.style.borderColor = '';
-      const numEl  = tr.querySelector('.win-num');
-      const nameEl = tr.querySelector('.win-name');
+      const numEl = tr.querySelector('.win-num');
       numEl.style.borderColor = '';
-      if (nameEl.textContent === 'Winning bid required') {
-        nameEl.textContent = '';
-        nameEl.style.color = '';
-      }
     });
   });
 
-  tbody.querySelectorAll('.win-num').forEach(inp => {
-    inp.addEventListener('change', () => {
-      const num     = parseInt(inp.value.trim(), 10);
-      const key     = inp.closest('tr').dataset.itemKey;
-      const tr      = inp.closest('tr');
+  tbody.querySelectorAll('.win-num').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const num     = parseInt(sel.value, 10);
+      const key     = sel.closest('tr').dataset.itemKey;
+      const tr      = sel.closest('tr');
       const winners = DB.getWinners();
-      inp.style.borderColor = '';
+      sel.style.borderColor = '';
       if (!num) {
         const existing = winners[key] || {};
         winners[key] = { winning_bid: existing.winning_bid || '' };
-        tr.querySelector('.win-name').textContent = '';
         DB.saveWinners(winners);
         return;
       }
       const bidEl = tr.querySelector('.win-bid');
       if (!bidEl.value.trim()) {
-        inp.style.borderColor = 'var(--danger)';
+        sel.style.borderColor = 'var(--danger)';
         bidEl.style.borderColor = 'var(--danger)';
-        tr.querySelector('.win-name').textContent = 'Winning bid required';
-        tr.querySelector('.win-name').style.color = 'var(--danger)';
         return;
       }
       bidEl.style.borderColor = '';
@@ -2373,10 +2417,7 @@ function refreshWinnersTable() {
       const name   = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '(not found)';
       winners[key] = Object.assign(winners[key] || {}, { bidder_number: num, bidder_name: name });
       DB.saveWinners(winners);
-      const nameEl = tr.querySelector('.win-name');
-      nameEl.textContent = name;
-      nameEl.style.color = bidder ? '' : 'var(--danger)';
-      inp.style.borderColor = bidder ? '' : 'var(--danger)';
+      sel.style.borderColor = bidder ? '' : 'var(--danger)';
     });
   });
 
@@ -2389,10 +2430,8 @@ function refreshWinnersTable() {
       DB.saveWinners(winners);
       tr.querySelector('.win-bid').value = '';
       tr.querySelector('.win-num').value = '';
-      tr.querySelector('.win-name').textContent = '';
       tr.querySelector('.win-bid').style.borderColor = '';
       tr.querySelector('.win-num').style.borderColor = '';
-      tr.querySelector('.win-name').style.color = '';
     });
   });
 }
@@ -2743,6 +2782,18 @@ function navigate(screenId) {
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('winners-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
+    const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions) {
+      const closeBtn = actions.querySelector('.tk-btn-close');
+      const mkBtn = (label, fn) => {
+        const b = document.createElement('button');
+        b.className = 'tk-btn';
+        b.textContent = label;
+        b.addEventListener('click', fn);
+        return b;
+      };
+      actions.insertBefore(mkBtn('Save', saveAllWinners), closeBtn);
+    }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
