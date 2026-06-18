@@ -57,7 +57,7 @@ const CATEGORIES = {
 const DEFAULT_SETTINGS = {
   gmailClientId: '', inboxEmail: 'etccwebsite.auction@gmail.com',
   debugMode: false, startingBidPct: 30, finalBidPct: 150, bidCount: 25,
-  squarePct: 2.6, squareFee: 0.10,
+  squarePct: 2.6, squareFee: 0.10, walkInStart: 1000,
 };
 
 const DB = {
@@ -80,7 +80,9 @@ const Bidders = {
   save(list) { DB.saveBidders(list); },
   nextNumber() {
     const list = DB.getBidders();
-    return list.length ? Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1 : 1;
+    const walkInStart = DB.getSettings().walkInStart ?? 1000;
+    if (!list.length) return walkInStart;
+    return Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1;
   },
   add(b)    { const list = DB.getBidders(); list.push(b); DB.saveBidders(list); },
   remove(n) { DB.saveBidders(DB.getBidders().filter(b => b.bidder_number !== n)); },
@@ -456,7 +458,7 @@ function runAll() {
   Bidders.clear();
   renderSuite('Bidders — empty store', [
     assertEqual('getAll returns []',      Bidders.getAll().length, 0),
-    assertEqual('nextNumber starts at 1', Bidders.nextNumber(),    1),
+    assertEqual('nextNumber starts at walkInStart (1000)', Bidders.nextNumber(), 1000),
   ]);
 
   Bidders.add({ bidder_number: 1, last_name: 'Smith', first_name: 'John', email: 'j@t.com', phone: '' });
@@ -478,7 +480,7 @@ function runAll() {
   Bidders.clear();
   renderSuite('Bidders — clear', [
     assertEqual('count is 0 after clear', Bidders.getAll().length, 0),
-    assertEqual('nextNumber resets to 1', Bidders.nextNumber(),    1),
+    assertEqual('nextNumber resets to walkInStart (1000)', Bidders.nextNumber(), 1000),
   ]);
 
   // ── 20. Bidders.nextNumber — max logic ───────────────────────────────────
@@ -490,7 +492,20 @@ function runAll() {
     assertEqual('next is max+1 (12+1=13)', Bidders.nextNumber(), 13),
   ]);
 
-  // ── 21. Bid base value — reserve vs value fallback ───────────────────────
+  // ── 21. Bidders.nextNumber — walkInStart setting ─────────────────────────
+  Bidders.clear();
+  DB.saveSettings(Object.assign({}, DEFAULT_SETTINGS, { walkInStart: 500 }));
+  renderSuite('Bidders.nextNumber — walkInStart setting', [
+    assertEqual('empty list returns walkInStart (500)', Bidders.nextNumber(), 500),
+  ]);
+  Bidders.add({ bidder_number: 500, last_name: 'X', first_name: 'Y', email: '', phone: '' });
+  renderSuite('Bidders.nextNumber — walkInStart after first add', [
+    assertEqual('next after 500 is 501', Bidders.nextNumber(), 501),
+  ]);
+  DB.saveSettings(DEFAULT_SETTINGS);
+  Bidders.clear();
+
+  // ── 22. Bid base value — reserve vs value fallback ───────────────────────
   function bidBase(item) {
     const r = parseFloat(String(item.reserve_amount || '0').replace(/[^0-9.]/g, '')) || 0;
     const v = parseFloat(String(item.value          || '0').replace(/[^0-9.]/g, '')) || 0;
@@ -504,7 +519,7 @@ function runAll() {
     assertEqual('handles $ in reserve',         bidBase({ reserve_amount: '$75.00', value: '35' }), 75),
   ]);
 
-  // ── 22. DB.getWinners / saveWinners round-trip ───────────────────────────
+  // ── 23. DB.getWinners / saveWinners round-trip ───────────────────────────
   _store['sam_winners'] = null;
   renderSuite('DB.getWinners — empty store', [
     assert('returns object',          typeof DB.getWinners() === 'object'),

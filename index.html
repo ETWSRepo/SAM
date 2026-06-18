@@ -302,6 +302,27 @@
       color: #ffffff;
       display: none;
     }
+    #member-db-modal .tk-wrap {
+      overflow: visible;
+    }
+    #member-db-modal-table thead th,
+    #member-db-modal-table tbody td {
+      padding: 1px 8px;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    #member-db-modal-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #dbeafe;
+    }
+    #bidders-table thead th,
+    #bidders-table tbody td {
+      padding: 2px 8px;
+      font-size: 12px;
+      line-height: 1.3;
+    }
     .tk-btn {
       background: var(--bg-section);
       border-color: var(--border);
@@ -652,6 +673,37 @@
     <!-- ══ Step 3: Register Bidders ══ -->
     <section class="screen" id="screen-bidder-reg">
       <div class="page-header"><h2>Step 3 — Register Bidders</h2><p>Add and manage auction bidders.</p></div>
+      <!-- Member Database Modal -->
+      <div id="member-db-modal" style="display:none;position:fixed;top:70px;left:220px;right:0;bottom:0;background:var(--bg-section);z-index:1000;flex-direction:column;">
+        <div class="page-header" style="flex-shrink:0;background:var(--bg);"><h2>Member Database</h2><p>Club Express Additional Member Data</p></div>
+        <div id="member-db-toolbar-wrap" style="flex-shrink:0;"></div>
+        <!-- Card -->
+        <div style="padding:20px 20px 0 20px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="border:1px solid var(--border);border-radius:10px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+            <div class="card-header" style="text-align:center;flex-shrink:0;">Member Database</div>
+            <div style="overflow-y:auto;flex:1;">
+              <table class="tablekit" id="member-db-modal-table" style="table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0;">
+                <colgroup>
+                  <col style="width:70px;"><col style="width:110px;"><col style="width:180px;">
+                  <col style="width:180px;"><col style="width:260px;"><col style="width:160px;">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Walk-In</th><th>Member #</th><th>Last Name</th><th>First Name</th><th>Email</th><th>Phone</th>
+                  </tr>
+                </thead>
+                <tbody id="member-db-modal-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div style="padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);">
+          <button class="btn primary" onclick="addCheckedToWalkins()">Add to Walk-ins</button>
+          <span id="member-db-walkin-status" style="font-size:12px;color:var(--text-secondary);"></span>
+        </div>
+      </div>
+
       <!-- Edit Bidder Modal -->
       <div id="bidder-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
         <div style="background:var(--bg);border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.25);">
@@ -688,7 +740,7 @@
 
       <div class="card" id="bidders-card">
         <div id="bidders-toolbar-wrap"></div>
-        <div style="overflow-x:auto;max-height:370px;overflow-y:auto;">
+        <div style="overflow-x:auto;max-height:calc(100vh - 330px);overflow-y:auto;">
           <table class="tablekit" id="bidders-table" style="table-layout:fixed;width:100%;">
             <colgroup>
               <col style="width:100px;"><col style="width:200px;"><col style="width:200px;">
@@ -707,6 +759,7 @@
           </table>
         </div>
       </div>
+
     </section>
 
     <!-- ══ Step 4: Record Winning Bidders ══ -->
@@ -824,7 +877,7 @@
 
       <!-- Bid Sheet Setup -->
       <div class="card" style="margin-bottom:20px;">
-        <div class="card-header">Bid Sheet Setup</div>
+        <div class="card-header">Auction Setup</div>
         <div style="padding:16px;">
           <div class="form-row">
             <label for="inp-starting-bid-pct">Starting Bid %</label>
@@ -840,6 +893,11 @@
             <label for="inp-bid-count">Bid Count</label>
             <input type="number" id="inp-bid-count" min="1" max="100" step="1" style="width:100px;" />
             <span class="form-hint">Number of bid rows on each bid sheet. Bids are evenly incremented from Starting Bid to Final Bid.</span>
+          </div>
+          <div class="form-row">
+            <label for="inp-walk-in-start">Walk-in Bidder Start #</label>
+            <input type="number" id="inp-walk-in-start" min="1" step="1" style="width:100px;" />
+            <span class="form-hint">Starting bidder number assigned to walk-in (non-pre-registered) bidders. Default: 1000.</span>
           </div>
           <div style="margin-top:12px;">
             <button class="btn primary" onclick="saveSettings()">Save Settings</button>
@@ -900,7 +958,39 @@
         </div>
       </div>
 
-      <!-- Developer Tools -->
+      <!-- Member Database -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Member Database</div>
+        <div style="padding:16px;">
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+            Import club members from a <strong>Club Express Additional Member Data</strong> CSV export. Expected columns: <code>member_number</code>, <code>last_name</code>, <code>first_name</code>, <code>primary_email</code>, <code>cell_phone</code>.
+          </p>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <input type="file" id="inp-member-csv" accept=".csv" style="font-size:13px;" />
+            <button class="btn primary" onclick="importMemberCSV()">Import CSV</button>
+            <button class="btn danger" onclick="clearMemberDB()" id="btn-clear-members" style="display:none;">Clear Members</button>
+          </div>
+          <div id="member-import-status" style="margin-top:10px;font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
+      <!-- Registration Database -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Registration Database</div>
+        <div style="padding:16px;">
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+            Import pre-registered bidders from a <strong>Club Express Registrant Data</strong> CSV export. Expected columns: <code>member_number</code>, <code>last_name</code>, <code>first_name</code>, <code>email</code>, <code>cell_phone</code>.
+          </p>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <input type="file" id="inp-reg-csv" accept=".csv" style="font-size:13px;" />
+            <button class="btn primary" onclick="importRegCSV()">Import CSV</button>
+            <button class="btn danger" onclick="clearRegDB()" id="btn-clear-reg" style="display:none;">Clear Registration</button>
+          </div>
+          <div id="reg-import-status" style="margin-top:10px;font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
+            <!-- Developer Tools -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">Developer Tools</div>
         <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
@@ -1093,6 +1183,7 @@ const DEFAULT_SETTINGS = {
   emailFolder:    'INBOX',
   squarePct:       2.6,
   squareFee:       0.10,
+  walkInStart:     1000,
 };
 
 // ══════════════════════════════════════
@@ -1101,6 +1192,10 @@ const DEFAULT_SETTINGS = {
 const DB = {
   getItems()      { return JSON.parse(localStorage.getItem('sam_items')    || '[]'); },
   saveItems(v)    { localStorage.setItem('sam_items',    JSON.stringify(v)); },
+  getMembers()    { return JSON.parse(localStorage.getItem('sam_members')  || '[]'); },
+  saveMembers(v)  { localStorage.setItem('sam_members', JSON.stringify(v)); },
+  getRegDB()      { return JSON.parse(localStorage.getItem('sam_regdb')   || '[]'); },
+  saveRegDB(v)    { localStorage.setItem('sam_regdb',   JSON.stringify(v)); },
   getSettings()   { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('sam_settings')  || '{}')); },
   saveSettings(v) { localStorage.setItem('sam_settings', JSON.stringify(v)); },
   getFieldMap()   { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
@@ -1152,7 +1247,9 @@ const Bidders = {
   save(list) { DB.saveBidders(list); },
   nextNumber() {
     const list = DB.getBidders();
-    return list.length ? Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1 : 1;
+    const walkInStart = DB.getSettings().walkInStart ?? 1000;
+    if (!list.length) return walkInStart;
+    return Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1;
   },
   add(b)    { const list = DB.getBidders(); list.push(b); DB.saveBidders(list); },
   remove(n) { DB.saveBidders(DB.getBidders().filter(b => b.bidder_number !== n)); },
@@ -1164,6 +1261,19 @@ const Bidders = {
 // ══════════════════════════════════════
 function cleanTrim(s) {
   return (s || '').trim().replace(/[\x00-\x1F\x7F]/g, '');
+}
+
+function fixAllStickyHeaders() {
+  document.querySelectorAll('table.tablekit').forEach(table => {
+    const wrap = table.closest('.tk-wrap');
+    if (wrap) wrap.style.overflow = 'visible';
+    table.querySelectorAll('thead th').forEach(th => {
+      th.style.position = 'sticky';
+      th.style.top = '0';
+      th.style.zIndex = '10';
+      if (!th.style.background) th.style.background = '#dbeafe';
+    });
+  });
 }
 
 function parseEmailBody(body, fieldMap) {
@@ -1645,7 +1755,7 @@ function refreshBiddersTable() {
     return;
   }
 
-  const tdStyle = 'font-size:13px;padding:6px 8px;';
+  const tdStyle = 'font-size:12px;padding:2px 8px;';
 
   list.forEach(b => {
     const tr = document.createElement('tr');
@@ -1656,7 +1766,7 @@ function refreshBiddersTable() {
       <td style="${tdStyle}">${escHtml(b.first_name || '')}</td>
       <td style="${tdStyle}">${escHtml(b.email      || '')}</td>
       <td style="${tdStyle}">${escHtml(fmtPhone(b.phone))}</td>
-      <td style="text-align:center;white-space:nowrap;">
+      <td style="text-align:center;white-space:nowrap;padding:2px 8px;">
         <button class="btn" data-edit="${b.bidder_number}" style="font-size:11px;padding:2px 8px;margin-right:4px;">Edit</button>
         <button class="btn danger" data-num="${b.bidder_number}" style="font-size:11px;padding:2px 8px;">Delete</button>
       </td>
@@ -1680,6 +1790,32 @@ function refreshBiddersTable() {
   });
 }
 
+// ══════════════════════════════════════
+//  RENDER — Registration DB table
+// ══════════════════════════════════════
+function refreshRegDBTable() {
+  const tbody = document.getElementById('regdb-tbody');
+  if (!tbody) return;
+  const records = DB.getRegDB();
+  tbody.innerHTML = '';
+  if (!records.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-secondary);">No registrations loaded. Import a CSV in Settings.</td></tr>';
+    return;
+  }
+  const tdStyle = 'font-size:12px;padding:2px 8px;';
+  records.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="${tdStyle}">${escHtml(r.member_number || '')}</td>
+      <td style="${tdStyle}">${escHtml(r.last_name     || '')}</td>
+      <td style="${tdStyle}">${escHtml(r.first_name    || '')}</td>
+      <td style="${tdStyle}">${escHtml(r.email         || '')}</td>
+      <td style="${tdStyle}">${escHtml(r.cell_phone    || '')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 function openBidderEditModal(num) {
   const b = Bidders.getAll().find(x => x.bidder_number === num);
   if (!b) return;
@@ -1697,6 +1833,90 @@ function openBidderEditModal(num) {
 
 function closeBidderEditModal() {
   document.getElementById('bidder-edit-modal').style.display = 'none';
+}
+
+function showMemberDBModal() {
+  PageToolbar.init({ title: 'Member Database' });
+  const tb   = document.getElementById('page-toolbar');
+  const wrap = document.getElementById('member-db-toolbar-wrap');
+  if (tb && wrap) wrap.appendChild(tb);
+  const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+  if (closeBtn) {
+    const fresh = closeBtn.cloneNode(true);
+    closeBtn.replaceWith(fresh);
+    fresh.addEventListener('click', () => {
+      document.getElementById('member-db-modal').style.display = 'none';
+      navigate('bidder-reg');
+    });
+  }
+  const members = DB.getMembers();
+  const tbody = document.getElementById('member-db-modal-tbody');
+  tbody.innerHTML = '';
+  const tdStyle = 'font-size:12px;padding:3px 8px;';
+  if (!members.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-secondary);">No members loaded. Import a CSV in Settings.</td></tr>';
+  } else {
+    members.forEach((m, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center;padding:3px 8px;"><input type="checkbox" data-idx="${i}" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"></td>
+        <td style="${tdStyle}">${escHtml(m.member_number || '')}</td>
+        <td style="${tdStyle}">${escHtml(m.last_name     || '')}</td>
+        <td style="${tdStyle}">${escHtml(m.first_name    || '')}</td>
+        <td style="${tdStyle}">${escHtml(m.primary_email || '')}</td>
+        <td style="${tdStyle}">${escHtml(m.cell_phone    || '')}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  document.getElementById('member-db-modal').style.display = 'flex';
+
+  // Force sticky header: override tk-wrap overflow and set inline sticky on each th
+  const tkWrap = document.querySelector('#member-db-modal .tk-wrap');
+  if (tkWrap) tkWrap.style.cssText += ';overflow:visible!important';
+  document.querySelectorAll('#member-db-modal-table thead th').forEach(th => {
+    th.style.position = 'sticky';
+    th.style.top = '0';
+    th.style.zIndex = '10';
+    th.style.background = '#dbeafe';
+  });
+}
+
+function addCheckedToWalkins() {
+  const status = document.getElementById('member-db-walkin-status');
+  function setStatus(msg, color) {
+    status.textContent = msg;
+    status.style.color = color || 'var(--text-secondary)';
+  }
+  try {
+    const allCheckboxes = document.querySelectorAll('#member-db-modal-table tbody input[type="checkbox"]');
+    const checked = Array.from(allCheckboxes).filter(cb => cb.checked);
+    if (!checked.length) {
+      setStatus('No members selected. Check a row first.');
+      return;
+    }
+    const members = DB.getMembers();
+    let added = 0;
+    checked.forEach(cb => {
+      const idx = parseInt(cb.getAttribute('data-idx'), 10);
+      const m = members[idx];
+      if (!m) return;
+      Bidders.add({
+        bidder_number: Bidders.nextNumber(),
+        last_name:     m.last_name     || '',
+        first_name:    m.first_name    || '',
+        email:         m.primary_email || '',
+        phone:         m.cell_phone    || ''
+      });
+      cb.checked = false;
+      added++;
+    });
+    refreshBiddersTable();
+    setStatus(added ? `${added} member${added !== 1 ? 's' : ''} added to Walk-ins.` : 'No members added.', added ? 'var(--success)' : null);
+    setTimeout(() => { setStatus(''); }, 5000);
+  } catch(e) {
+    setStatus('Error: ' + e.message, 'var(--danger)');
+  }
 }
 
 function saveBidderEdit() {
@@ -2214,6 +2434,20 @@ function refreshMetrics() {
 //  SETTINGS
 // ══════════════════════════════════════
 function loadSettingsForm() {
+  const members = DB.getMembers();
+  const clearBtn = document.getElementById('btn-clear-members');
+  const statusEl = document.getElementById('member-import-status');
+  if (members.length) {
+    if (clearBtn) clearBtn.style.display = '';
+    if (statusEl) statusEl.textContent = members.length + ' members in database.';
+  }
+  const regDB = DB.getRegDB();
+  const regClearBtn = document.getElementById('btn-clear-reg');
+  const regStatusEl = document.getElementById('reg-import-status');
+  if (regDB.length) {
+    if (regClearBtn) regClearBtn.style.display = '';
+    if (regStatusEl) regStatusEl.textContent = regDB.length + ' registrations in database.';
+  }
   const s = DB.getSettings();
   document.getElementById('inp-client-id').value       = s.gmailClientId  || '';
   document.getElementById('inp-inbox-email').value     = s.inboxEmail     || '';
@@ -2222,6 +2456,7 @@ function loadSettingsForm() {
   document.getElementById('inp-starting-bid-pct').value = s.startingBidPct ?? 30;
   document.getElementById('inp-final-bid-pct').value    = s.finalBidPct    ?? 150;
   document.getElementById('inp-bid-count').value        = s.bidCount       ?? 25;
+  document.getElementById('inp-walk-in-start').value    = s.walkInStart    ?? 1000;
   document.getElementById('inp-square-pct').value       = s.squarePct      ?? 2.6;
   document.getElementById('inp-square-fee').value       = (s.squareFee ?? 0.10).toFixed(2);
   renderFieldMapTable();
@@ -2342,6 +2577,7 @@ function saveSettings() {
     startingBidPct: parseInt(document.getElementById('inp-starting-bid-pct').value, 10) || 0,
     finalBidPct:    parseInt(document.getElementById('inp-final-bid-pct').value,    10) || 0,
     bidCount:       parseInt(document.getElementById('inp-bid-count').value,         10) || 20,
+    walkInStart:    parseInt(document.getElementById('inp-walk-in-start').value,     10) || 1000,
     squarePct:      parseFloat(document.getElementById('inp-square-pct').value)     || 0,
     squareFee:      parseFloat(document.getElementById('inp-square-fee').value)     || 0,
   };
@@ -2465,6 +2701,12 @@ function navigate(screenId) {
         addBtn.textContent = '+ Add Bidder';
         addBtn.addEventListener('click', addBidder);
         actionBar.appendChild(addBtn);
+        const viewMembersBtn = document.createElement('button');
+        viewMembersBtn.className = 'btn';
+        viewMembersBtn.textContent = 'View Member Database';
+        viewMembersBtn.style.marginLeft = '8px';
+        viewMembersBtn.addEventListener('click', showMemberDBModal);
+        actionBar.appendChild(viewMembersBtn);
         card.insertBefore(actionBar, wrap);
       }
       card.insertBefore(tb, actionBar);
@@ -2476,6 +2718,7 @@ function navigate(screenId) {
       fresh.addEventListener('click', () => navigate('home'));
     }
     refreshBiddersTable();
+    refreshRegDBTable();
   }
   if (screenId === 'auction-close') {
     PageToolbar.init({ title: '' });
@@ -2537,6 +2780,143 @@ function navigate(screenId) {
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
 
 refreshHomeMetrics();
+
+// ══════════════════════════════════════
+//  MEMBER DATABASE
+// ══════════════════════════════════════
+function importMemberCSV() {
+  const file = document.getElementById('inp-member-csv').files[0];
+  if (!file) { document.getElementById('member-import-status').textContent = 'Please select a CSV file first.'; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    if (!lines.length) { document.getElementById('member-import-status').textContent = 'File is empty.'; return; }
+
+    // Parse header row (use parseCSVLine to handle quoted headers; strip BOM)
+    const rawHeader = lines[0].replace(/^﻿/, '');
+    const headers = parseCSVLine(rawHeader).map(h => cleanTrim(h).toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+    const REQUIRED = ['member_number', 'last_name', 'first_name'];
+    const OPTIONAL = ['primary_email', 'cell_phone'];
+    const colMap = {};
+    [...REQUIRED, ...OPTIONAL].forEach(k => { colMap[k] = -1; });
+    headers.forEach((h, i) => { if (colMap.hasOwnProperty(h)) colMap[h] = i; });
+
+    const missing = REQUIRED.filter(k => colMap[k] === -1);
+    if (missing.length) {
+      document.getElementById('member-import-status').textContent = 'Missing required columns: ' + missing.join(', ') + '. Found: ' + headers.join(', ');
+      return;
+    }
+
+    const members = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVLine(lines[i]);
+      const get = key => cleanTrim(cols[colMap[key]] || '');
+      members.push({
+        member_number: get('member_number'),
+        last_name:     get('last_name'),
+        first_name:    get('first_name'),
+        primary_email: get('primary_email'),
+        cell_phone:    get('cell_phone'),
+      });
+    }
+
+    DB.saveMembers(members);
+    document.getElementById('member-import-status').textContent = members.length + ' members imported successfully.';
+    document.getElementById('btn-clear-members').style.display = '';
+    document.getElementById('inp-member-csv').value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function clearMemberDB() {
+  if (!confirm('Clear all imported members? This cannot be undone.')) return;
+  DB.saveMembers([]);
+  document.getElementById('member-import-status').textContent = 'Member database cleared.';
+  document.getElementById('btn-clear-members').style.display = 'none';
+}
+
+// ══════════════════════════════════════
+//  REGISTRATION DATABASE
+// ══════════════════════════════════════
+function importRegCSV() {
+  const file = document.getElementById('inp-reg-csv').files[0];
+  if (!file) { document.getElementById('reg-import-status').textContent = 'Please select a CSV file first.'; return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    if (!lines.length) { document.getElementById('reg-import-status').textContent = 'File is empty.'; return; }
+
+    const rawHeader = lines[0].replace(/^﻿/, '');
+    const headers = parseCSVLine(rawHeader).map(h => cleanTrim(h).toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+    const REQUIRED = ['member_number', 'last_name', 'first_name'];
+    const OPTIONAL = ['email', 'cell_phone'];
+    const colMap = {};
+    [...REQUIRED, ...OPTIONAL].forEach(k => { colMap[k] = -1; });
+    headers.forEach((h, i) => { if (colMap.hasOwnProperty(h)) colMap[h] = i; });
+
+    const missing = REQUIRED.filter(k => colMap[k] === -1);
+    if (missing.length) {
+      document.getElementById('reg-import-status').textContent = 'Missing required columns: ' + missing.join(', ') + '. Found: ' + headers.join(', ');
+      return;
+    }
+
+    const records = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVLine(lines[i]);
+      const get = key => colMap[key] === -1 ? '' : cleanTrim(cols[colMap[key]] || '');
+      records.push({
+        member_number: get('member_number'),
+        last_name:     get('last_name'),
+        first_name:    get('first_name'),
+        email:         get('email'),
+        cell_phone:    get('cell_phone'),
+      });
+    }
+
+    DB.saveRegDB(records);
+
+    // Add all imported registrants as walk-in bidders
+    let walkInsAdded = 0;
+    records.forEach(r => {
+      Bidders.add({
+        bidder_number: Bidders.nextNumber(),
+        last_name:     r.last_name  || '',
+        first_name:    r.first_name || '',
+        email:         r.email      || '',
+        phone:         r.cell_phone || ''
+      });
+      walkInsAdded++;
+    });
+    refreshBiddersTable();
+
+    document.getElementById('reg-import-status').textContent = records.length + ' registrations imported; ' + walkInsAdded + ' added to Walk-ins.';
+    document.getElementById('btn-clear-reg').style.display = '';
+    document.getElementById('inp-reg-csv').value = '';
+  };
+  reader.readAsText(file);
+}
+
+function clearRegDB() {
+  if (!confirm('Clear all imported registrations? This cannot be undone.')) return;
+  DB.saveRegDB([]);
+  document.getElementById('reg-import-status').textContent = 'Registration database cleared.';
+  document.getElementById('btn-clear-reg').style.display = 'none';
+}
 
 // Manual
 const overlay   = document.getElementById('manual-overlay');
@@ -2758,6 +3138,7 @@ function showCategoryItems(code, name) {
   refreshItemsTable();
   refreshMetrics();
   TableKit.initAll();
+  fixAllStickyHeaders();
 
   const settings = DB.getSettings();
   if (!settings.gmailClientId) {
