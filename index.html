@@ -709,6 +709,8 @@
         <!-- Footer -->
         <div style="padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);">
           <button class="btn primary" onclick="addCheckedToWalkins()">Add to Bidders</button>
+          <button class="btn" onclick="selectAllMembers(true)">Select All</button>
+          <button class="btn" onclick="selectAllMembers(false)">Clear All</button>
           <span id="member-db-walkin-status" style="font-size:12px;color:var(--text-secondary);"></span>
         </div>
       </div>
@@ -922,6 +924,24 @@
 
     <section class="screen" id="screen-settings">
       <div class="page-header"><h2>Settings</h2><p>Configure Gmail access and email field extraction mapping.</p></div>
+
+      <!-- Auction Location -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Auction Location</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-venue-name">Venue Name</label>
+            <input type="text" id="inp-venue-name" style="width:320px;" placeholder="e.g. ETCC Event Hall" />
+          </div>
+          <div class="form-row">
+            <label for="inp-venue-address">Address</label>
+            <input type="text" id="inp-venue-address" style="width:400px;" placeholder="e.g. 123 Main St, Knoxville, TN 37901" />
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Bid Sheet Setup -->
       <div class="card" style="margin-bottom:20px;">
@@ -1947,6 +1967,15 @@ function showMemberDBModal() {
   });
 }
 
+function selectAllMembers(checked) {
+  document.querySelectorAll('#member-db-modal-tbody tr').forEach(tr => {
+    if (tr.style.display !== 'none') {
+      const cb = tr.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = checked;
+    }
+  });
+}
+
 function filterMemberTable(query) {
   const q = query.trim().toLowerCase();
   document.querySelectorAll('#member-db-modal-tbody tr').forEach(tr => {
@@ -2579,6 +2608,8 @@ function loadSettingsForm() {
   document.getElementById('inp-walk-in-start').value    = s.walkInStart    ?? 1000;
   document.getElementById('inp-square-pct').value       = s.squarePct      ?? 2.6;
   document.getElementById('inp-square-fee').value       = (s.squareFee ?? 0.10).toFixed(2);
+  document.getElementById('inp-venue-name').value       = s.venueName    || '';
+  document.getElementById('inp-venue-address').value    = s.venueAddress || '';
   renderFieldMapTable();
 }
 
@@ -2700,6 +2731,8 @@ function saveSettings() {
     walkInStart:    parseInt(document.getElementById('inp-walk-in-start').value,     10) || 1000,
     squarePct:      parseFloat(document.getElementById('inp-square-pct').value)     || 0,
     squareFee:      parseFloat(document.getElementById('inp-square-fee').value)     || 0,
+    venueName:      document.getElementById('inp-venue-name').value.trim(),
+    venueAddress:   document.getElementById('inp-venue-address').value.trim(),
   };
   DB.saveSettings(settings);
 
@@ -2915,24 +2948,47 @@ function openEmailBiddersPage() {
   const bidders = Bidders.getAll();
   if (!bidders.length) { alert('No bidders registered yet.'); return; }
 
-  const rows = bidders.map((b, i) => `
+  const winners = DB.getWinners();
+  const winnerNums = new Set(Object.values(winners).map(w => String(w.bidder_number)));
+
+  const rows = bidders.map((b, i) => {
+    const isWinner = winnerNums.has(String(b.bidder_number));
+    const statusHtml = isWinner
+      ? `<span style="font-size:11px;font-weight:600;color:#1a7f37;background:#d1fae5;border-radius:4px;padding:1px 6px;">Winner</span>`
+      : `<span style="font-size:11px;color:#6e6e73;background:#f0f0f0;border-radius:4px;padding:1px 6px;">No win</span>`;
+    return `
     <tr>
       <td style="text-align:center;padding:3px 8px;"><input type="checkbox" class="bidder-cb" data-idx="${i}" style="width:15px;height:15px;accent-color:#0071e3;cursor:pointer;" checked></td>
       <td style="font-size:12px;padding:3px 8px;">${escHtml(String(b.bidder_number))}</td>
       <td style="font-size:12px;padding:3px 8px;">${escHtml(b.last_name || '')}, ${escHtml(b.first_name || '')}</td>
       <td style="font-size:12px;padding:3px 8px;">${escHtml(b.email || '')}</td>
-      <td style="font-size:12px;padding:3px 8px;">${escHtml(b.phone || '')}</td>
-    </tr>`).join('');
+      <td style="text-align:center;padding:3px 8px;">${statusHtml}</td>
+    </tr>`;
+  }).join('');
 
   const biddersJson = JSON.stringify(bidders.map(b => ({ email: b.email || '', name: `${b.first_name} ${b.last_name}`.trim() })));
+  const payments = DB.getPayments();
+  const winnersJson = JSON.stringify(winners);
+  const paymentsJson = JSON.stringify(payments);
+  // Build sample winner items table for the preview (use first winner found)
+  const firstWinnerNum = Object.values(winners)[0]?.bidder_number;
+  const sampleItems = firstWinnerNum
+    ? Object.entries(winners).filter(([,w]) => String(w.bidder_number) === String(firstWinnerNum))
+    : [];
+  const samplePay = firstWinnerNum ? (payments[firstWinnerNum] || payments[String(firstWinnerNum)] || {}) : {};
+  const sampleTotal = sampleItems.reduce((sum, [,w]) => sum + (parseFloat(w.winning_bid) || 0), 0);
+  const sampleAmtPaid = samplePay.paid ? `$${sampleTotal.toFixed(2)}` : (sampleTotal > 0 ? `$${sampleTotal.toFixed(2)} (unpaid)` : '—');
+  const sampleItemRows = sampleItems.length
+    ? sampleItems.map(([itemNum, w]) => `<tr><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;">${itemNum}</td><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;">${escHtml(w.bidder_name||'')}</td><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;text-align:right;">$${parseFloat(w.winning_bid||0).toFixed(2)}</td></tr>`).join('')
+    : `<tr><td colspan="3" style="padding:8px;color:#888;font-style:italic;">No winner data recorded yet.</td></tr>`;
   const logoUrl = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
 
   const html = `<!DOCTYPE html><html><head><title>Email Bidders</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:system-ui,sans-serif; color:#1d1d1f; font-size:12px; display:flex; justify-content:center; background:#e8e8ed; height:100vh; overflow:hidden; }
-    .page { display:flex; flex-direction:column; width:820px; max-width:100%; height:80vh; margin-top:40px; background:#fff; box-shadow:0 0 20px rgba(0,0,0,.2); border-radius:8px; overflow:hidden; }
-    .top-bar { display:flex; align-items:center; gap:10px; padding:6px 12px; background:#1d1d1f; color:#fff; flex-shrink:0; }
+    .page { display:flex; flex-direction:column; width:1400px; max-width:100%; height:100vh; margin-top:0; background:#fff; box-shadow:0 0 20px rgba(0,0,0,.2); border-radius:0; overflow:hidden; }
+    .top-bar { display:flex; align-items:center; gap:10px; padding:6px 12px; background:#1d1d1f; color:#fff; flex-shrink:0; border-radius:8px 8px 0 0; }
     .top-bar img { height:30px; }
     .top-bar span { flex:1; font-size:13px; font-weight:700; color:#fff; }
     .top-bar button { padding:4px 12px; border:none; border-radius:5px; cursor:pointer; font-size:12px; font-weight:600; }
@@ -2945,6 +3001,8 @@ function openEmailBiddersPage() {
     .ctrl-bar .status { font-size:11px; color:#555; white-space:nowrap; margin-left:4px; }
     .ctrl-bar button { padding:3px 10px; border:none; border-radius:5px; cursor:pointer; font-size:11px; font-weight:600; background:#e0e0e0; color:#1d1d1f; }
     .ctrl-bar button:hover { background:#ccc; }
+    .body-row { display:flex; flex:1; overflow:hidden; }
+    .list-panel { display:flex; flex-direction:column; width:520px; flex-shrink:0; border-right:1px solid #d2d2d7; }
     .table-wrap { flex:1; overflow-y:auto; }
     table { width:100%; border-collapse:collapse; }
     thead th { background:#dbeafe; padding:4px 8px; text-align:left; border-bottom:2px solid #d2d2d7; font-size:11px; position:sticky; top:0; z-index:5; }
@@ -2957,6 +3015,19 @@ function openEmailBiddersPage() {
     .btn-primary:hover { background:#0077ed; }
     .btn-sec { background:#e0e0e0; color:#1d1d1f; }
     .btn-sec:hover { background:#ccc; }
+    .preview-panel { flex:1; overflow-y:auto; background:#f0f0f5; padding:16px; }
+    .preview-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#888; margin-bottom:10px; }
+    .email-preview { background:#fff; border:1px solid #d2d2d7; border-radius:6px; overflow:hidden; font-family:Georgia,serif; font-size:13px; color:#1d1d1f; }
+    .ep-header { background:#1d1d1f; padding:16px 20px; display:flex; align-items:center; gap:12px; }
+    .ep-header img { height:44px; }
+    .ep-header-text { color:#fff; }
+    .ep-header-text h2 { font-size:15px; font-weight:700; margin-bottom:2px; }
+    .ep-header-text p { font-size:11px; color:#aaa; }
+    .ep-body { padding:24px 28px; }
+    .ep-body h3 { font-size:16px; font-weight:700; color:#0071e3; margin-bottom:12px; }
+    .ep-body p { line-height:1.7; color:#333; margin-bottom:12px; font-size:13px; }
+    .ep-divider { border:none; border-top:1px solid #e0e0e0; margin:16px 0; }
+    .ep-footer { background:#f5f5f7; padding:12px 20px; font-size:11px; color:#888; text-align:center; border-top:1px solid #e0e0e0; }
   </style>
   </head><body><div class="page">
   <div class="top-bar">
@@ -2965,27 +3036,90 @@ function openEmailBiddersPage() {
     <button class="btn-close" onclick="window.close()">✕ Close</button>
   </div>
   <div class="ctrl-bar">
-    <input type="text" id="search-name" placeholder="Search last name…" style="width:160px;" oninput="filterRows(this.value)">
+    <input type="text" id="search-name" placeholder="Search last name…" style="width:140px;" oninput="filterRows(this.value)">
     <label for="email-subject">Subject:</label>
-    <input id="email-subject" type="text" class="subj" value="East Tennessee Corvette Club Silent Auction">
+    <input id="email-subject" type="text" class="subj" value="East Tennessee Corvette Club Silent Auction" oninput="updatePreview()">
     <span class="status" id="sel-status">${bidders.length} of ${bidders.length} selected</span>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th style="width:30px;text-align:center;"><input type="checkbox" id="cb-all" checked onchange="selectAll(this.checked)" style="accent-color:#0071e3;cursor:pointer;"></th>
-        <th style="width:70px;">Bidder #</th>
-        <th style="width:180px;">Name</th>
-        <th>Email</th>
-        <th style="width:120px;">Phone</th>
-      </tr></thead>
-      <tbody id="bidder-tbody">${rows}</tbody>
-    </table>
-  </div>
-  <div class="footer">
-    <button class="btn-primary" onclick="sendEmail()">✉ Open Email Client</button>
-    <button class="btn-sec" onclick="selectAll(true)">Select All</button>
-    <button class="btn-sec" onclick="selectAll(false)">Clear All</button>
+  <div class="body-row">
+    <div class="list-panel">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:30px;text-align:center;"><input type="checkbox" id="cb-all" checked onchange="selectAll(this.checked)" style="accent-color:#0071e3;cursor:pointer;"></th>
+            <th style="width:60px;">Bidder #</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th style="width:70px;text-align:center;">Status</th>
+          </tr></thead>
+          <tbody id="bidder-tbody">${rows}</tbody>
+        </table>
+      </div>
+      <div class="footer">
+        <button class="btn-primary" onclick="sendEmail()">✉ Open Email Client</button>
+        <button class="btn-sec" onclick="selectAll(true)">Select All</button>
+        <button class="btn-sec" onclick="selectAll(false)">Clear All</button>
+      </div>
+    </div>
+    <div class="preview-panel" style="display:flex;gap:16px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+      <div class="preview-label">No Win Email</div>
+      <div class="email-preview">
+        <div class="ep-header">
+          <img src="${logoUrl}" alt="ETCC Logo">
+          <div class="ep-header-text">
+            <h2>East Tennessee Corvette Club</h2>
+            <p>Silent Auction</p>
+          </div>
+        </div>
+        <div class="ep-body">
+          <h3 id="prev-subject">East Tennessee Corvette Club Silent Auction</h3>
+          <p>Dear Auction Participant,</p>
+          <p>Thank you for your participation in the East Tennessee Corvette Club Silent Auction! Your support means a great deal to our club and to the charitable organizations we proudly serve.</p>
+          <p>We hope you enjoyed the event and that you were able to take home a few treasures. The success of our auction is made possible by generous bidders like you.</p>
+          <hr class="ep-divider">
+          <p>We look forward to seeing you at future ETCC events!</p>
+          <p style="margin-top:16px;font-weight:700;">Warm regards,<br>East Tennessee Corvette Club</p>
+        </div>
+        <div class="ep-footer">East Tennessee Corvette Club &nbsp;|&nbsp; etccapps.com</div>
+      </div>
+      </div>
+      <div style="flex:1;min-width:0;">
+      <div class="preview-label">Winner Email</div>
+      <div class="email-preview">
+        <div class="ep-header">
+          <img src="${logoUrl}" alt="ETCC Logo">
+          <div class="ep-header-text">
+            <h2>East Tennessee Corvette Club</h2>
+            <p>Silent Auction</p>
+          </div>
+        </div>
+        <div class="ep-body">
+          <h3 id="prev-subject-winner">East Tennessee Corvette Club Silent Auction</h3>
+          <p>Dear Auction Winner,</p>
+          <p>Congratulations! You are a winner in the East Tennessee Corvette Club Silent Auction! Thank you for your enthusiastic bidding — your support makes a real difference for our club.</p>
+          <p style="font-weight:600;margin-bottom:6px;">Your Winning Item(s):</p>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
+            <thead><tr style="background:#dbeafe;">
+              <th style="padding:4px 8px;text-align:left;border-bottom:2px solid #d2d2d7;">Item #</th>
+              <th style="padding:4px 8px;text-align:left;border-bottom:2px solid #d2d2d7;">Winner</th>
+              <th style="padding:4px 8px;text-align:right;border-bottom:2px solid #d2d2d7;">Winning Bid</th>
+            </tr></thead>
+            <tbody>${sampleItemRows}</tbody>
+            <tfoot><tr>
+              <td colspan="2" style="padding:4px 8px;font-weight:600;border-top:2px solid #d2d2d7;">Amount Paid</td>
+              <td style="padding:4px 8px;text-align:right;font-weight:600;border-top:2px solid #d2d2d7;">${sampleAmtPaid}</td>
+            </tr></tfoot>
+          </table>
+          <p>Please make arrangements to pick up your item(s) at your earliest convenience. If you have any questions, please don't hesitate to reach out.</p>
+          <hr class="ep-divider">
+          <p>We look forward to seeing you at future ETCC events!</p>
+          <p style="margin-top:16px;font-weight:700;">Warm regards,<br>East Tennessee Corvette Club</p>
+        </div>
+        <div class="ep-footer">East Tennessee Corvette Club &nbsp;|&nbsp; etccapps.com</div>
+      </div>
+      </div>
+    </div>
   </div>
   <script>
     const allBidders = ${biddersJson};
@@ -2995,8 +3129,12 @@ function openEmailBiddersPage() {
       document.getElementById('sel-status').textContent = checked + ' of ' + total + ' selected';
       document.getElementById('cb-all').checked = checked === total;
     }
+    function updatePreview() {
+      const subj = document.getElementById('email-subject').value.trim();
+      document.getElementById('prev-subject').textContent = subj || '(no subject)';
+    }
     function selectAll(val) {
-      document.querySelectorAll('.bidder-cb:not([style*="display:none"])').forEach(cb => {
+      document.querySelectorAll('.bidder-cb').forEach(cb => {
         const tr = cb.closest('tr');
         if (!tr || tr.style.display !== 'none') cb.checked = val;
       });

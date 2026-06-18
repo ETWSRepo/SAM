@@ -942,6 +942,8 @@ function runUITests() {
         uiCheck(d, 'walk-in start field',       '#inp-walk-in-start'),
         uiCheck(d, 'starting bid % field',      '#inp-starting-bid-pct'),
         uiCheck(d, 'bid count field',           '#inp-bid-count'),
+        uiCheck(d, 'venue name field',          '#inp-venue-name'),
+        uiCheck(d, 'venue address field',       '#inp-venue-address'),
       ]);
 
       // ── Member DB modal ────────────────────────────────────────────────────
@@ -955,6 +957,8 @@ function runUITests() {
           'member-db-modal not visible'),
         uiCheck(d, 'modal table present',       '#member-db-modal-table'),
         uiAnyContains(d, 'Add to Bidders button', '#member-db-modal button', 'Add to Bidders'),
+        uiAnyContains(d, 'Select All button',    '#member-db-modal button', 'Select All'),
+        uiAnyContains(d, 'Clear All button',     '#member-db-modal button', 'Clear All'),
         uiCheck(d, 'search box present',        '#member-search'),
       ]);
       // Close modal
