@@ -726,6 +726,32 @@ function runAll() {
     ]);
   }
 
+  // ── Print Invoice calculations ────────────────────────────────────────────
+  {
+    function invoiceCalc(wonItems, sqPct, sqFee, method) {
+      const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
+      const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
+      const ccTotal  = Math.round((totalBid + ccTrans) * 100) / 100;
+      const amtDue   = method === 'Credit Card' ? ccTotal : totalBid;
+      return { totalBid, ccTrans, ccTotal, amtDue };
+    }
+
+    const items1 = [{ bid: 50 }, { bid: 30 }];
+    const r1 = invoiceCalc(items1, 0.026, 0.10, 'Credit Card');
+    const r2 = invoiceCalc(items1, 0.026, 0.10, 'Cash');
+    const r3 = invoiceCalc([{ bid: 100 }], 0.026, 0.10, 'Credit Card');
+
+    renderSuite('Print Invoice — calculations', [
+      assertEqual('totalBid sums items',           r1.totalBid, 80),
+      assertEqual('ccTrans = totalBid*pct + fee',  r1.ccTrans,  Math.round((80 * 0.026 + 0.10) * 100) / 100),
+      assertEqual('ccTotal = totalBid + ccTrans',  r1.ccTotal,  Math.round((80 + r1.ccTrans) * 100) / 100),
+      assertEqual('amtDue = ccTotal for CC',       r1.amtDue,   r1.ccTotal),
+      assertEqual('amtDue = totalBid for Cash',    r2.amtDue,   80),
+      assertEqual('single item totalBid',          r3.totalBid, 100),
+      assertEqual('single item ccTrans',           r3.ccTrans,  Math.round((100 * 0.026 + 0.10) * 100) / 100),
+    ]);
+  }
+
   // ── Summary ───────────────────────────────────────────────────────────────
   const total = passCount + failCount;
   document.getElementById('s-pass').textContent  = passCount;

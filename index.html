@@ -446,6 +446,9 @@
     <div class="nav-item" data-screen="payment-pickup">
       <span class="nav-badge">6</span> Pay &amp; Pickup
     </div>
+    <div class="nav-item" data-screen="post-auction">
+      <span class="nav-badge">7</span> Post Auction
+    </div>
     <hr class="nav-divider" />
     <div class="nav-section-label">Management</div>
 <div class="nav-item" data-screen="settings">
@@ -467,7 +470,7 @@
         <div style="text-align:center;margin-bottom:36px;">
           <img src="Images/ETCClogoWhiteBackground.png" alt="ETCC Logo" style="height:80px;margin-bottom:16px;" />
           <h1 style="font-size:1.8rem;font-weight:700;color:var(--text);margin:0 0 8px;">Silent Auction Manager</h1>
-          <p style="font-size:14px;color:var(--text-secondary);margin:0;">East Tennessee Corvette Club — Auction Management System</p>
+          <p style="font-size:14px;color:var(--text-secondary);margin:0;">East Tennessee Corvette Club</p>
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;" id="home-metrics"></div>
@@ -478,7 +481,7 @@
 
         <div class="card" style="margin-bottom:20px;">
           <div class="card-header">Auction Workflow</div>
-          <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,auto);grid-auto-flow:column;gap:10px;">
             <div onclick="navigate('item-load')"       style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
               <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">1</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Load Item Emails</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Scan the auction inbox and import items from Gmail</div></div>
@@ -502,6 +505,10 @@
             <div onclick="navigate('payment-pickup')"  style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
               <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">6</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Pay &amp; Pickup</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Record payments and item pickup for each winner</div></div>
+            </div>
+            <div onclick="navigate('post-auction')"    style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">7</span>
+              <div><div style="font-size:13px;font-weight:600;color:var(--text);">Post Auction</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Post-auction tasks and reporting</div></div>
             </div>
           </div>
         </div>
@@ -550,14 +557,13 @@
             <div style="display:flex;gap:8px;">
               <button class="btn primary" id="btn-scan-inline" style="font-size:11px;padding:3px 10px;">📧 Scan</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('emails')">View All</button>
-              <button class="btn danger" style="font-size:11px;padding:3px 10px;" onclick="clearInboxEmails()">Clear All</button>
             </div>
           </div>
           <div style="overflow-x:auto;max-height:185px;overflow-y:auto;">
             <table class="tablekit" id="email-table" data-tk-sort="false">
               <thead style="position:sticky;top:0;z-index:1;">
                 <tr>
-                  <th>Date</th>
+                  <th>Email Date</th>
                   <th>From</th>
                   <th>Subject</th>
                   <th>Preview</th>
@@ -577,7 +583,6 @@
             <button class="btn primary" id="btn-load-items" style="font-size:11px; padding:4px 10px;">Update Items</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showCategories()">View Categories</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('items')">View All</button>
-            <button class="btn danger" id="btn-clear-items" style="font-size:11px; padding:4px 10px;">Clear All</button>
           </div>
         </div>
         <div style="overflow-x:auto;">
@@ -586,20 +591,21 @@
               <col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
               <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
               <col style="width:130px;"><col style="width:160px;"><col style="width:120px;">
-              <col style="width:130px;">
+              <col style="width:130px;"><col style="width:220px;">
             </colgroup>
             <thead>
               <tr>
-                <th>Item #</th>
-                <th>Submission Date</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Value</th>
-                <th>Reserve</th>
-                <th>Donor Name</th>
-                <th>Donor Email</th>
-                <th>Donor Phone</th>
+                <th>itemNumber</th>
+                <th>Email Date</th>
+                <th>ItemCategory</th>
+                <th>itemDescription</th>
+                <th>ItemValue</th>
+                <th>ItemReserveAmount</th>
+                <th>DonorName</th>
+                <th>DonorEmail</th>
+                <th>DonorPhone</th>
                 <th>Date Loaded</th>
+                <th>Preview</th>
               </tr>
             </thead>
           </table>
@@ -609,7 +615,7 @@
                 <col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
                 <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
                 <col style="width:130px;"><col style="width:160px;"><col style="width:120px;">
-                <col style="width:130px;">
+                <col style="width:130px;"><col style="width:220px;">
               </colgroup>
               <tbody id="items-tbody"></tbody>
             </table>
@@ -799,23 +805,24 @@
           <table class="tablekit" id="payment-table" data-tk-sort="false" style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
               <tr style="background:#f0f4ff;position:sticky;top:0;z-index:2;">
-                <td colspan="14" style="padding:3px 8px;font-size:11px;color:var(--text-secondary);font-style:italic;">Click <strong>Bidder #</strong> or <strong>Last Name</strong> column header to sort</td>
+                <td colspan="15" style="padding:3px 8px;font-size:11px;color:var(--text-secondary);font-style:italic;">Click <strong>Bidder #</strong> or <strong>Last Name</strong> column header to sort</td>
               </tr>
               <tr style="background:#dbeafe;position:sticky;top:24px;z-index:1;">
-                <th id="pay-th-bidder" style="padding:6px 8px;text-align:left;font-weight:700;width:65px;cursor:pointer;user-select:none;" onclick="paySort('bidder_number')">Bidder # <span id="pay-sort-bidder"></span></th>
-                <th id="pay-th-last" style="padding:6px 8px;text-align:left;font-weight:700;width:110px;cursor:pointer;user-select:none;" onclick="paySort('last_name')">Last Name <span id="pay-sort-last"></span></th>
-                <th style="padding:6px 8px;text-align:left;font-weight:700;width:100px;">First Name</th>
-                <th style="padding:6px 8px;text-align:center;font-weight:700;width:55px;"># Items</th>
-                <th style="padding:6px 8px;text-align:right;font-weight:700;width:85px;">Winning Bid</th>
-                <th style="padding:6px 8px;text-align:left;font-weight:700;">Item # — Description</th>
-                <th style="padding:6px 8px;text-align:right;font-weight:700;width:80px;">Cash/Check</th>
-                <th style="padding:6px 8px;text-align:left;font-weight:700;width:90px;">Check #</th>
-                <th style="padding:6px 8px;text-align:right;font-weight:700;width:80px;">CC Trans.</th>
-                <th style="padding:6px 8px;text-align:right;font-weight:700;width:85px;">CC Total</th>
-                <th style="padding:6px 8px;text-align:center;font-weight:700;width:45px;">Paid</th>
-                <th style="padding:6px 8px;text-align:left;font-weight:700;width:115px;">Pay Method</th>
-                <th style="padding:6px 8px;text-align:right;font-weight:700;width:90px;">Other Amt</th>
-                <th style="padding:6px 8px;text-align:left;font-weight:700;width:140px;">Other Reason</th>
+                <th id="pay-th-bidder" style="padding:6px 8px;text-align:left;font-weight:700;width:55px;cursor:pointer;user-select:none;" onclick="paySort('bidder_number')">Bidder # <span id="pay-sort-bidder"></span></th>
+                <th id="pay-th-last" style="padding:6px 8px;text-align:left;font-weight:700;width:90px;cursor:pointer;user-select:none;" onclick="paySort('last_name')">Last Name <span id="pay-sort-last"></span></th>
+                <th style="padding:6px 8px;text-align:left;font-weight:700;width:80px;">First Name</th>
+                <th style="padding:6px 8px;text-align:center;font-weight:700;width:42px;"># Items</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:700;width:72px;">Winning Bid</th>
+                <th style="padding:6px 8px;text-align:left;font-weight:700;width:140px;">Item # — Description</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:700;width:68px;">Cash/Check</th>
+                <th style="padding:6px 8px;text-align:left;font-weight:700;width:75px;">Check #</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:700;width:68px;">CC Trans.</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:700;width:72px;">CC Total</th>
+                <th style="padding:6px 8px;text-align:center;font-weight:700;width:38px;">Paid</th>
+                <th style="padding:6px 8px;text-align:left;font-weight:700;width:95px;">Pay Method</th>
+                <th style="padding:6px 8px;text-align:right;font-weight:700;width:75px;">Other Amt</th>
+                <th style="padding:6px 8px;text-align:left;font-weight:700;width:115px;">Other Reason</th>
+                <th style="padding:6px 8px;text-align:center;font-weight:700;width:80px;">Invoice</th>
               </tr>
             </thead>
             <tbody id="payment-tbody"></tbody>
@@ -826,6 +833,14 @@
 
 
     <!-- ══ Settings ══ -->
+    <!-- ══ Step 7: Post Auction ══ -->
+    <section class="screen" id="screen-post-auction">
+      <div class="page-header">
+        <h2>Step 7 — Post Auction</h2>
+        <p>Post-auction tasks and reporting.</p>
+      </div>
+    </section>
+
     <section class="screen" id="screen-settings">
       <div class="page-header"><h2>Settings</h2><p>Configure Gmail access and email field extraction mapping.</p></div>
 
@@ -871,12 +886,16 @@
                 <th>Email Label</th>
                 <th style="width:200px;">Select By</th>
                 <th>Database Column</th>
+                <th>Loaded Items Column</th>
                 <th style="width:60px; text-align:center;">Edit</th>
                 <th style="width:60px; text-align:center;">Remove</th>
               </tr>
             </thead>
             <tbody id="field-map-tbody"></tbody>
           </table>
+          <div style="padding:12px 0 4px;">
+            <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+          </div>
         </div>
       </div>
 
@@ -913,6 +932,14 @@
             <button class="btn" onclick="window.open('test.html','_blank')">▶ Run Regression Tests</button>
             <span style="font-size:12px;color:var(--text-secondary);">Opens the automated test suite in a new tab.</span>
           </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn danger" onclick="clearInboxEmails()">Clear Emails</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Clear all scanned inbox emails from the current session.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn danger" id="btn-clear-items">Clear Items</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Clear all loaded auction items from the database.</span>
+          </div>
         </div>
       </div>
 
@@ -937,9 +964,6 @@
         </div>
       </div>
 
-      <div style="display:flex; gap:10px;">
-        <button class="btn primary" id="btn-save-settings">Save Settings</button>
-      </div>
       <div id="settings-saved-msg" style="display:none; margin-top:10px;" class="alert success">Settings saved.</div>
     </section>
 
@@ -1382,7 +1406,7 @@ function processEmails(emails) {
   let loaded = 0, skipped = 0, errors = 0;
 
   emails.forEach(email => {
-    if (email.status === 'loaded') { skipped++; return; }
+    if (Items.existsByMsgId(email.id)) { email.status = 'loaded'; skipped++; return; }
     try {
       const fields   = parseEmailBody(email.body || '', fieldMap);
       const parseErr = fields._parseErrors || [];
@@ -1402,6 +1426,7 @@ function processEmails(emails) {
         email_message_id: email.id,
         email_from:       email.from,
         email_date:       email.date,
+        email_preview:    email.preview || '',
         loaded_date:      new Date().toLocaleString(),
       }, fields);
 
@@ -1484,16 +1509,22 @@ function refreshItemsTable() {
   tbody.innerHTML = '';
 
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet.</td></tr>';
     return;
   }
 
+  const EMAIL_ICON = `<svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" stroke-width="1.4" xmlns="http://www.w3.org/2000/svg"><rect x="0.7" y="0.7" width="12.6" height="9.6" rx="1"/><path d="M0.7 2l6.3 4.5L13.3 2"/></svg>`;
+
   items.forEach(item => {
-    const catCode = item.category_code ? 'cat-' + item.category_code : 'cat-900';
+    const catCode  = item.category_code ? 'cat-' + item.category_code : 'cat-900';
+    const emailIdx = scannedEmails.findIndex(e => e.id === item.email_message_id);
+    const previewCell = emailIdx >= 0
+      ? `<span onclick="showEmailModal(${emailIdx})" title="View email" style="cursor:pointer;display:inline-flex;align-items:center;color:var(--text-secondary);transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">${EMAIL_ICON}</span>`
+      : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
-      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.submission_date || '')}</td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.email_date || '')}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
       <td>${escHtml(item.description)}</td>
       <td>${fmtDollar(item.value)}</td>
@@ -1502,6 +1533,7 @@ function refreshItemsTable() {
       <td style="font-size:11px;">${escHtml(item.donor_email)}</td>
       <td style="font-size:11px;">${escHtml(item.donor_phone)}</td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(item.loaded_date)}</td>
+      <td style="text-align:center;">${previewCell}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -1761,6 +1793,70 @@ function paySort(by) {
   refreshPaymentTable();
 }
 
+function printInvoice(bidderNum) {
+  const bidders  = Bidders.getAll();
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const items    = Items.getAll();
+  const settings = DB.getSettings();
+  const sqPct    = (settings.squarePct || 0) / 100;
+  const sqFee    = settings.squareFee  || 0;
+
+  const bidder  = bidders.find(b => b.bidder_number === bidderNum) || {};
+  const pay     = payments[bidderNum] || {};
+  const itemMap = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  const wonItems = Object.entries(winners)
+    .filter(([, w]) => w.bidder_number === bidderNum)
+    .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseFloat(w.winning_bid) || 0 }));
+
+  const totalBid  = wonItems.reduce((s, i) => s + i.bid, 0);
+  const ccTrans   = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
+  const ccTotal   = Math.round((totalBid + ccTrans) * 100) / 100;
+  const method    = pay.method || 'Credit Card';
+  const amtDue    = method === 'Credit Card' ? ccTotal : totalBid;
+
+  const rows = wonItems.map(i => `
+    <tr>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;">${escHtml(i.key)}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;">${escHtml(i.desc)}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">${fmtDollar(i.bid)}</td>
+    </tr>`).join('');
+
+  const ccRow = method === 'Credit Card' ? `
+    <tr><td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">CC Transaction Fee</td><td style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">${fmtDollar(ccTrans)}</td></tr>` : '';
+
+  const html = `<!DOCTYPE html><html><head><title>Invoice — Bidder ${bidderNum}</title>
+  <style>body{font-family:system-ui,sans-serif;margin:40px auto;max-width:520px;color:#1d1d1f;}h2{margin:0 0 4px;}table{width:100%;border-collapse:collapse;}th{background:#dbeafe;padding:8px 10px;text-align:left;}@media print{button{display:none;}}</style>
+  </head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+    <div><h2>Silent Auction Invoice</h2><div style="font-size:13px;color:#555;">East Tennessee Corvette Club</div></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Cancel</button>
+    </div>
+  </div>
+  <div style="margin-bottom:20px;font-size:14px;">
+    <strong>Bidder #${bidderNum}</strong> — ${escHtml(bidder.first_name || '')} ${escHtml(bidder.last_name || '')}<br>
+    <span style="color:#555;font-size:12px;">Payment Method: ${escHtml(method)}</span>
+  </div>
+  <table>
+    <thead><tr><th style="width:100px;">Item #</th><th>Description</th><th style="width:120px;text-align:right;">Amount</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Subtotal</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
+      ${ccRow}
+      <tr style="background:#f0f4ff;"><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;font-size:15px;">Total Due</td><td style="padding:8px 10px;text-align:right;font-weight:700;font-size:15px;">${fmtDollar(amtDue)}</td></tr>
+    </tfoot>
+  </table>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
 function refreshPaymentTable() {
   const bidders  = Bidders.getAll();
   const winners  = DB.getWinners();
@@ -1825,7 +1921,7 @@ function refreshPaymentTable() {
           <td style="padding:5px 8px;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
           <td style="padding:5px 8px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid)}</td>
           <td style="padding:5px 8px;" rowspan="${group.items.length}">
-            <input type="text" class="pay-checknum" data-num="${num}" value="${escHtml(pay.checknum || '')}" placeholder="—" style="width:74px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;">
+            <input type="text" class="pay-checknum" data-num="${num}" value="${escHtml(pay.checknum || '')}" placeholder="—" style="width:60px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;">
           </td>
           <td style="padding:5px 8px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid * sqPct + sqFee)}</td>
           <td style="padding:5px 8px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid + totalBid * sqPct + sqFee)}</td>
@@ -1833,18 +1929,21 @@ function refreshPaymentTable() {
             <input type="checkbox" class="pay-paid" data-num="${num}" style="width:16px;height:16px;cursor:pointer;" ${pay.paid ? 'checked' : ''}>
           </td>
           <td style="padding:5px 8px;" rowspan="${group.items.length}">
-            <select class="pay-method" data-num="${num}" style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;width:105px;">
+            <select class="pay-method" data-num="${num}" style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;width:88px;">
               <option value="Credit Card" ${(pay.method||'Credit Card')==='Credit Card'?'selected':''}>Credit Card</option>
               <option value="Cash"        ${(pay.method||'Credit Card')==='Cash'       ?'selected':''}>Cash</option>
               <option value="Check"       ${(pay.method||'Credit Card')==='Check'      ?'selected':''}>Check</option>
             </select>
           </td>
           <td style="padding:5px 8px;" rowspan="${group.items.length}">
-            <input type="number" class="pay-other" data-num="${num}" value="${pay.other || ''}" placeholder="0.00" min="0" step="any" style="width:75px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;">
+            <input type="number" class="pay-other" data-num="${num}" value="${pay.other || ''}" placeholder="0.00" min="0" step="any" style="width:62px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;">
           </td>
           <td style="padding:5px 8px;" rowspan="${group.items.length}">
-            <input type="text" class="pay-other-reason" data-num="${num}" value="${escHtml(pay.otherReason || '')}" placeholder="—" style="width:125px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;">
+            <input type="text" class="pay-other-reason" data-num="${num}" value="${escHtml(pay.otherReason || '')}" placeholder="—" style="width:105px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;">
             <div class="pay-other-err" data-num="${num}" style="display:none;color:var(--danger);font-size:11px;margin-top:3px;">Reason is required.</div>
+          </td>
+          <td style="padding:5px 8px;text-align:center;" rowspan="${group.items.length}">
+            <button class="btn" onclick="printInvoice(${num})" style="font-size:11px;padding:3px 8px;">🖨 Print Invoice</button>
           </td>
         `;
       } else {
@@ -2124,6 +2223,22 @@ function loadSettingsForm() {
   renderFieldMapTable();
 }
 
+const LOADED_ITEMS_COL = {
+  item_number:    'itemNumber',
+  email_date:     'Email Date',
+  category:       'ItemCategory',
+  item_category:  'ItemCategory',
+  description:    'itemDescription',
+  value:          'ItemValue',
+  item_value:     'ItemValue',
+  reserve_amount: 'ItemReserveAmount',
+  donor_name:     'DonorName',
+  donor_email:    'DonorEmail',
+  donor_phone:    'DonorPhone',
+  loaded_date:    'Date Loaded',
+  email_preview:  'Preview',
+};
+
 function renderFieldMapTable() {
   const map   = DB.getFieldMap();
   const tbody = document.getElementById('field-map-tbody');
@@ -2132,6 +2247,7 @@ function renderFieldMapTable() {
   let dragSrc = null;
 
   map.forEach((row, idx) => {
+    const loadedCol = LOADED_ITEMS_COL[row.column] || '';
     const tr = document.createElement('tr');
     tr.draggable = true;
     tr.dataset.idx = idx;
@@ -2140,6 +2256,7 @@ function renderFieldMapTable() {
       <td class="fm-label-cell" style="font-size:13px;">${escHtml(row.label)}</td>
       <td class="fm-selectby-cell" style="font-size:12px;color:var(--text-secondary);">${escHtml(row.selectBy || 'Next Line')}</td>
       <td class="fm-column-cell" style="font-size:12px;color:var(--text-secondary);font-family:monospace;">${escHtml(row.column)}</td>
+      <td style="font-size:12px;color:var(--text-secondary);font-family:monospace;">${escHtml(loadedCol)}</td>
       <td style="text-align:center;">
         <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="editFieldMapRow(${idx})">Edit</button>
       </td>
@@ -2428,7 +2545,6 @@ document.getElementById('btn-clear-items').addEventListener('click', () => {
   refreshMetrics();
 });
 
-document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
 
 document.getElementById('inp-debug-mode').addEventListener('change', function() {
   const s = DB.getSettings();
