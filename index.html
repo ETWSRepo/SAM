@@ -268,6 +268,14 @@
     }
     #items-tbody td {
       border-bottom: 1px solid #e8e0b8;
+      text-align: left;
+    }
+    #items-table thead th {
+      text-align: left !important;
+    }
+    #items-table .tk-th-inner {
+      width: 100%;
+      justify-content: flex-start;
     }
     /* Suppress TableKit duplicate sort arrow on label */
     .tk-th-label::after { display: none !important; }
@@ -585,7 +593,7 @@
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('items')">View All</button>
           </div>
         </div>
-        <div style="overflow-x:auto;">
+        <div style="overflow:auto;max-height:230px;">
           <table class="tablekit" id="items-table" style="table-layout:fixed;width:100%;">
             <colgroup>
               <col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
@@ -608,18 +616,8 @@
                 <th>Preview</th>
               </tr>
             </thead>
+            <tbody id="items-tbody"></tbody>
           </table>
-          <div style="overflow-y:auto;max-height:185px;">
-            <table style="table-layout:fixed;width:100%;border-collapse:collapse;font-size:13px;">
-              <colgroup>
-                <col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
-                <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
-                <col style="width:130px;"><col style="width:160px;"><col style="width:120px;">
-                <col style="width:130px;"><col style="width:220px;">
-              </colgroup>
-              <tbody id="items-tbody"></tbody>
-            </table>
-          </div>
         </div>
       </div>
     </section>
@@ -1671,15 +1669,15 @@ function refreshItemsTable() {
       : '';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center;"><strong>${escHtml(String(item.item_number))}</strong></td>
-      <td style="font-size:11px;white-space:nowrap;text-align:center;">${escHtml(item.email_date || '')}</td>
-      <td style="text-align:center;"><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
-      <td style="text-align:center;">${escHtml(item.description)}</td>
-      <td style="text-align:center;">${fmtDollar(item.item_value)}</td>
-      <td style="text-align:center;">${escHtml(item.reserve_amount || '')}</td>
-      <td style="text-align:center;">${escHtml(item.donor_name)}</td>
-      <td style="font-size:11px;text-align:center;">${escHtml(item.donor_email)}</td>
-      <td style="font-size:11px;text-align:center;">${escHtml(item.donor_phone)}</td>
+      <td><strong>${escHtml(String(item.item_number))}</strong></td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.email_date || '')}</td>
+      <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
+      <td>${escHtml(item.description)}</td>
+      <td>${fmtDollar(item.item_value)}</td>
+      <td>${escHtml(item.reserve_amount || '')}</td>
+      <td>${escHtml(item.donor_name)}</td>
+      <td style="font-size:11px;">${escHtml(item.donor_email)}</td>
+      <td style="font-size:11px;">${escHtml(item.donor_phone)}</td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(item.loaded_date)}</td>
       <td style="text-align:center;">${previewCell}</td>
     `;
@@ -3020,7 +3018,8 @@ document.getElementById('btn-scan').addEventListener('click', () => {
 
 
 document.getElementById('btn-load-items').addEventListener('click', () => {
-  const newEmails = scannedEmails.filter(e => e.status !== 'loaded');
+  const loadedIds = new Set(DB.getItems().map(i => i.email_message_id).filter(Boolean));
+  const newEmails = scannedEmails.filter(e => !loadedIds.has(e.id));
   if (!newEmails.length) { document.getElementById('scan-note').textContent = 'Update complete — 0 new items added.'; return; }
   processEmails(newEmails);
 });
