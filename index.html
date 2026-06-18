@@ -300,6 +300,7 @@
     }
     .tk-toolbar-title {
       color: #ffffff;
+      display: none;
     }
     .tk-btn {
       background: var(--bg-section);
@@ -377,17 +378,14 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: #fff;
       z-index: 200;
-      justify-content: center;
-      align-items: center;
     }
-    #manual-overlay.open { display: flex; }
+    #manual-overlay.open { display: block; }
     #manual-dialog {
       background: #fff;
-      border-radius: 10px;
-      width: min(700px, 92vw);
-      max-height: 80vh;
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       box-shadow: 0 8px 32px rgba(0,0,0,0.25);
@@ -427,28 +425,6 @@
   <nav id="nav">
     <div class="nav-item active" data-screen="home" style="font-size:13px;font-weight:600;color:#fff;padding:12px 16px 10px;">🏠 Home</div>
     <hr class="nav-divider" />
-    <div class="nav-section-label">Auction Steps</div>
-    <div class="nav-item" data-screen="item-load">
-      <span class="nav-badge">1</span> Load Item Emails
-    </div>
-    <div class="nav-item" data-screen="bidding-sheets">
-      <span class="nav-badge">2</span> Create Bid Sheets
-    </div>
-    <div class="nav-item" data-screen="bidder-reg">
-      <span class="nav-badge">3</span> Register Bidders
-    </div>
-    <div class="nav-item" data-screen="auction-close">
-      <span class="nav-badge">4</span> Record Winning Bidders
-    </div>
-    <div class="nav-item" data-screen="winner-announce">
-      <span class="nav-badge">5</span> Announce Winners
-    </div>
-    <div class="nav-item" data-screen="payment-pickup">
-      <span class="nav-badge">6</span> Pay &amp; Pickup
-    </div>
-    <div class="nav-item" data-screen="post-auction">
-      <span class="nav-badge">7</span> Post Auction
-    </div>
     <hr class="nav-divider" />
     <div class="nav-section-label">Management</div>
 <div class="nav-item" data-screen="settings">
@@ -517,9 +493,12 @@
 
     <!-- ══ Step 1: Item Load ══ -->
     <section class="screen" id="screen-item-load">
-      <div class="page-header">
-        <h2>Step 1 — Item Load</h2>
-        <p>Scan the auction inbox, review emails, and load items into the database.</p>
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <h2>Step 1 — Item Load</h2>
+          <p>Scan the auction inbox, review emails, and load items into the database.</p>
+        </div>
+        <button class="btn" style="flex-shrink:0;border-color:var(--danger);color:var(--danger);" onmouseover="this.style.background='var(--danger)';this.style.color='#fff';" onmouseout="this.style.background='';this.style.color='var(--danger)';" onclick="navigate('home')">Close</button>
       </div>
 
       <!-- Metric summary -->
@@ -629,14 +608,8 @@
       <div class="page-header"><h2>Step 2 — Create Bid Sheets</h2><p>Print a bid sheet for each auction item.</p></div>
 
       <div class="card" id="bs-items-card">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>Auction Items</span>
-          <div style="display:flex;gap:8px;">
-            <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="bsCheckAll()">Check All</button>
-            <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="bsClearAll()">Clear All</button>
-            <button class="btn primary" style="font-size:11px;padding:3px 10px;" onclick="printBiddingSheets()">🖨️ Print Bid Sheets</button>
-          </div>
-        </div>
+        <div id="bs-toolbar-wrap"></div>
+        <div style="height:12px;"></div>
         <div style="overflow-x:auto;">
           <table class="tablekit" id="bs-items-table" style="table-layout:fixed;width:100%;">
             <colgroup>
@@ -801,6 +774,7 @@
       <div class="page-header"><h2>Step 6 — Pay &amp; Pickup</h2><p>Record payment method and item pickup for each winning bidder.</p></div>
       <div class="card" id="payment-card">
         <div id="payment-toolbar-wrap"></div>
+        <div style="height:12px;"></div>
         <div style="overflow-x:auto;max-height:600px;overflow-y:auto;">
           <table class="tablekit" id="payment-table" data-tk-sort="false" style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
@@ -838,6 +812,10 @@
       <div class="page-header">
         <h2>Step 7 — Post Auction</h2>
         <p>Post-auction tasks and reporting.</p>
+      </div>
+      <div class="card" id="post-auction-card">
+        <div id="post-auction-toolbar-wrap"></div>
+        <div style="height:12px;"></div>
       </div>
     </section>
 
@@ -2415,16 +2393,43 @@ function navigate(screenId) {
   if (screenId === 'home')           refreshHomeMetrics();
   if (screenId === 'item-load')      renderEmailTable(scannedEmails);
   if (screenId === 'settings')       loadSettingsForm();
-  if (screenId === 'bidding-sheets') refreshBsItemsTable();
+  if (screenId === 'bidding-sheets') {
+    PageToolbar.init({ title: '', tableSelector: '#bs-items-table' });
+    const tb   = document.getElementById('page-toolbar');
+    const wrap = document.getElementById('bs-toolbar-wrap');
+    if (tb && wrap) wrap.appendChild(tb);
+    const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions) {
+      const closeBtn = actions.querySelector('.tk-btn-close');
+      const mkBtn = (label, fn) => {
+        const b = document.createElement('button');
+        b.className = 'tk-btn';
+        b.textContent = label;
+        b.addEventListener('click', fn);
+        return b;
+      };
+      actions.insertBefore(mkBtn('Check All',  bsCheckAll),       closeBtn);
+      actions.insertBefore(mkBtn('Clear All',  bsClearAll),       closeBtn);
+      actions.insertBefore(mkBtn('Print Bid Sheets', printBiddingSheets), closeBtn);
+    }
+    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    if (closeBtn) {
+      const fresh = closeBtn.cloneNode(true);
+      closeBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => navigate('home'));
+    }
+    refreshBsItemsTable();
+  }
   if (screenId === 'bidder-reg') {
-    if (!navigate._biddersToolbarInited) {
-      PageToolbar.init({ title: 'Register Bidders', logoText: 'ETCC' });
-      const tb   = document.getElementById('page-toolbar');
-      const card = document.getElementById('bidders-card');
-      if (tb && card) {
-        const wrap = card.querySelector('div[style*="overflow-x"]');
-        // Action bar between toolbar and column headers
-        const actionBar = document.createElement('div');
+    PageToolbar.init({ title: '' });
+    const tb   = document.getElementById('page-toolbar');
+    const card = document.getElementById('bidders-card');
+    if (tb && card) {
+      const wrap = card.querySelector('div[style*="overflow-x"]');
+      let actionBar = card.querySelector('#bidders-action-bar');
+      if (!actionBar) {
+        actionBar = document.createElement('div');
+        actionBar.id = 'bidders-action-bar';
         actionBar.style.cssText = 'display:flex;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--bg);';
         const addBtn = document.createElement('button');
         addBtn.className = 'btn primary';
@@ -2432,35 +2437,40 @@ function navigate(screenId) {
         addBtn.addEventListener('click', addBidder);
         actionBar.appendChild(addBtn);
         card.insertBefore(actionBar, wrap);
-        card.insertBefore(tb, actionBar);
       }
-      navigate._biddersToolbarInited = true;
+      card.insertBefore(tb, actionBar);
+    }
+    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    if (closeBtn) {
+      const fresh = closeBtn.cloneNode(true);
+      closeBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => navigate('home'));
     }
     refreshBiddersTable();
   }
   if (screenId === 'auction-close') {
-    if (!navigate._winnersToolbarInited) {
-      PageToolbar.init({ title: 'Record Winning Bidders', logoText: 'ETCC' });
-      const tb   = document.getElementById('page-toolbar');
-      const card = document.getElementById('winners-card');
-      if (tb && card) {
-        const wrap = card.querySelector('div[style*="overflow-x"]');
-        card.insertBefore(tb, wrap);
-      }
-      navigate._winnersToolbarInited = true;
+    PageToolbar.init({ title: '' });
+    const tb   = document.getElementById('page-toolbar');
+    const wrap = document.getElementById('winners-toolbar-wrap');
+    if (tb && wrap) wrap.appendChild(tb);
+    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    if (closeBtn) {
+      const fresh = closeBtn.cloneNode(true);
+      closeBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => navigate('home'));
     }
     refreshWinnersTable();
   }
   if (screenId === 'winner-announce') {
-    if (!navigate._announceToolbarInited) {
-      PageToolbar.init({ title: 'Announce Winners', logoText: 'ETCC', tableSelector: '#announce-table' });
-      const tb   = document.getElementById('page-toolbar');
-      const card = document.getElementById('announce-card');
-      if (tb && card) {
-        const wrap = card.querySelector('div[style*="overflow-x"]');
-        card.insertBefore(tb, wrap);
-      }
-      navigate._announceToolbarInited = true;
+    PageToolbar.init({ title: '', tableSelector: '#announce-table' });
+    const tb   = document.getElementById('page-toolbar');
+    const wrap = document.getElementById('announce-toolbar-wrap');
+    if (tb && wrap) wrap.appendChild(tb);
+    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    if (closeBtn) {
+      const fresh = closeBtn.cloneNode(true);
+      closeBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => navigate('home'));
     }
     refreshAnnounceTable();
   }
@@ -2469,7 +2479,7 @@ function navigate(screenId) {
       TableKit.init(document.getElementById('payment-table'));
       navigate._paymentTableInited = true;
     }
-    PageToolbar.init({ title: 'Pay & Pickup', logoText: 'ETCC', tableSelector: '#payment-table' });
+    PageToolbar.init({ title: '', tableSelector: '#payment-table' });
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('payment-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
@@ -2480,6 +2490,18 @@ function navigate(screenId) {
       fresh.addEventListener('click', () => navigate('home'));
     }
     refreshPaymentTable();
+  }
+  if (screenId === 'post-auction') {
+    PageToolbar.init({ title: '' });
+    const tb   = document.getElementById('page-toolbar');
+    const wrap = document.getElementById('post-auction-toolbar-wrap');
+    if (tb && wrap) wrap.appendChild(tb);
+    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    if (closeBtn) {
+      const fresh = closeBtn.cloneNode(true);
+      closeBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => navigate('home'));
+    }
   }
 }
 
@@ -2596,8 +2618,7 @@ function showViewAll(type) {
   wrap.innerHTML = '';
   const title = type === 'emails' ? 'Inbox Emails' : type === 'bs-items' ? 'Auction Items' : 'Loaded Items';
   PageToolbar.init({
-    title:         title,
-    logoText:      'ETCC',
+    title:         '',
     tableSelector: '#view-all-table',
     onRefresh:     () => showViewAll(type),
   });
@@ -2658,7 +2679,7 @@ function showCategories() {
 
   const catWrap = document.getElementById('cat-toolbar-wrap');
   catWrap.innerHTML = '';
-  PageToolbar.init({ title: 'Item Categories', logoText: 'ETCC', tableSelector: '#cat-table' });
+  PageToolbar.init({ title: '', tableSelector: '#cat-table' });
   const catTb = document.getElementById('page-toolbar');
   if (catTb) catWrap.appendChild(catTb);
   const catClose = catWrap.querySelector('.tk-btn-close');
@@ -2693,7 +2714,7 @@ function showCategoryItems(code, name) {
 
   const ciWrap = document.getElementById('cat-items-toolbar-wrap');
   ciWrap.innerHTML = '';
-  PageToolbar.init({ title: `${code} — ${name}`, logoText: 'ETCC', tableSelector: '#cat-items-table' });
+  PageToolbar.init({ title: '', tableSelector: '#cat-items-table' });
   const ciTb = document.getElementById('page-toolbar');
   if (ciTb) ciWrap.appendChild(ciTb);
   const ciClose = ciWrap.querySelector('.tk-btn-close');
