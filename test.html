@@ -1019,6 +1019,300 @@ function runUITests() {
         updateSummary();
       }
 
+      // ── Add to bidders uses member_number as bidder_number ─────────────────
+      try {
+        w.localStorage.setItem('sam_bidders', JSON.stringify([]));
+        w.localStorage.setItem('sam_members', JSON.stringify([
+          { member_number: '42',  last_name: 'Doe',   first_name: 'Jane', primary_email: 'j@t.com', cell_phone: '555-0001' },
+          { member_number: '101', last_name: 'Smith',  first_name: 'Bob',  primary_email: 'b@t.com', cell_phone: '555-0002' },
+        ]));
+        w.showMemberDBModal();
+        await delay(80);
+        // Check all checkboxes
+        d.querySelectorAll('#member-db-modal-table tbody input[type="checkbox"]').forEach(cb => cb.checked = true);
+        w.addCheckedToWalkins();
+        await delay(60);
+        const bidders = JSON.parse(w.localStorage.getItem('sam_bidders') || '[]');
+        const b42  = bidders.find(b => b.bidder_number === 42);
+        const b101 = bidders.find(b => b.bidder_number === 101);
+        await suite('Add to bidders uses member_number', () => [
+          uiAssert('2 bidders added',            bidders.length === 2,        `Got ${bidders.length}`),
+          uiAssert('member 42 bidder_number=42', b42  !== undefined,          'No bidder with number 42'),
+          uiAssert('member 101 bidder_number=101', b101 !== undefined,        'No bidder with number 101'),
+          uiAssert('bidder_type is member',      b42?.bidder_type === 'member', `Got ${b42?.bidder_type}`),
+          uiAssert('last_name preserved',        b42?.last_name === 'Doe',    `Got ${b42?.last_name}`),
+        ]);
+        d.getElementById('member-db-modal').style.display = 'none';
+        w.localStorage.setItem('sam_bidders', JSON.stringify([]));
+      } catch(e) {
+        renderSuite('UI — Add to bidders uses member_number', [{ name: 'add test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Member DB — Select All / Clear All buttons ─────────────────────────
+      try {
+        w.localStorage.setItem('sam_members', JSON.stringify([
+          { member_number: '1', last_name: 'Alpha', first_name: 'A', primary_email: '', cell_phone: '' },
+          { member_number: '2', last_name: 'Beta',  first_name: 'B', primary_email: '', cell_phone: '' },
+        ]));
+        w.showMemberDBModal();
+        await delay(80);
+        // Click Select All
+        const selAllBtn = [...d.querySelectorAll('#member-db-modal button')].find(b => b.textContent.trim() === 'Select All');
+        if (selAllBtn) selAllBtn.click();
+        await delay(30);
+        const allChecked = [...d.querySelectorAll('#member-db-modal-tbody input[type="checkbox"]')].every(cb => cb.checked);
+        // Click Clear All
+        const clrAllBtn = [...d.querySelectorAll('#member-db-modal button')].find(b => b.textContent.trim() === 'Clear All');
+        if (clrAllBtn) clrAllBtn.click();
+        await delay(30);
+        const allUnchecked = [...d.querySelectorAll('#member-db-modal-tbody input[type="checkbox"]')].every(cb => !cb.checked);
+        await suite('Member DB — Select All / Clear All', () => [
+          uiAssert('Select All button found',     !!selAllBtn,  'No Select All button in modal'),
+          uiAssert('Select All checks all rows',  allChecked,   'Not all checkboxes checked after Select All'),
+          uiAssert('Clear All button found',      !!clrAllBtn,  'No Clear All button in modal'),
+          uiAssert('Clear All unchecks all rows', allUnchecked, 'Not all checkboxes unchecked after Clear All'),
+        ]);
+        d.getElementById('member-db-modal').style.display = 'none';
+        w.localStorage.removeItem('sam_members');
+      } catch(e) {
+        renderSuite('UI — Member DB — Select All / Clear All', [{ name: 'select/clear test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Register Bidders — Add Bidder button ───────────────────────────────
+      try {
+        nav('bidder-reg');
+        await delay(80);
+        w.localStorage.setItem('sam_bidders', JSON.stringify([]));
+        w.refreshBiddersTable();
+        await delay(40);
+        const addBtn = [...d.querySelectorAll('#bidders-action-bar button')].find(b => b.textContent.includes('Add Bidder'));
+        if (addBtn) addBtn.click();
+        await delay(40);
+        const newRow = d.querySelector('#bidders-tbody tr.new-bidder-row');
+        const saveInRow   = newRow ? newRow.querySelector('.nb-save')   : null;
+        const cancelInRow = newRow ? newRow.querySelector('.nb-cancel') : null;
+        await suite('Register Bidders — Add Bidder button', () => [
+          uiAssert('Add Bidder button found',     !!addBtn,      'No Add Bidder button in action bar'),
+          uiAssert('New row appears in table',    !!newRow,      'No new-bidder-row in tbody'),
+          uiAssert('Save button in new row',      !!saveInRow,   'No .nb-save in new row'),
+          uiAssert('Cancel button in new row',    !!cancelInRow, 'No .nb-cancel in new row'),
+        ]);
+        // Click Cancel — row should disappear
+        if (cancelInRow) cancelInRow.click();
+        await delay(30);
+        const rowGone = !d.querySelector('#bidders-tbody tr.new-bidder-row');
+        await suite('Register Bidders — Cancel new bidder row', () => [
+          uiAssert('Cancel removes the new row',  rowGone, 'new-bidder-row still present after Cancel'),
+        ]);
+        w.localStorage.removeItem('sam_bidders');
+      } catch(e) {
+        renderSuite('UI — Register Bidders — Add Bidder button', [{ name: 'add bidder test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Register Bidders — Delete bidder button ────────────────────────────
+      try {
+        nav('bidder-reg');
+        await delay(80);
+        w.localStorage.setItem('sam_bidders', JSON.stringify([
+          { bidder_number: 55, last_name: 'Del', first_name: 'Me', email: 'd@t.com', phone: '', bidder_type: 'walk-in' }
+        ]));
+        w.refreshBiddersTable();
+        await delay(40);
+        const orig = w.confirm;
+        w.confirm = () => true;
+        const delBtn = d.querySelector('#bidders-tbody button.btn.danger[data-num]');
+        if (delBtn) delBtn.click();
+        await delay(40);
+        w.confirm = orig;
+        const remaining = JSON.parse(w.localStorage.getItem('sam_bidders') || '[]');
+        await suite('Register Bidders — Delete bidder button', () => [
+          uiAssert('Delete button found',      !!delBtn,          'No delete button in bidders-tbody'),
+          uiAssert('Bidder removed from DB',   remaining.length === 0, `Expected 0 bidders, got ${remaining.length}`),
+        ]);
+        w.localStorage.removeItem('sam_bidders');
+      } catch(e) {
+        renderSuite('UI — Register Bidders — Delete bidder button', [{ name: 'delete bidder test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Bidder Edit modal — Cancel button ──────────────────────────────────
+      try {
+        nav('bidder-reg');
+        await delay(80);
+        w.localStorage.setItem('sam_bidders', JSON.stringify([
+          { bidder_number: 77, last_name: 'Edit', first_name: 'Me', email: 'e@t.com', phone: '', bidder_type: 'walk-in' }
+        ]));
+        w.refreshBiddersTable();
+        await delay(40);
+        const editBtn = d.querySelector('#bidders-tbody button[data-edit]');
+        if (editBtn) editBtn.click();
+        await delay(40);
+        const cancelEditBtn = [...d.querySelectorAll('#bidder-edit-modal button')].find(b => b.textContent.trim() === 'Cancel');
+        if (cancelEditBtn) cancelEditBtn.click();
+        await delay(30);
+        const modalClosed = d.getElementById('bidder-edit-modal')?.style.display === 'none';
+        await suite('Bidder Edit modal — Cancel button', () => [
+          uiAssert('Cancel button found in edit modal', !!cancelEditBtn, 'No Cancel button in bidder-edit-modal'),
+          uiAssert('Modal closes after Cancel',         modalClosed,     'bidder-edit-modal still visible after Cancel'),
+        ]);
+        w.localStorage.removeItem('sam_bidders');
+      } catch(e) {
+        renderSuite('UI — Bidder Edit modal — Cancel button', [{ name: 'cancel edit test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Load Items — View All (items) button ───────────────────────────────
+      try {
+        nav('item-load');
+        await delay(80);
+        const viewAllBtn = [...d.querySelectorAll('#screen-item-load button')].find(b => b.textContent.trim() === 'View All');
+        if (viewAllBtn) viewAllBtn.click();
+        await delay(40);
+        const modalVisible = d.getElementById('view-all-modal')?.style.display !== 'none';
+        await suite('Load Items — View All button', () => [
+          uiAssert('View All button found',     !!viewAllBtn,  'No View All button on Load Items screen'),
+          uiAssert('View All modal opens',      modalVisible,  'view-all-modal not visible after click'),
+        ]);
+        w.closeViewAll();
+        await delay(20);
+      } catch(e) {
+        renderSuite('UI — Load Items — View All button', [{ name: 'view all test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Load Items — View Categories button ────────────────────────────────
+      try {
+        nav('item-load');
+        await delay(60);
+        const catBtn = [...d.querySelectorAll('#screen-item-load button')].find(b => b.textContent.trim() === 'View Categories');
+        if (catBtn) catBtn.click();
+        await delay(40);
+        const catModal = d.getElementById('cat-modal');
+        const catVisible = catModal && catModal.style.display !== 'none';
+        await suite('Load Items — View Categories button', () => [
+          uiAssert('View Categories button found',  !!catBtn,    'No View Categories button on Load Items screen'),
+          uiAssert('Categories modal opens',        catVisible,  'cat-modal not visible after click'),
+        ]);
+        if (catModal) catModal.style.display = 'none';
+      } catch(e) {
+        renderSuite('UI — Load Items — View Categories button', [{ name: 'view categories test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Bid Sheets — Check All / Clear All buttons ─────────────────────────
+      try {
+        nav('bidding-sheets');
+        await delay(80);
+        w.localStorage.setItem('sam_items', JSON.stringify([
+          { item_number: '200-1', description: 'Test Item', category_name: 'Corvette Items', category_code: '200', value: '$50', reserve_amount: '', donor_name: 'Donor' }
+        ]));
+        w.refreshBSTable && w.refreshBSTable();
+        await delay(60);
+        const checkAllBtn = [...d.querySelectorAll('#bs-toolbar-wrap button, #screen-bidding-sheets button')].find(b => b.textContent.trim() === 'Check All');
+        if (checkAllBtn) checkAllBtn.click();
+        await delay(30);
+        const allBsChecked = [...d.querySelectorAll('#bs-items-tbody .bs-chk')].every(cb => cb.checked);
+        const clearAllBtn = [...d.querySelectorAll('#bs-toolbar-wrap button, #screen-bidding-sheets button')].find(b => b.textContent.trim() === 'Clear All');
+        if (clearAllBtn) clearAllBtn.click();
+        await delay(30);
+        const allBsUnchecked = [...d.querySelectorAll('#bs-items-tbody .bs-chk')].every(cb => !cb.checked);
+        await suite('Bid Sheets — Check All / Clear All', () => [
+          uiAssert('Check All button found',       !!checkAllBtn,   'No Check All button on Bid Sheets screen'),
+          uiAssert('Check All checks all items',   allBsChecked,    'Not all bs-chk checked after Check All'),
+          uiAssert('Clear All button found',       !!clearAllBtn,   'No Clear All button on Bid Sheets screen'),
+          uiAssert('Clear All unchecks all items', allBsUnchecked,  'Not all bs-chk unchecked after Clear All'),
+        ]);
+        w.localStorage.removeItem('sam_items');
+      } catch(e) {
+        renderSuite('UI — Bid Sheets — Check All / Clear All', [{ name: 'check/clear test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Auction Close — Save button ────────────────────────────────────────
+      try {
+        nav('auction-close');
+        await delay(80);
+        const saveWinnersBtn = [...d.querySelectorAll('#winners-toolbar-wrap button, #screen-auction-close button')].find(b => b.textContent.trim() === 'Save');
+        if (saveWinnersBtn) saveWinnersBtn.click();
+        await delay(40);
+        const note = d.getElementById('winners-save-note');
+        const noteVisible = note && note.textContent.trim() !== '';
+        await suite('Auction Close — Save button', () => [
+          uiAssert('Save button found on Auction Close', !!saveWinnersBtn, 'No Save button on Auction Close screen'),
+          uiAssert('Save note shown after click',        noteVisible,      'winners-save-note empty after Save'),
+        ]);
+      } catch(e) {
+        renderSuite('UI — Auction Close — Save button', [{ name: 'save winners test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Settings — Save Settings button ───────────────────────────────────
+      try {
+        nav('settings');
+        await delay(60);
+        const saveSettingsBtn = [...d.querySelectorAll('#screen-settings button')].find(b => b.textContent.trim() === 'Save Settings');
+        if (saveSettingsBtn) saveSettingsBtn.click();
+        await delay(40);
+        const toast = d.getElementById('settings-saved-msg');
+        const toastVisible = toast && toast.style.display !== 'none';
+        await suite('Settings — Save Settings button', () => [
+          uiAssert('Save Settings button found', !!saveSettingsBtn, 'No Save Settings button on Settings screen'),
+          uiAssert('Toast appears after save',   toastVisible,      'settings-saved-msg not visible after Save'),
+        ]);
+      } catch(e) {
+        renderSuite('UI — Settings — Save Settings button', [{ name: 'save settings test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Settings — Add Field button ────────────────────────────────────────
+      try {
+        nav('settings');
+        await delay(60);
+        const rowsBefore = d.querySelectorAll('#field-map-tbody tr').length;
+        const addFieldBtn = d.getElementById('btn-add-field');
+        if (addFieldBtn) addFieldBtn.click();
+        await delay(40);
+        const rowsAfter = d.querySelectorAll('#field-map-tbody tr').length;
+        await suite('Settings — Add Field button', () => [
+          uiAssert('Add Field button found',      !!addFieldBtn,           'No #btn-add-field on Settings screen'),
+          uiAssert('Row added to field map table', rowsAfter === rowsBefore + 1, `Rows before: ${rowsBefore}, after: ${rowsAfter}`),
+        ]);
+      } catch(e) {
+        renderSuite('UI — Settings — Add Field button', [{ name: 'add field test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // ── Settings — Delete Bidders button ───────────────────────────────────
+      try {
+        nav('settings');
+        await delay(60);
+        w.localStorage.setItem('sam_bidders', JSON.stringify([
+          { bidder_number: 1, last_name: 'A', first_name: 'B', email: '', phone: '', bidder_type: 'walk-in' },
+          { bidder_number: 2, last_name: 'C', first_name: 'D', email: '', phone: '', bidder_type: 'member' },
+        ]));
+        d.getElementById('sel-clear-bidders').value = 'all';
+        const orig = w.confirm;
+        w.confirm = () => true;
+        const delBiddersBtn = [...d.querySelectorAll('#screen-settings button')].find(b => b.textContent.trim() === 'Delete Bidders');
+        if (delBiddersBtn) delBiddersBtn.click();
+        await delay(40);
+        w.confirm = orig;
+        const afterDelete = JSON.parse(w.localStorage.getItem('sam_bidders') || '[]');
+        const statusMsg = d.getElementById('bidder-db-status')?.textContent;
+        await suite('Settings — Delete Bidders button', () => [
+          uiAssert('Delete Bidders button found',  !!delBiddersBtn,       'No Delete Bidders button on Settings screen'),
+          uiAssert('All bidders cleared from DB',  afterDelete.length === 0, `Expected 0, got ${afterDelete.length}`),
+          uiAssert('Status message shown',         statusMsg && statusMsg.includes('removed'), `Status: "${statusMsg}"`),
+        ]);
+        w.localStorage.removeItem('sam_bidders');
+      } catch(e) {
+        renderSuite('UI — Settings — Delete Bidders button', [{ name: 'delete bidders test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
       updateSummary();
       document.getElementById('s-status').textContent +=  ' (incl. UI)';
     })();

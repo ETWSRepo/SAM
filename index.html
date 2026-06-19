@@ -2022,7 +2022,7 @@ function addCheckedToWalkins() {
       const key = `${(m.last_name||'').trim().toLowerCase()}|${(m.first_name||'').trim().toLowerCase()}`;
       if (existingKeys.has(key)) { dupes++; return; }
       Bidders.add({
-        bidder_number: Bidders.nextNumber(),
+        bidder_number: parseInt(m.member_number, 10) || Bidders.nextNumber(),
         last_name:     m.last_name     || '',
         first_name:    m.first_name    || '',
         email:         m.primary_email || '',
@@ -3873,7 +3873,7 @@ function importRegCSV() {
       const name  = (r.last_name + '|' + r.first_name).toLowerCase().trim();
       if ((email && existingEmails.has(email)) || existingNames.has(name)) return;
       Bidders.add({
-        bidder_number: Bidders.nextNumber(),
+        bidder_number: parseInt(r.member_number, 10) || Bidders.nextNumber(),
         last_name:     r.last_name  || '',
         first_name:    r.first_name || '',
         email:         r.email      || '',
