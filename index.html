@@ -791,6 +791,7 @@
         <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto;">
           <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;">
             <colgroup>
+              <col style="width:36px;">
               <col style="width:90px;">
               <col style="width:280px;">
               <col style="width:90px;">
@@ -801,6 +802,7 @@
             </colgroup>
             <thead>
               <tr>
+                <th style="text-align:center;" title="Print invoice">🖨</th>
                 <th>Item #</th>
                 <th>Description</th>
                 <th>Value</th>
@@ -1226,6 +1228,19 @@
 <!-- Scripts -->
 <script src="js/table.js"></script>
 <script src="js/toolbar.js"></script>
+<script>
+(function() {
+  const _origInit = PageToolbar.init.bind(PageToolbar);
+  PageToolbar.init = function(opts) {
+    _origInit(opts);
+    const tb = document.getElementById('page-toolbar');
+    if (tb) tb.querySelectorAll('.tk-btn:not(.tk-btn-close)').forEach(b => {
+      const label = b.textContent.trim();
+      if (label === 'Export' || label === 'Import' || label === 'Email' || label === 'Print') b.remove();
+    });
+  };
+})();
+</script>
 <script src="https://apis.google.com/js/api.js" async></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
@@ -2213,6 +2228,310 @@ function printInvoice(bidderNum) {
   win.document.close();
 }
 
+function printBiddersList() {
+  const bidders = Bidders.getAll().slice().sort((a, b) => a.bidder_number - b.bidder_number);
+  const rows = bidders.map(b => `
+    <tr>
+      <td>${escHtml(String(b.bidder_number))}</td>
+      <td>${escHtml(b.bidder_type || 'walk-in')}</td>
+      <td>${escHtml(b.last_name || '')}</td>
+      <td>${escHtml(b.first_name || '')}</td>
+      <td>${escHtml(b.email || '')}</td>
+      <td>${escHtml(b.phone || '')}</td>
+    </tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><title>Bidder List</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; color: #1d1d1f; }
+    h2 { margin: 0 0 4px; }
+    .sub { font-size: 13px; color: #555; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #dbeafe; padding: 6px 8px; text-align: left; border: 1px solid #000; font-weight: 600; }
+    td { padding: 4px 8px; border: 1px solid #ccc; }
+    tr:nth-child(even) td { background: #f0f7ff; }
+    @media print { button { display: none; } @page { margin: 0.4in; } }
+  </style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div>
+      <h2>East Tennessee Corvette Club — Silent Auction</h2>
+      <div class="sub">Registered Bidders &nbsp;|&nbsp; Printed: ${new Date().toLocaleString()}</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:6px 16px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:6px 16px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Bidder #</th><th>Type</th><th>Last Name</th><th>First Name</th><th>Email</th><th>Phone</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printPaymentTable() {
+  const bidders  = Bidders.getAll();
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const items    = Items.getAll();
+  const settings = DB.getSettings();
+  const sqPct    = (settings.squarePct || 0) / 100;
+  const sqFee    = settings.squareFee  || 0;
+  const itemMap  = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  const byBidder = {};
+  Object.entries(winners).forEach(([key, w]) => {
+    if (!w.bidder_number) return;
+    if (!byBidder[w.bidder_number]) byBidder[w.bidder_number] = [];
+    byBidder[w.bidder_number].push({ key, bid: parseFloat(w.winning_bid) || 0, desc: itemMap[key]?.description || key });
+  });
+
+  const rows = bidders.slice().sort((a, b) => a.bidder_number - b.bidder_number)
+    .filter(b => byBidder[b.bidder_number])
+    .map(b => {
+      const pay      = payments[b.bidder_number] || {};
+      const wonItems = byBidder[b.bidder_number] || [];
+      const total    = wonItems.reduce((s, i) => s + i.bid, 0);
+      const ccTrans  = Math.round((total * sqPct + sqFee) * 100) / 100;
+      const ccTotal  = Math.round((total + ccTrans) * 100) / 100;
+      const method   = pay.method || '';
+      const itemList = wonItems.map(i => `${escHtml(i.key)}: ${escHtml(i.desc)}`).join('<br>');
+      return `<tr>
+        <td>${escHtml(String(b.bidder_number))}</td>
+        <td>${escHtml(b.last_name || '')}</td>
+        <td>${escHtml(b.first_name || '')}</td>
+        <td style="text-align:center;">${wonItems.length}</td>
+        <td style="text-align:right;">${fmtDollar(total)}</td>
+        <td style="font-size:11px;">${itemList}</td>
+        <td style="text-align:right;">${fmtDollar(total)}</td>
+        <td style="text-align:right;">${fmtDollar(ccTotal)}</td>
+        <td style="text-align:center;">${pay.paid ? '✓' : ''}</td>
+        <td>${escHtml(method)}</td>
+      </tr>`;
+    }).join('');
+
+  const html = `<!DOCTYPE html><html><head><title>Pay & Pickup</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; color: #1d1d1f; }
+    h2 { margin: 0 0 4px; }
+    .sub { font-size: 13px; color: #555; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { background: #dbeafe; padding: 5px 6px; text-align: left; border: 1px solid #000; font-weight: 600; }
+    td { padding: 3px 6px; border: 1px solid #ccc; vertical-align: top; }
+    tr:nth-child(even) td { background: #f0f7ff; }
+    @media print { button { display: none; } @page { size: landscape; margin: 0.4in; } }
+  </style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div>
+      <h2>East Tennessee Corvette Club — Silent Auction</h2>
+      <div class="sub">Pay &amp; Pickup &nbsp;|&nbsp; Printed: ${new Date().toLocaleString()}</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:6px 16px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:6px 16px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Bidder #</th><th>Last Name</th><th>First Name</th><th># Items</th><th>Winning Bid</th><th>Items</th><th>Cash/Check</th><th>CC Total</th><th>Paid</th><th>Method</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printAnnounceTable() {
+  const bidders = Bidders.getAll();
+  const winners = DB.getWinners();
+  const winCount = {};
+  Object.values(winners).forEach(w => {
+    if (!w.bidder_number) return;
+    winCount[w.bidder_number] = (winCount[w.bidder_number] || 0) + 1;
+  });
+  const rows = bidders.slice().sort((a, b) => a.bidder_number - b.bidder_number).map(b => {
+    const count = winCount[b.bidder_number] || 0;
+    return `<tr>
+      <td>${escHtml(String(b.bidder_number))}</td>
+      <td>${escHtml(`${b.last_name}, ${b.first_name}`.trim())}</td>
+      <td style="text-align:center;${count > 0 ? 'font-weight:700;color:#1a7f37;' : 'color:#86868b;'}">${count > 0 ? count : '—'}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html><head><title>Announce Winners</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; color: #1d1d1f; }
+    h2 { margin: 0 0 4px; }
+    .sub { font-size: 13px; color: #555; margin-bottom: 16px; }
+    table { width: 560px; border-collapse: collapse; font-size: 12px; }
+    th { background: #dbeafe; padding: 6px 8px; text-align: left; border: 1px solid #000; font-weight: 600; }
+    td { padding: 4px 8px; border: 1px solid #ccc; }
+    tr:nth-child(even) td { background: #f0f7ff; }
+    @media print { button { display: none; } @page { margin: 0.4in; } }
+  </style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div>
+      <h2>East Tennessee Corvette Club — Silent Auction</h2>
+      <div class="sub">Announce Winners &nbsp;|&nbsp; Printed: ${new Date().toLocaleString()}</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:6px 16px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:6px 16px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Bidder #</th><th>Bidder Name</th><th style="text-align:center;">Items Won</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printWinnersTable() {
+  const items   = Items.getAll();
+  const winners = DB.getWinners();
+  const rows = items.map(item => {
+    const key = String(item.item_number);
+    const w   = winners[key] || {};
+    return `<tr>
+      <td>${escHtml(key)}</td>
+      <td>${escHtml(item.description || '')}</td>
+      <td style="text-align:right;">${fmtDollar(item.value)}</td>
+      <td style="text-align:right;">${escHtml(String(w.winning_bid || ''))}</td>
+      <td>${escHtml(String(w.bidder_number || ''))}</td>
+      <td>${escHtml(w.bidder_name || '')}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html><head><title>Winning Bidders</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 32px; color: #1d1d1f; }
+    h2 { margin: 0 0 4px; }
+    .sub { font-size: 13px; color: #555; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #dbeafe; padding: 6px 8px; text-align: left; border: 1px solid #000; font-weight: 600; }
+    td { padding: 4px 8px; border: 1px solid #ccc; }
+    tr:nth-child(even) td { background: #f0f7ff; }
+    @media print { button { display: none; } @page { margin: 0.4in; } }
+  </style></head><body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+    <div>
+      <h2>East Tennessee Corvette Club — Silent Auction</h2>
+      <div class="sub">Winning Bidders &nbsp;|&nbsp; Printed: ${new Date().toLocaleString()}</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="window.print()" style="padding:6px 16px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+      <button onclick="window.close()" style="padding:6px 16px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Item #</th><th>Description</th><th>Value</th><th>Winning Bid</th><th>Bidder #</th><th>Bidder Name</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function printAllInvoices() {
+  const bidders  = Bidders.getAll();
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const items    = Items.getAll();
+  const settings = DB.getSettings();
+  const sqPct    = (settings.squarePct || 0) / 100;
+  const sqFee    = settings.squareFee  || 0;
+
+  const itemMap = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  // Only include bidders with at least one saved item that has both a bidder and a winning bid
+  const validWinnerNums = [...new Set(
+    Object.values(winners)
+      .filter(w => w.bidder_number && w.winning_bid)
+      .map(w => w.bidder_number)
+  )];
+  // Filter by checked rows if any are checked; otherwise use all valid winners
+  const checkedNums = new Set(
+    [...document.querySelectorAll('#winners-tbody tr')].filter(tr => tr.querySelector('.win-print-chk')?.checked).map(tr => {
+      const sel = tr.querySelector('.win-num');
+      return sel ? parseInt(sel.value, 10) : 0;
+    }).filter(Boolean)
+  );
+  const bidderNums = (checkedNums.size ? validWinnerNums.filter(n => checkedNums.has(n)) : validWinnerNums).sort((a, b) => a - b);
+  if (!bidderNums.length) { alert('No winners recorded yet.'); return; }
+
+  const logoUrl = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  const invoicePages = bidderNums.map((bidderNum, pageIdx) => {
+    const bidder   = bidders.find(b => b.bidder_number === bidderNum) || {};
+    const pay      = payments[bidderNum] || {};
+    const wonItems = Object.entries(winners)
+      .filter(([, w]) => w.bidder_number === bidderNum)
+      .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseFloat(w.winning_bid) || 0 }));
+    const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
+    const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
+    const ccTotal  = Math.round((totalBid + ccTrans) * 100) / 100;
+    const method   = pay.method || 'Credit Card';
+    const rows = wonItems.map(i => `
+      <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee;">${escHtml(i.key)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee;">${escHtml(i.desc)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">${fmtDollar(i.bid)}</td>
+      </tr>`).join('');
+    const ccRow = method === 'Credit Card' ? `
+      <tr><td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">CC Transaction Fee</td><td style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">${fmtDollar(ccTrans)}</td></tr>` : '';
+    const pageBreak = pageIdx > 0 ? 'page-break-before:always;' : '';
+    return `
+    <div style="${pageBreak}max-width:520px;margin:40px auto;padding:0 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="${logoUrl}" alt="ETCC Logo" style="height:60px;">
+          <div><h2 style="margin:0 0 4px;">Silent Auction Invoice</h2><div style="font-size:13px;color:#555;">East Tennessee Corvette Club</div></div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:18px;font-weight:800;">${escHtml(bidder.first_name || '')} ${escHtml(bidder.last_name || '')} &nbsp;|&nbsp; Bidder #${bidderNum} &nbsp;|&nbsp; ${escHtml(method)}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;">
+        <thead><tr><th style="width:100px;background:#dbeafe;padding:8px 10px;text-align:left;border:1px solid #000;">Item #</th><th style="background:#dbeafe;padding:8px 10px;text-align:left;border:1px solid #000;">Description</th><th style="width:120px;background:#dbeafe;padding:8px 10px;text-align:right;border:1px solid #000;">Amount</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          ${ccRow}
+          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Cash / Check Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
+          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;color:#888;font-size:11px;">(Includes ${settings.squarePct || 0}% + $${sqFee.toFixed(2)})&nbsp;&nbsp;</span>Credit Card Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
+          <tr><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;border:1px solid #000;">Paid</td><td style="padding:8px 10px;text-align:center;border:1px solid #000;"><input type="checkbox" style="width:20px;height:20px;cursor:pointer;accent-color:#1a7f37;"></td></tr>
+        </tfoot>
+      </table>
+      <div style="margin-top:32px;padding:16px 20px;border:1px solid #000;border-radius:6px;text-align:center;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Thank You for Your Support!</div>
+        <div style="font-size:13px;color:#333;line-height:1.6;">The East Tennessee Corvette Club sincerely appreciates your participation in our Silent Auction.</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><title>All Invoices</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; color: #1d1d1f; }
+    @page { size: letter portrait; margin: 0.4in; }
+    @media print { .no-print { display: none; } }
+  </style>
+  </head><body>
+  <div class="no-print" style="position:sticky;top:0;background:#1d1d1f;padding:10px 20px;display:flex;gap:10px;z-index:99;">
+    <button onclick="if(confirm('Print ${bidderNums.length} invoice${bidderNums.length !== 1 ? 's' : ''}?')) window.print();" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print</button>
+    <button onclick="window.close()" style="padding:8px 18px;background:#e0e0e0;color:#1d1d1f;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Close</button>
+  </div>
+  ${invoicePages}
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
 function refreshPaymentTable() {
   const bidders  = Bidders.getAll();
   const winners  = DB.getWinners();
@@ -2452,7 +2771,7 @@ function refreshWinnersTable() {
   tbody.innerHTML = '';
 
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet. Complete Step 1 first.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet. Complete Step 1 first.</td></tr>';
     return;
   }
 
@@ -2470,6 +2789,7 @@ function refreshWinnersTable() {
     const tr = document.createElement('tr');
     tr.dataset.itemKey = key;
     tr.innerHTML = `
+      <td style="text-align:center;"><input type="checkbox" class="win-print-chk" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent);"></td>
       <td style="font-weight:600;font-size:13px;">${escHtml(key)}</td>
       <td style="font-size:12px;">${escHtml(item.description || '')}</td>
       <td style="font-size:12px;">${fmtDollar(item.value)}</td>
@@ -2882,6 +3202,12 @@ function navigate(screenId) {
       }
       card.insertBefore(tb, actionBar);
     }
+    const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions) {
+      const closeBtn = actions.querySelector('.tk-btn-close');
+      const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
+      actions.insertBefore(mkBtn('Print', printBiddersList), closeBtn);
+    }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
@@ -2896,6 +3222,7 @@ function navigate(screenId) {
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('winners-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
+    if (tb) tb.querySelectorAll('.tk-btn:not(.tk-btn-close)').forEach(b => { if (b.textContent.trim() === 'Print') b.remove(); });
     const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
     if (actions) {
       const closeBtn = actions.querySelector('.tk-btn-close');
@@ -2906,6 +3233,10 @@ function navigate(screenId) {
         b.addEventListener('click', fn);
         return b;
       };
+      actions.insertBefore(mkBtn('Print Invoices', printAllInvoices), closeBtn);
+      actions.insertBefore(mkBtn('Print', printWinnersTable), closeBtn);
+      actions.insertBefore(mkBtn('Check All', () => document.querySelectorAll('#winners-tbody .win-print-chk').forEach(c => c.checked = true)), closeBtn);
+      actions.insertBefore(mkBtn('Clear All', () => document.querySelectorAll('#winners-tbody .win-print-chk').forEach(c => c.checked = false)), closeBtn);
       actions.insertBefore(mkBtn('Save', saveAllWinners), closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
@@ -2921,6 +3252,12 @@ function navigate(screenId) {
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('announce-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
+    const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions) {
+      const closeBtn = actions.querySelector('.tk-btn-close');
+      const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
+      actions.insertBefore(mkBtn('Print', printAnnounceTable), closeBtn);
+    }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
@@ -2939,6 +3276,12 @@ function navigate(screenId) {
     const wrap = document.getElementById('payment-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
     navigate._payDirty = false;
+    const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions) {
+      const closeBtn = actions.querySelector('.tk-btn-close');
+      const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
+      actions.insertBefore(mkBtn('Print', printPaymentTable), closeBtn);
+    }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
