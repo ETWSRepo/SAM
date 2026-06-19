@@ -1341,6 +1341,13 @@ function runUITests() {
         updateSummary();
       }
 
+      // ── Server sync infrastructure ─────────────────────────────────────────
+      await suite('Server sync infrastructure', () => [
+        uiAssert('_samServerSync promise exists',   typeof w._samServerSync?.then === 'function', '_samServerSync is not a Promise'),
+        uiAssert('_samOrigSetItem override exists', typeof w._samOrigSetItem === 'function',      '_samOrigSetItem not set'),
+        uiAssert('localStorage.setItem intercepted', w.localStorage.setItem !== w._samOrigSetItem, 'setItem was not intercepted'),
+      ]);
+
       updateSummary();
       document.getElementById('s-status').textContent +=  ' (incl. UI)';
     })();

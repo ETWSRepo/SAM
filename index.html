@@ -1119,7 +1119,7 @@
         <div style="padding:16px;">
           <div class="form-row">
             <label for="inp-client-id">Google OAuth Client ID</label>
-            <input type="text" id="inp-client-id" value="215529370659-28knl9jlure9gells5aedltglbpdrgt4.apps.googleusercontent.com" style="font-family:monospace; font-size:12px;" />
+            <input type="text" id="inp-client-id" style="font-family:monospace; font-size:12px;" />
             <span class="form-hint">Create a Web Application credential in Google Cloud Console → APIs &amp; Services → Credentials. Add http://localhost:3000 to Authorized JavaScript Origins.</span>
           </div>
           <div class="form-row">
@@ -1249,6 +1249,40 @@
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script>
 // ══════════════════════════════════════
+//  SERVER SYNC (MySQL via api.php)
+// ══════════════════════════════════════
+(function() {
+  const _orig = localStorage.setItem.bind(localStorage);
+  window._samOrigSetItem = _orig;
+  localStorage.setItem = function(key, value) {
+    _orig(key, value);
+    if (key.startsWith('sam_') && !window._samLoadingFromServer) {
+      fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set', key, value })
+      }).catch(() => {});
+    }
+  };
+})();
+
+window._samServerSync = fetch('api.php', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'get_all' })
+})
+.then(r => r.json())
+.then(data => {
+  if (!data || data.error) return;
+  window._samLoadingFromServer = true;
+  for (const [k, v] of Object.entries(data)) {
+    if (k.startsWith('sam_')) window._samOrigSetItem(k, v);
+  }
+  window._samLoadingFromServer = false;
+})
+.catch(() => {});
+
+// ══════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════
 const CATEGORIES = {
@@ -1288,7 +1322,7 @@ const DEFAULT_FIELD_MAP = [
 ];
 
 const DEFAULT_SETTINGS = {
-  gmailClientId:   '',
+  gmailClientId:   '1081410495667-pp74cqsp8uhtuinbevtlebqvn0rj3op5.apps.googleusercontent.com',
   inboxEmail:      'etccwebsite.auction@gmail.com',
   debugMode:       false,
   startingBidPct:  30,
@@ -4485,7 +4519,8 @@ function showCategoryItems(code, name) {
 // ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
-(function init() {
+(async function init() {
+  await window._samServerSync;
   renderEmailTable(scannedEmails);
   refreshItemsTable();
   refreshMetrics();
