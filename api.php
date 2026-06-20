@@ -51,6 +51,16 @@ if ($action === 'get_all') {
     $stmt->execute([$key, $val]);
     echo json_encode(['ok' => true]);
 
+} elseif ($action === 'clear_all') {
+    // Purge all stored data. Requires a token to prevent accidental clearing.
+    $token = $input['token'] ?? '';
+    if ($token !== 'samclear2026') {
+        echo json_encode(['error' => 'Invalid or missing token']);
+        exit;
+    }
+    $pdo->exec("TRUNCATE TABLE sam_store");
+    echo json_encode(['ok' => true, 'message' => 'All data cleared']);
+
 } else {
     echo json_encode(['error' => 'Unknown action']);
 }

@@ -553,6 +553,10 @@
 
         <!-- Current auction panel (shown when auction is selected) -->
         <div id="home-auction-panel" style="display:none;">
+          <div style="padding:10px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-top:16px;margin-bottom:20px;font-size:12px;line-height:1.5;color:var(--text);text-align:center;">
+            <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. You run the auction and I'll manage the administration.
+          </div>
+
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:8px 12px;background:var(--bg-section);border:1px solid var(--border);border-radius:8px;">
             <div>
               <div style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;">Current Auction</div>
@@ -562,10 +566,6 @@
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;" id="home-metrics"></div>
-
-          <div style="padding:10px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;font-size:12px;line-height:1.5;color:var(--text);text-align:center;">
-            <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door.
-          </div>
 
           <div class="card" style="margin-bottom:0;">
             <div class="card-header">Auction Workflow</div>
@@ -612,9 +612,9 @@
           </div>
         </div>
 
-        <!-- No-auction welcome (shown when no auction is selected) -->
-        <div id="home-no-auction" style="padding:16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;font-size:12px;line-height:1.6;color:var(--text);text-align:center;">
-          <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Create a new auction or select an existing one below to get started.
+        <!-- Welcome card (shown when no auction is selected, above auction picker) -->
+        <div id="home-no-auction-welcome" style="padding:10px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-top:16px;margin-bottom:20px;font-size:12px;line-height:1.5;color:var(--text);text-align:center;display:none;">
+          <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. You run the auction and I'll manage the administration.
         </div>
 
         <!-- Auctions list (shown only when no auction is selected) -->
@@ -1256,6 +1256,21 @@
         </div>
       </div>
 
+      <!-- Auction Management -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Auction Management</div>
+        <div style="padding:16px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">Select auction:</label>
+            <select id="sel-delete-auction" style="font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);">
+              <option value="">-- Choose an auction --</option>
+            </select>
+            <button class="btn danger" onclick="deleteAuctionByName()">Delete Auction</button>
+          </div>
+          <div id="auction-delete-status" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
             <!-- Developer Tools -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">Developer Tools</div>
@@ -1723,25 +1738,25 @@ function renameAuction(id) {
 }
 
 function updateHomeAuctionPanel() {
-  const auction        = currentAuction();
-  const auctionPanel   = document.getElementById('home-auction-panel');
-  const noAuctionEl    = document.getElementById('home-no-auction');
-  const auctionsCard   = document.getElementById('home-auctions-card');
-  const archivedBanner = document.getElementById('home-archived-banner');
-  const nameEl         = document.getElementById('home-current-auction-name');
+  const auction              = currentAuction();
+  const auctionPanel         = document.getElementById('home-auction-panel');
+  const auctionsCard         = document.getElementById('home-auctions-card');
+  const noAuctionWelcome     = document.getElementById('home-no-auction-welcome');
+  const archivedBanner       = document.getElementById('home-archived-banner');
+  const nameEl               = document.getElementById('home-current-auction-name');
   if (!auctionPanel) return;
   if (auction) {
     auctionPanel.style.display   = '';
-    noAuctionEl.style.display    = 'none';
     if (auctionsCard) auctionsCard.style.display = 'none';
+    if (noAuctionWelcome) noAuctionWelcome.style.display = 'none';
     nameEl.textContent           = auction.name;
     const isArch = auction.status === 'archived';
     archivedBanner.style.display = isArch ? '' : 'none';
     document.body.classList.toggle('archived-mode', isArch);
   } else {
     auctionPanel.style.display   = 'none';
-    noAuctionEl.style.display    = '';
     if (auctionsCard) auctionsCard.style.display = '';
+    if (noAuctionWelcome) noAuctionWelcome.style.display = '';
     archivedBanner.style.display = 'none';
     document.body.classList.remove('archived-mode');
   }
@@ -3595,6 +3610,7 @@ function loadSettingsForm() {
   document.getElementById('inp-club-logo').value        = s.clubLogo      || '';
   document.getElementById('inp-club-favicon').value     = s.clubFavicon  || '';
   renderFieldMapTable();
+  refreshDeleteAuctionDropdown();
 }
 
 const LOADED_ITEMS_COL = {
@@ -5017,6 +5033,56 @@ function clearBiddersBySelection() {
   document.getElementById('bidder-db-status').textContent = removed + ' bidder' + (removed !== 1 ? 's' : '') + ' removed.';
 }
 
+function refreshDeleteAuctionDropdown() {
+  const sel = document.getElementById('sel-delete-auction');
+  if (!sel) return;
+  const auctions = DB.getAuctions();
+  sel.innerHTML = '<option value="">-- Choose an auction --</option>';
+  auctions.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = a.name + ' (' + a.status + ')';
+    sel.appendChild(opt);
+  });
+}
+
+function deleteAuctionByName() {
+  const sel = document.getElementById('sel-delete-auction');
+  const statusEl = document.getElementById('auction-delete-status');
+  const auctionId = sel.value;
+  if (!auctionId) {
+    statusEl.textContent = 'Please select an auction.';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  const auctions = DB.getAuctions();
+  const auction = auctions.find(a => a.id === auctionId);
+  if (!auction) {
+    statusEl.textContent = 'Auction not found.';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  if (!confirm('Delete auction "' + auction.name + '" and all its data? This cannot be undone.')) return;
+  // Remove the auction from the list
+  const remaining = auctions.filter(a => a.id !== auction.id);
+  DB.saveAuctions(remaining);
+  // If this was the current auction, deselect it
+  if (DB.getCurrentAuctionId() === auction.id) {
+    DB.setCurrentAuctionId('');
+    if (typeof updateHomeAuctionPanel === 'function') updateHomeAuctionPanel();
+  }
+  // Clear all per-auction data for this auction
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('sam_' + auction.id + '_')) keysToRemove.push(key);
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+  refreshDeleteAuctionDropdown();
+  statusEl.textContent = 'Auction "' + escHtml(auction.name) + '" deleted.';
+  statusEl.style.color = 'var(--success)';
+}
+
 // ══════════════════════════════════════
 //  REGISTRATION DATABASE
 // ══════════════════════════════════════
@@ -5393,7 +5459,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.101</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 4:00 PM</span></div>
+  <div>Version: <span id="app-version">1.112</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 4:45 PM</span></div>
 </div>
 </body>
 </html>
