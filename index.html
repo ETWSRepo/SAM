@@ -1673,19 +1673,11 @@ function createAuction() {
   auctions.push({ id, name: name.trim(), status: 'active', created: new Date().toISOString() });
   DB.saveAuctions(auctions);
 
-  // Pre-populate bidders from the registration database
-  const regDB = DB.getRegDB();
-  if (regDB.length) {
-    const bidders = regDB.map(r => ({
-      bidder_number: parseInt(r.member_number, 10) || 0,
-      last_name:     r.last_name  || '',
-      first_name:    r.first_name || '',
-      email:         r.email      || '',
-      phone:         r.cell_phone || '',
-      bidder_type:   'pre-registration',
-    })).filter(b => b.bidder_number > 0);
-    localStorage.setItem(`sam_${id}_bidders`, JSON.stringify(bidders));
-  }
+  // Clear emails, items, bidders, and winners for the new auction
+  localStorage.setItem(`sam_${id}_emails`, JSON.stringify([]));
+  localStorage.setItem(`sam_${id}_items`, JSON.stringify([]));
+  localStorage.setItem(`sam_${id}_bidders`, JSON.stringify([]));
+  localStorage.setItem(`sam_${id}_winners`, JSON.stringify({}));
 
   openAuction(id);
 }
@@ -5133,38 +5125,11 @@ function importRegCSV() {
 
     DB.saveRegDB(records);
 
-    // Add registrants as walk-in bidders, skipping duplicates
-    const existing = Bidders.getAll();
-    const existingEmails = new Set(existing.map(b => (b.email || '').toLowerCase().trim()).filter(Boolean));
-    const existingNames  = new Set(existing.map(b => (b.last_name + '|' + b.first_name).toLowerCase().trim()));
-    let walkInsAdded = 0;
-    records.forEach(r => {
-      const email = (r.email || '').toLowerCase().trim();
-      const name  = (r.last_name + '|' + r.first_name).toLowerCase().trim();
-      if ((email && existingEmails.has(email)) || existingNames.has(name)) return;
-      Bidders.add({
-        bidder_number: parseInt(r.member_number, 10) || Bidders.nextNumber(),
-        last_name:     r.last_name  || '',
-        first_name:    r.first_name || '',
-        email:         r.email      || '',
-        phone:         r.cell_phone || '',
-        bidder_type:   'pre-registration'
-      });
-      existingEmails.add(email);
-      existingNames.add(name);
-      walkInsAdded++;
-    });
-    refreshBiddersTable();
-
     const regImportDate = new Date().toLocaleString();
     DB.saveSettings(Object.assign(DB.getSettings(), { regImportDate }));
     const rDateEl = document.getElementById('reg-import-date');
     if (rDateEl) rDateEl.value = regImportDate;
-    const dupes = records.length - walkInsAdded;
-    document.getElementById('reg-import-status').textContent =
-      records.length + ' members imported; ' +
-      walkInsAdded + ' added as bidders' +
-      (dupes ? '; ' + dupes + ' duplicate' + (dupes !== 1 ? 's' : '') + ' skipped' : '');
+    document.getElementById('reg-import-status').textContent = records.length + ' members imported.';
     document.getElementById('inp-reg-csv').value = '';
   };
   reader.readAsText(file);
@@ -5467,7 +5432,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.114</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 4:53 PM</span></div>
+  <div>Version: <span id="app-version">1.117</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 5:00 PM</span></div>
 </div>
 </body>
 </html>
