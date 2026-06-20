@@ -1429,6 +1429,7 @@ function runUITests() {
 
       updateSummary();
       document.getElementById('s-status').textContent +=  ' (incl. UI)';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     })();
   }
 

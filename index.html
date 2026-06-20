@@ -1287,24 +1287,67 @@
   <div id="manual-dialog">
     <header>
       <h2>📖 ETCC Silent Auction Manager — User Manual</h2>
-      <button id="close-manual">&times;</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="window.print()" style="background:#0071e3;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">🖨 Print</button>
+        <button id="close-manual">&times;</button>
+      </div>
     </header>
     <div id="manual-body">
-      <p>This application manages the silent auction for the East Tennessee Corvette Club. Follow the six steps in order for each auction event.</p>
-      <h3>Step 1 — Item Load</h3>
-      <p>Scans <strong>etccwebsite.auction@gmail.com</strong> for donation emails. Extracts item fields and loads them into the items database. Duplicate emails are skipped. Each item receives a unique item number based on its category.</p>
+      <p>SAM manages the full silent auction lifecycle for the East Tennessee Corvette Club — from item intake through payment and pickup. Follow the eight steps in order for each auction event.</p>
+
+      <h3>Step 1 — Load Item Emails</h3>
+      <p>Connects to <strong>etccwebsite.auction@gmail.com</strong> via Gmail (OAuth sign-in required) and scans the inbox for donation submission emails. Click <strong>Scan Inbox</strong> to authenticate and fetch emails, then <strong>Load Items</strong> to import new ones into the database. Duplicate emails are automatically skipped. Each item is assigned a unique number based on its category (e.g. 200-3 for the third Corvette item).</p>
+
       <h3>Step 2 — Create Bid Sheets</h3>
-      <p>Generates a printable bid sheet for each item showing item number, description, starting bid, bid increment, and a table of bid rows.</p>
-      <h3>Step 3 — Bidder Registration</h3>
-      <p>Register attendees as bidders. Import member numbers from a Club Express file. Send emails to individual or all bidders.</p>
-      <h3>Step 4 — Auction Close</h3>
-      <p>After the auction closes, enter the winning bidder number for each item using bulk entry mode.</p>
-      <h3>Step 5 — Winner Announcement</h3>
-      <p>Generates a list of all winning bidders and items that can be announced to attendees.</p>
-      <h3>Step 6 — Payment &amp; Pickup</h3>
-      <p>Payment report listing each winning bidder, items won, and payment details. Sortable by bidder number or last name.</p>
+      <p>Generates a printable bid sheet for each item. Each sheet shows the item number, description, donor, value, starting bid, and a numbered table of bid rows with increment amounts. Starting bid and bid count are configurable in Settings. Select individual items or use Check All, then click Print.</p>
+
+      <h3>Step 3 — Register Bidders</h3>
+      <p>Add auction attendees as bidders and assign bidder numbers. Import members from a Club Express export file or a registration CSV. Walk-in bidder numbers start at the configured Walk-in Start value (default 1000). Each bidder record stores name, email, and phone.</p>
+
+      <h3>Step 4 — Record Winning Bidders</h3>
+      <p>After the auction closes, enter the winning bidder number and winning bid amount for each item. The table lists all items; type the bidder number and bid amount into each row and click Save. Only rows with both a bidder number and a bid amount are saved as winners.</p>
+
+      <h3>Step 5 — Print Invoices</h3>
+      <p>Generates printed invoices for winning bidders. Select individual bidders using the checkboxes or use Check All, then click Print All. Each invoice lists the bidder's winning items, amounts, total, and payment options including a credit card surcharge calculation based on the Square fee settings.</p>
+
+      <h3>Step 6 — Announce Winners</h3>
+      <p>Displays a table of all bidders who won one or more items. Use this screen to publicly announce winners at the event. The <strong>Email Bidders</strong> button opens the Email Bidders screen where you can send personalized winner notification emails.</p>
+
+      <h3>Step 7 — Pay &amp; Pickup</h3>
+      <p>Records payment method and item pickup status for each winning bidder. Supports Cash, Check, Credit Card, and Other. Credit card totals automatically include the Square transaction fee (configurable in Settings). Mark each bidder as paid and items as picked up as they are processed.</p>
+
+      <h3>Step 8 — Post Auction</h3>
+      <p>Reporting and email tools for after the auction closes:</p>
+      <ul>
+        <li><strong>Auction Summary</strong> — full list of bidders, items, winners, and total income</li>
+        <li><strong>Winning Bidder Report</strong> — each winner's items and amount due</li>
+        <li><strong>Donor Report</strong> — items donated and revenue per donor</li>
+        <li><strong>Club Financial Summary</strong> — income broken down by payment method</li>
+        <li><strong>Email Bidders</strong> — send personalized winner emails or non-winner thank-you emails via Gmail API</li>
+      </ul>
+
+      <h3>Email Bidders</h3>
+      <p>Opens a full-screen panel listing all bidders with their winner/non-winner status. Select the recipients using the checkboxes, then:</p>
+      <ul>
+        <li><strong>Send Winning Emails</strong> — sends a personalized email to each selected winner via the Gmail API. Each email lists only that winner's items and total. Gmail sign-in (Step 1) must be completed first.</li>
+        <li><strong>Send NonWinners Emails</strong> — sends a single thank-you email to all selected non-winners as BCC.</li>
+      </ul>
+
       <h3>Settings</h3>
-      <p>Enter your Google OAuth Client ID to enable Gmail scanning. Configure the field mapping table to match your email format.</p>
+      <ul>
+        <li><strong>Gmail OAuth Client ID</strong> — required for scanning the inbox and sending winner emails. Enter your Google Cloud OAuth 2.0 client ID.</li>
+        <li><strong>Starting Bid %</strong> — starting bid as a percentage of item value (default 30%)</li>
+        <li><strong>Final Bid %</strong> — highest bid row as a percentage of item value (default 150%)</li>
+        <li><strong>Bid Count</strong> — number of bid rows on each bid sheet (default 25)</li>
+        <li><strong>Walk-in Start</strong> — first bidder number assigned to walk-in registrations (default 1000)</li>
+        <li><strong>Square Fee %</strong> and <strong>Square Flat Fee</strong> — credit card surcharge rates used on invoices and Pay &amp; Pickup</li>
+        <li><strong>Email Field Mapping</strong> — maps labels in donation emails to database fields. Adjust if your email format changes.</li>
+        <li><strong>Data Backup</strong> — Export a full JSON backup of all auction data, or Import a previously saved backup to restore data.</li>
+      </ul>
+
+      <h3>Data &amp; Sync</h3>
+      <p>All data is stored in the browser's localStorage and automatically synced to a MySQL database on the server after every change. On startup, the app loads the latest data from the server so data is preserved across browsers and devices. Use <strong>Export Backup</strong> in Settings to save a local copy before major changes.</p>
+
       <h3>Item Categories</h3>
       <ul>
         <li>100 — General Auto Repair / Car Items</li>
@@ -4902,7 +4945,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 East Tennessee Corvette Club &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.23</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 7:30 AM</span></div>
+  <div>Version: <span id="app-version">1.25</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 7:37 AM</span></div>
 </div>
 </body>
 </html>
