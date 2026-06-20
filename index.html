@@ -1311,17 +1311,18 @@
             </div>
             <button class="btn primary" onclick="changeSettingsPassword()" style="font-size:12px;white-space:nowrap;">Change Password</button>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div>
-              <label for="inp-version-major" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Major Version</label>
+          <div style="display:flex;gap:12px;align-items:flex-end;">
+            <div style="width:80px;">
+              <label for="inp-version-major" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Major</label>
               <input type="number" id="inp-version-major" min="0" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
             </div>
-            <div>
-              <label for="inp-version-minor" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Minor Version</label>
+            <div style="width:80px;">
+              <label for="inp-version-minor" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Minor</label>
               <input type="number" id="inp-version-minor" min="0" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
             </div>
           </div>
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
+          <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
       </div>
 
