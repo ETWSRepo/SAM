@@ -12,7 +12,7 @@
   .stat span { font-weight: 700; font-size: 20px; display: block; }
   .pass-count { color: #1a7f37; }
   .fail-count { color: #c62828; }
-  #results { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  #results { padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 860px; margin: 0 auto; }
   .suite { background: #fff; border-radius: 8px; border: 1px solid #d2d2d7; overflow: hidden; }
   .suite-header { padding: 10px 16px; font-weight: 700; font-size: 14px; background: #dbeafe; border-bottom: 1px solid #d2d2d7; display: flex; justify-content: space-between; }
   .test { display: flex; gap: 12px; padding: 8px 16px; border-bottom: 1px solid #f0f0f2; font-size: 13px; align-items: flex-start; }
@@ -39,6 +39,10 @@
   <div class="stat"><span id="s-fail" class="fail-count">—</span>Failed</div>
   <div class="stat"><span id="s-total">—</span>Total</div>
   <div class="stat" id="s-status" style="font-size:13px;color:#6e6e73;"></div>
+  <label style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+    <input type="checkbox" id="show-failed-only" onchange="applyFailedFilter()" style="width:15px;height:15px;cursor:pointer;accent-color:#c62828;">
+    Show failed only
+  </label>
 </div>
 <div id="results"></div>
 <iframe id="ui-iframe" src="index.html" style="position:absolute;left:-9999px;width:1280px;height:800px;border:none;" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -83,7 +87,8 @@ const Bidders = {
     const list = DB.getBidders();
     const walkInStart = DB.getSettings().walkInStart ?? 1000;
     if (!list.length) return walkInStart;
-    return Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1;
+    const maxExisting = Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0));
+    return Math.max(walkInStart, maxExisting + 1);
   },
   add(b)    { const list = DB.getBidders(); list.push(b); DB.saveBidders(list); },
   remove(n) { DB.saveBidders(DB.getBidders().filter(b => b.bidder_number !== n)); },
@@ -195,8 +200,10 @@ function assertEqual(name, actual, expected) {
 
 function renderSuite(title, tests) {
   const passed = tests.filter(t => t.pass).length;
+  const hasFailed = passed < tests.length;
   const div = document.createElement('div');
   div.className = 'suite';
+  if (!hasFailed) div.dataset.allPass = '1';
   div.innerHTML = `
     <div class="suite-header">
       <span>${escHtml(title)}</span>
@@ -214,6 +221,13 @@ function renderSuite(title, tests) {
   document.getElementById('results').appendChild(div);
   passCount += passed;
   failCount += tests.length - passed;
+}
+
+function applyFailedFilter() {
+  const failedOnly = document.getElementById('show-failed-only').checked;
+  document.querySelectorAll('#results .suite').forEach(suite => {
+    suite.style.display = (failedOnly && suite.dataset.allPass === '1') ? 'none' : '';
+  });
 }
 
 function runAll() {
@@ -462,6 +476,7 @@ function runAll() {
     assertEqual('nextNumber starts at walkInStart (1000)', Bidders.nextNumber(), 1000),
   ]);
 
+  DB.saveSettings(Object.assign({}, DEFAULT_SETTINGS, { walkInStart: 1 }));
   Bidders.add({ bidder_number: 1, last_name: 'Smith', first_name: 'John', email: 'j@t.com', phone: '' });
   Bidders.add({ bidder_number: 2, last_name: 'Jones', first_name: 'Sue',  email: 's@t.com', phone: '' });
   renderSuite('Bidders — add / getAll', [
@@ -477,6 +492,7 @@ function runAll() {
     assertEqual('remaining is #2',        Bidders.getAll()[0].bidder_number, 2),
     assertEqual('nextNumber after remove', Bidders.nextNumber(),             3),
   ]);
+  DB.saveSettings(DEFAULT_SETTINGS);
 
   Bidders.clear();
   renderSuite('Bidders — clear', [
@@ -486,12 +502,14 @@ function runAll() {
 
   // ── 20. Bidders.nextNumber — max logic ───────────────────────────────────
   Bidders.clear();
+  DB.saveSettings(Object.assign({}, DEFAULT_SETTINGS, { walkInStart: 1 }));
   Bidders.add({ bidder_number: 5,  last_name: 'A', first_name: 'B', email: 'a@b.com', phone: '' });
   Bidders.add({ bidder_number: 12, last_name: 'C', first_name: 'D', email: 'c@d.com', phone: '' });
   Bidders.add({ bidder_number: 3,  last_name: 'E', first_name: 'F', email: 'e@f.com', phone: '' });
   renderSuite('Bidders.nextNumber — max logic', [
     assertEqual('next is max+1 (12+1=13)', Bidders.nextNumber(), 13),
   ]);
+  DB.saveSettings(DEFAULT_SETTINGS);
 
   // ── 21. Bidders.nextNumber — walkInStart setting ─────────────────────────
   Bidders.clear();
@@ -502,6 +520,19 @@ function runAll() {
   Bidders.add({ bidder_number: 500, last_name: 'X', first_name: 'Y', email: '', phone: '' });
   renderSuite('Bidders.nextNumber — walkInStart after first add', [
     assertEqual('next after 500 is 501', Bidders.nextNumber(), 501),
+  ]);
+  DB.saveSettings(DEFAULT_SETTINGS);
+
+  // ── 21b. Bidders.nextNumber — walkInStart enforced when existing < walkInStart ─
+  Bidders.clear();
+  DB.saveSettings(Object.assign({}, DEFAULT_SETTINGS, { walkInStart: 2000 }));
+  Bidders.add({ bidder_number: 1020, last_name: 'A', first_name: 'B', email: '', phone: '' });
+  renderSuite('Bidders.nextNumber — walkInStart enforced above existing', [
+    assertEqual('existing max=1020 < walkInStart=2000, returns 2000', Bidders.nextNumber(), 2000),
+  ]);
+  Bidders.add({ bidder_number: 2001, last_name: 'C', first_name: 'D', email: '', phone: '' });
+  renderSuite('Bidders.nextNumber — above walkInStart uses max+1', [
+    assertEqual('existing max=2001 > walkInStart=2000, returns 2002', Bidders.nextNumber(), 2002),
   ]);
   DB.saveSettings(DEFAULT_SETTINGS);
   Bidders.clear();
@@ -871,9 +902,9 @@ function runUITests() {
       await suite('Load Items screen', () => [
         uiCheck(d, 'screen is active',          '#screen-item-load.active'),
         uiCheck(d, 'items table present',       '#items-table'),
-        uiAnyContains(d, 'Item # column header',   '#items-table .tk-th-label', 'Item #'),
-        uiAnyContains(d, 'Category column header', '#items-table .tk-th-label', 'Category'),
-        uiAnyContains(d, 'Value column header',    '#items-table .tk-th-label', 'Value'),
+        uiAnyContains(d, 'Item # column header',   '#items-table th', 'Item #'),
+        uiAnyContains(d, 'Category column header', '#items-table th', 'Category'),
+        uiAnyContains(d, 'Value column header',    '#items-table th', 'Value'),
         uiCheck(d, 'items tbody present',       '#items-tbody'),
         uiCheck(d, 'email table present',       '#email-table'),
       ]);
@@ -884,8 +915,8 @@ function runUITests() {
       await suite('Bid Sheets screen', () => [
         uiCheck(d, 'screen is active',          '#screen-bidding-sheets.active'),
         uiCheck(d, 'bs-items table present',    '#bs-items-table'),
-        uiAnyContains(d, 'Item # column header',   '#bs-items-table .tk-th-label', 'Item #'),
-        uiAnyContains(d, 'Category column header', '#bs-items-table .tk-th-label', 'Category'),
+        uiAnyContains(d, 'Item # column header',   '#bs-items-table th', 'Item #'),
+        uiAnyContains(d, 'Category column header', '#bs-items-table th', 'Category'),
         uiCheck(d, 'bs-items tbody present',    '#bs-items-tbody'),
       ]);
 
@@ -895,8 +926,8 @@ function runUITests() {
       await suite('Register Bidders screen', () => [
         uiCheck(d, 'screen is active',          '#screen-bidder-reg.active'),
         uiCheck(d, 'bidders table present',     '#bidders-table'),
-        uiAnyContains(d, 'Bidder # column header', '#bidders-table .tk-th-label', 'Bidder #'),
-        uiAnyContains(d, 'Bidder Type column',    '#bidders-table .tk-th-label', 'Bidder Type'),
+        uiAnyContains(d, 'Bidder # column header', '#bidders-table th', 'Bidder #'),
+        uiAnyContains(d, 'Bidder Type column',    '#bidders-table th', 'Bidder Type'),
         uiCheck(d, 'bidders tbody present',     '#bidders-tbody'),
         uiCheck(d, 'member-db modal present',   '#member-db-modal'),
         uiCheck(d, 'member search input',       '#member-search'),

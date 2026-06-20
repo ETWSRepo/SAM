@@ -323,7 +323,7 @@
       border-bottom: 1px solid var(--border);
     }
     .tk-toolbar-logo-text {
-      color: var(--accent);
+      display: none;
     }
     .tk-toolbar-title {
       color: #ffffff;
@@ -522,7 +522,7 @@
               <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">4</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Record Winning Bidders</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Enter the winning bidder number for each item</div></div>
             </div>
-            <div onclick="navigate('auction-close');setTimeout(printAllInvoices,400)" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+            <div onclick="navigate('print-invoices')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
               <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">5</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Print Invoices</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Print invoices for all winning bidders</div></div>
             </div>
@@ -652,8 +652,7 @@
 
       <div class="card" id="bs-items-card">
         <div id="bs-toolbar-wrap"></div>
-        <div style="height:12px;"></div>
-        <div style="overflow:auto;max-height:420px;">
+        <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto;">
           <table class="tablekit" id="bs-items-table" style="table-layout:fixed;width:100%;">
             <colgroup>
               <col style="width:32px;"><col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
@@ -825,13 +824,13 @@
     <!-- ══ Step 5: Announce Winners ══ -->
     <section class="screen" id="screen-winner-announce">
       <div class="page-header"><h2>Step 5 — Announce Winners</h2><p>Review and announce winning bidders for each item.</p></div>
-      <div class="card" id="announce-card">
+      <div class="card" id="announce-card" style="max-width:420px;">
         <div id="announce-toolbar-wrap"></div>
-        <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
-          <table class="tablekit" id="announce-table" style="table-layout:fixed;width:560px;">
+        <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto;">
+          <table class="tablekit" id="announce-table" style="table-layout:fixed;width:380px;">
             <colgroup>
-              <col style="width:100px;">
-              <col style="width:300px;">
+              <col style="width:120px;">
+              <col style="width:320px;">
               <col style="width:120px;">
             </colgroup>
             <thead>
@@ -883,6 +882,38 @@
       </div>
     </section>
 
+    <!-- ══ Print Invoices ══ -->
+    <section class="screen" id="screen-print-invoices">
+      <div class="page-header"><h2>Print Invoices</h2><p>Select winning bidders and print their invoices.</p></div>
+      <div class="card" id="print-invoices-card" style="max-width:640px;">
+        <div id="print-invoices-toolbar-wrap"></div>
+        <div style="overflow-y:auto;max-height:calc(100vh - 220px);">
+          <table class="tablekit" id="print-invoices-table" style="table-layout:fixed;width:100%;">
+            <colgroup>
+              <col style="width:32px;">
+              <col style="width:80px;">
+              <col style="width:120px;">
+              <col style="width:110px;">
+              <col style="width:70px;">
+              <col style="width:90px;">
+              <col style="width:78px;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="text-align:center;"></th>
+                <th>Bidder #</th>
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th style="text-align:center;"># Items</th>
+                <th style="text-align:right;">Total Bid</th>
+                <th style="text-align:center;">Invoice</th>
+              </tr>
+            </thead>
+            <tbody id="print-invoices-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
     <!-- ══ Settings ══ -->
     <!-- ══ Step 7: Post Auction ══ -->
@@ -1154,24 +1185,36 @@
 </div>
 
 <!-- ══ Categories Modal ══ -->
-<div id="cat-modal" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+<div id="cat-modal" style="display:none;position:fixed;top:70px;left:220px;right:0;bottom:0;z-index:900;background:var(--bg);">
+  <div class="page-header"><h2>Categories</h2><p>View items grouped by category.</p></div>
   <div id="cat-toolbar-wrap"></div>
-  <div style="flex:1;overflow:auto;padding:16px;">
-    <table class="tablekit" id="cat-table" style="width:600px;">
-      <thead><tr><th style="width:80px;text-align:center;">Items</th><th>Category</th><th style="width:80px;"></th></tr></thead>
-      <tbody id="cat-tbody"></tbody>
-    </table>
+  <div style="padding:16px 28px;">
+    <div style="max-width:640px;">
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="overflow-x:auto;max-height:calc(100vh - 230px);overflow-y:auto;">
+          <table class="tablekit" id="cat-table" style="width:100%;">
+            <thead><tr><th style="width:80px;text-align:center;">Items</th><th>Category</th><th style="width:80px;"></th></tr></thead>
+            <tbody id="cat-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- ══ Category Items Modal ══ -->
-<div id="cat-items-modal" style="display:none;position:fixed;inset:0;z-index:950;background:var(--bg);flex-direction:column;">
+<div id="cat-items-modal" style="display:none;position:fixed;top:70px;left:220px;right:0;bottom:0;z-index:950;background:var(--bg);">
+  <div class="page-header"><div id="cat-items-modal-title" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;"></div><p>Items in this category.</p></div>
   <div id="cat-items-toolbar-wrap"></div>
-  <div style="flex:1;overflow:auto;padding:16px;">
-    <table class="tablekit" id="cat-items-table" style="width:100%;">
-      <thead><tr><th>Item #</th><th>Submission Date</th><th>Description</th><th>Value</th><th>Reserve</th><th>Donor Name</th></tr></thead>
-      <tbody id="cat-items-tbody"></tbody>
-    </table>
+  <div style="padding:16px 28px;">
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <div style="overflow-x:auto;max-height:calc(100vh - 230px);overflow-y:auto;">
+        <table class="tablekit" id="cat-items-table" style="width:100%;">
+          <thead><tr><th>Item #</th><th>Submission Date</th><th>Description</th><th>Value</th><th>Reserve</th><th>Donor Name</th></tr></thead>
+          <tbody id="cat-items-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1356,6 +1399,8 @@ const DB = {
   saveWinners(v)  { localStorage.setItem('sam_winners',  JSON.stringify(v)); },
   getPayments()   { return JSON.parse(localStorage.getItem('sam_payments') || '{}'); },
   savePayments(v) { localStorage.setItem('sam_payments', JSON.stringify(v)); },
+  getEmails()     { return JSON.parse(localStorage.getItem('sam_emails')   || '[]'); },
+  saveEmails(v)   { localStorage.setItem('sam_emails',   JSON.stringify(v)); },
 };
 
 // ══════════════════════════════════════
@@ -1399,7 +1444,8 @@ const Bidders = {
     const list = DB.getBidders();
     const walkInStart = DB.getSettings().walkInStart ?? 1000;
     if (!list.length) return walkInStart;
-    return Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0)) + 1;
+    const maxExisting = Math.max(...list.map(b => parseInt(b.bidder_number, 10) || 0));
+    return Math.max(walkInStart, maxExisting + 1);
   },
   add(b)    { const list = DB.getBidders(); list.push(b); DB.saveBidders(list); },
   remove(n) { DB.saveBidders(DB.getBidders().filter(b => b.bidder_number !== n)); },
@@ -1504,7 +1550,7 @@ let gapiReady     = false;
 let gisReady      = false;
 let tokenClient   = null;
 let accessToken   = null;
-let scannedEmails = [];
+let scannedEmails = DB.getEmails();
 let sessionNewCount = 0;
 
 // Poll until both Google libraries are available
@@ -1639,6 +1685,7 @@ async function doScanInbox() {
     }
 
     const scanCount = scannedEmails.length;
+    DB.saveEmails(scannedEmails);
     log(`✅ Fetched ${scanCount} emails.`);
     renderEmailTable(scannedEmails);
     if (btnScan) btnScan.disabled = false;
@@ -2227,8 +2274,7 @@ function printInvoice(bidderNum) {
       <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">${fmtDollar(i.bid)}</td>
     </tr>`).join('');
 
-  const ccRow = method === 'Credit Card' ? `
-    <tr><td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">CC Transaction Fee</td><td style="padding:4px 10px;text-align:right;font-size:12px;color:#555;">${fmtDollar(ccTrans)}</td></tr>` : '';
+
 
   const html = `<!DOCTYPE html><html><head><title>Invoice — Bidder ${bidderNum}</title>
   <style>body{font-family:system-ui,sans-serif;margin:40px auto;max-width:520px;color:#1d1d1f;}h2{margin:0 0 4px;}table{width:100%;border-collapse:collapse;border:1px solid #000;}th{background:#dbeafe;padding:8px 10px;text-align:left;border:1px solid #000;}td{border:1px solid #000;}@media print{button{display:none;}}</style>
@@ -2251,7 +2297,7 @@ function printInvoice(bidderNum) {
     <tbody>${rows}</tbody>
     <tfoot>
 <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Cash / Check Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
-      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;"><span style="font-weight:400;color:#888;font-size:11px;">(Includes transaction fee of ${settings.squarePct || 0}% and $${sqFee.toFixed(2)})&nbsp;&nbsp;</span>Credit Card Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
+      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;"><span style="font-weight:400;color:#888;font-size:11px;">(Transaction fee of ${settings.squarePct || 0}% + $${sqFee.toFixed(2)} = ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
       <tr><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;">Paid</td><td style="padding:8px 10px;text-align:center;"><input type="checkbox" style="width:20px;height:20px;cursor:pointer;accent-color:#1a7f37;"></td></tr>
     </tfoot>
   </table>
@@ -2469,6 +2515,123 @@ function printWinnersTable() {
     <tbody>${rows}</tbody>
   </table>
   </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function refreshPrintInvoicesTable() {
+  const tbody   = document.getElementById('print-invoices-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const winners  = DB.getWinners();
+  const bidders  = Bidders.getAll();
+  const payments = DB.getPayments();
+  const itemMap  = {};
+  Items.getAll().forEach(i => { itemMap[String(i.item_number)] = i; });
+
+  const byBidder = {};
+  Object.entries(winners).forEach(([key, w]) => {
+    if (!w.bidder_number) return;
+    const num = w.bidder_number;
+    if (!byBidder[num]) byBidder[num] = { items: [], total: 0 };
+    byBidder[num].items.push(key);
+    byBidder[num].total += parseFloat(w.winning_bid) || 0;
+  });
+
+  if (!Object.keys(byBidder).length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-secondary);">No winners recorded yet. Complete Step 4 first.</td></tr>';
+    return;
+  }
+
+  const tdStyle = 'font-size:13px;padding:6px 8px;';
+  Object.keys(byBidder).map(Number).sort((a, b) => a - b).forEach(num => {
+    const bidder = bidders.find(b => b.bidder_number === num) || {};
+    const group  = byBidder[num];
+    const tr = document.createElement('tr');
+    tr.dataset.bidderNum = num;
+    tr.innerHTML = `
+      <td style="${tdStyle}text-align:center;"><input type="checkbox" class="pi-chk" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent);"></td>
+      <td style="${tdStyle}font-weight:600;">${num}</td>
+      <td style="${tdStyle}">${escHtml(bidder.last_name  || '')}</td>
+      <td style="${tdStyle}">${escHtml(bidder.first_name || '')}</td>
+      <td style="${tdStyle}text-align:center;">${group.items.length}</td>
+      <td style="${tdStyle}text-align:right;">${fmtDollar(group.total)}</td>
+      <td style="${tdStyle}text-align:center;"><button class="btn pi-print-btn" style="font-size:11px;padding:2px 8px;">Print</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.pi-print-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const num = parseInt(btn.closest('tr').dataset.bidderNum, 10);
+      printInvoice(num);
+    });
+  });
+}
+
+function printCheckedInvoices() {
+  const checked = [...document.querySelectorAll('#print-invoices-tbody .pi-chk:checked')]
+    .map(c => parseInt(c.closest('tr').dataset.bidderNum, 10));
+  if (!checked.length) { alert('No bidders selected.'); return; }
+
+  const bidders  = Bidders.getAll();
+  const winners  = DB.getWinners();
+  const payments = DB.getPayments();
+  const items    = Items.getAll();
+  const settings = DB.getSettings();
+  const sqPct    = (settings.squarePct || 0) / 100;
+  const sqFee    = settings.squareFee  || 0;
+  const itemMap  = {};
+  items.forEach(i => { itemMap[String(i.item_number)] = i; });
+  const logoUrl  = new URL('Images/ETCClogoWhiteBackground.png', window.location.href).href;
+
+  const pages = checked.map(bidderNum => {
+    const bidder   = bidders.find(b => b.bidder_number === bidderNum) || {};
+    const pay      = payments[bidderNum] || {};
+    const wonItems = Object.entries(winners)
+      .filter(([, w]) => w.bidder_number === bidderNum)
+      .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseFloat(w.winning_bid) || 0 }));
+    const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
+    const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
+    const ccTotal  = Math.round((totalBid + ccTrans) * 100) / 100;
+    const method   = pay.method || 'Credit Card';
+    const rows = wonItems.map(i => `
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee;">${escHtml(i.key)}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #eee;">${escHtml(i.desc)}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">${fmtDollar(i.bid)}</td></tr>`).join('');
+    const ccLabel = `Credit Card Due <span style="font-weight:400;font-size:11px;color:#666;">(${fmtDollar(ccTrans)} Transaction fee)</span>`;
+    return `<div style="page-break-after:always;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="${logoUrl}" alt="ETCC Logo" style="height:60px;">
+          <div><h2 style="margin:0 0 4px;">Silent Auction Invoice</h2><div style="font-size:13px;color:#555;">East Tennessee Corvette Club</div></div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;font-size:18px;font-weight:800;">${escHtml(bidder.first_name||'')} ${escHtml(bidder.last_name||'')} &nbsp;|&nbsp; Bidder #${bidderNum} &nbsp;|&nbsp; ${escHtml(method)}</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;">
+        <thead><tr><th style="background:#dbeafe;padding:8px 10px;width:100px;border:1px solid #000;">Item #</th><th style="background:#dbeafe;padding:8px 10px;border:1px solid #000;">Description</th><th style="background:#dbeafe;padding:8px 10px;width:120px;text-align:right;border:1px solid #000;">Amount</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Cash / Check Due</td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
+          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${ccLabel}</td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
+          <tr><td colspan="2" style="padding:8px 10px;text-align:right;font-weight:700;border:1px solid #000;">Paid</td><td style="padding:8px 10px;text-align:center;border:1px solid #000;"><input type="checkbox" style="width:20px;height:20px;"></td></tr>
+        </tfoot>
+      </table>
+      <div style="margin-top:32px;padding:16px 20px;border:1px solid #000;border-radius:6px;text-align:center;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Thank You for Your Support!</div>
+        <div style="font-size:13px;color:#333;line-height:1.6;">The East Tennessee Corvette Club sincerely appreciates your participation in our Silent Auction.</div>
+      </div>
+    </div>`;
+  });
+
+  const html = `<!DOCTYPE html><html><head><title>Invoices</title>
+    <style>body{font-family:system-ui,sans-serif;margin:40px auto;max-width:600px;color:#1d1d1f;}@media print{button{display:none;}}</style>
+  </head><body>
+    <div style="margin-bottom:12px;"><button onclick="window.print()" style="padding:8px 18px;background:#0071e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print All</button></div>
+    ${pages.join('')}
+  </body></html>`;
+
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
@@ -2832,7 +2995,7 @@ function refreshWinnersTable() {
       <td style="font-size:12px;">${escHtml(item.description || '')}</td>
       <td style="font-size:12px;">${fmtDollar(item.value)}</td>
       <td style="font-size:12px;">${parseFloat(item.reserve_amount||0) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
-      <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(w.winning_bid || ''))}" placeholder="$0.00"></td>
+      <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(bidderNum ? (w.winning_bid || '') : ''))}" placeholder="$0.00"></td>
       <td><select class="win-num" style="${selStyle}"><option value="">— select bidder —</option>${bidderOptions}</select></td>
       <td style="text-align:center;"><button class="btn danger win-clear" style="font-size:11px;padding:2px 8px;">Clear</button></td>
     `;
@@ -2844,15 +3007,10 @@ function refreshWinnersTable() {
 
   tbody.querySelectorAll('.win-bid').forEach(inp => {
     inp.addEventListener('change', () => {
-      const tr      = inp.closest('tr');
-      const key     = tr.dataset.itemKey;
-      const winners = DB.getWinners();
-      winners[key]  = Object.assign(winners[key] || {}, { winning_bid: inp.value.trim() });
-      DB.saveWinners(winners);
-      // Clear error state so user can re-submit bidder number cleanly
+      // Clear error state only — do not auto-save; use Save button
       inp.style.borderColor = '';
-      const numEl = tr.querySelector('.win-num');
-      numEl.style.borderColor = '';
+      const numEl = inp.closest('tr').querySelector('.win-num');
+      if (numEl) numEl.style.borderColor = '';
     });
   });
 
@@ -3284,6 +3442,28 @@ function navigate(screenId) {
       fresh.addEventListener('click', () => navigate('home'));
     }
     refreshWinnersTable();
+  }
+  if (screenId === 'print-invoices') {
+    PageToolbar.init({ title: '' });
+    const tb   = document.getElementById('page-toolbar');
+    const wrap = document.getElementById('print-invoices-toolbar-wrap');
+    if (tb && wrap) wrap.appendChild(tb);
+    const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions) {
+      const closeBtn = actions.querySelector('.tk-btn-close');
+      const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
+      actions.insertBefore(mkBtn('Check All',  () => document.querySelectorAll('#print-invoices-tbody .pi-chk').forEach(c => c.checked = true)),  closeBtn);
+      actions.insertBefore(mkBtn('Clear All',  () => document.querySelectorAll('#print-invoices-tbody .pi-chk').forEach(c => c.checked = false)), closeBtn);
+      actions.insertBefore(mkBtn('Print All',  printCheckedInvoices), closeBtn);
+    }
+    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    if (closeBtn) {
+      const fresh = closeBtn.cloneNode(true); closeBtn.replaceWith(fresh);
+      fresh.addEventListener('click', () => navigate('home'));
+    }
+    refreshPrintInvoicesTable();
+    const tkWrap = document.querySelector('#print-invoices-table')?.closest('.tk-wrap');
+    if (tkWrap) { tkWrap.style.overflow = 'visible'; tkWrap.style.overflowX = 'hidden'; }
   }
   if (screenId === 'winner-announce') {
     PageToolbar.init({ title: '', tableSelector: '#announce-table' });
@@ -4435,6 +4615,7 @@ function showViewAll(type) {
 function clearInboxEmails() {
   if (!confirm('Clear all scanned emails from the list?')) return;
   scannedEmails = [];
+  DB.saveEmails([]);
   renderEmailTable([]);
 }
 
@@ -4470,15 +4651,18 @@ function showCategories() {
   });
 
   const catModal = document.getElementById('cat-modal');
-  catModal.style.display = 'flex';
+  catModal.style.display = 'block';
 
   const catWrap = document.getElementById('cat-toolbar-wrap');
-  catWrap.innerHTML = '';
-  PageToolbar.init({ title: '', tableSelector: '#cat-table' });
-  const catTb = document.getElementById('page-toolbar');
-  if (catTb) catWrap.appendChild(catTb);
-  const catClose = catWrap.querySelector('.tk-btn-close');
-  if (catClose) { const f = catClose.cloneNode(true); catClose.replaceWith(f); f.addEventListener('click', () => catModal.style.display = 'none'); }
+  catWrap.innerHTML = `
+    <div class="tk-toolbar">
+      <div class="tk-toolbar-logo"></div>
+      <div class="tk-toolbar-title"></div>
+      <div class="tk-toolbar-actions">
+        <button class="tk-btn tk-btn-close" id="cat-modal-close">Close</button>
+      </div>
+    </div>`;
+  document.getElementById('cat-modal-close').addEventListener('click', () => catModal.style.display = 'none');
 }
 
 document.getElementById('cat-modal').addEventListener('click', e => {
@@ -4505,15 +4689,19 @@ function showCategoryItems(code, name) {
   });
 
   const catItemsModal = document.getElementById('cat-items-modal');
-  catItemsModal.style.display = 'flex';
+  catItemsModal.style.display = 'block';
+  document.getElementById('cat-items-modal-title').textContent = `${name}`;
 
   const ciWrap = document.getElementById('cat-items-toolbar-wrap');
-  ciWrap.innerHTML = '';
-  PageToolbar.init({ title: '', tableSelector: '#cat-items-table' });
-  const ciTb = document.getElementById('page-toolbar');
-  if (ciTb) ciWrap.appendChild(ciTb);
-  const ciClose = ciWrap.querySelector('.tk-btn-close');
-  if (ciClose) { const f = ciClose.cloneNode(true); ciClose.replaceWith(f); f.addEventListener('click', () => catItemsModal.style.display = 'none'); }
+  ciWrap.innerHTML = `
+    <div class="tk-toolbar">
+      <div class="tk-toolbar-logo"></div>
+      <div class="tk-toolbar-title"></div>
+      <div class="tk-toolbar-actions">
+        <button class="tk-btn tk-btn-close" id="cat-items-modal-close">Close</button>
+      </div>
+    </div>`;
+  document.getElementById('cat-items-modal-close').addEventListener('click', () => catItemsModal.style.display = 'none');
 }
 
 // ══════════════════════════════════════
