@@ -37,9 +37,15 @@ function Deploy-File($rel) {
     else { Write-Host "  FAILED: $out" -ForegroundColor Red }
 }
 
-# Version is now managed via Settings - no auto-increment on deployment
+# Update deploy date in Settings when deploying
 function Update-Version {
-    # Versions are managed in Settings, not auto-incremented on deploy
+    $indexPath = Join-Path $local "index.html"
+    $content = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
+    $deployDate = Get-Date -Format "MMM d, yyyy"
+    # Update the deploy date input field in Settings
+    $content = $content -replace '(inp-deploy-date.*?value=")[^"]*', "`${1}$deployDate"
+    [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.Encoding]::UTF8)
+    Write-Host "  Deployed: $deployDate" -ForegroundColor Cyan
 }
 
 # Single file mode
