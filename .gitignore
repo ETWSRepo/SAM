@@ -1,1 +1,5 @@
 .ftp-credentials
+node_modules/
+package.json
+package-lock.json
+run-tests.js

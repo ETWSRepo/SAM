@@ -917,6 +917,9 @@ function runUITests() {
       w._samOrigSetItem('sam_current_auction', testAuctionId);
       w.updateHomeAuctionPanel?.();
       w.refreshHomeMetrics?.();
+      // Pre-authenticate Settings so navigate('settings') is not blocked by the
+      // password prompt during automated tests.
+      w._settingsAuthAt = Date.now();
 
       // ── Home — workflow cards ──────────────────────────────────────────────
       nav('home');
@@ -1471,10 +1474,32 @@ function runUITests() {
       await suite('App footer', () => [
         uiCheck(d,    'footer element present',         '#app-footer'),
         uiCheck(d,    'version span present',           '#app-version'),
-        uiCheck(d,    'build date span present',        '#app-build-date'),
+        uiCheck(d,    'deploy date span present',       '#app-deploy-date'),
         uiAssert('version is non-empty',                (d.querySelector('#app-version')?.textContent || '').trim().length > 0, 'app-version is empty'),
-        uiAssert('build date is non-empty',             (d.querySelector('#app-build-date')?.textContent || '').trim().length > 0, 'app-build-date is empty'),
+        uiAssert('deploy date is non-empty',            (d.querySelector('#app-deploy-date')?.textContent || '').trim().length > 0, 'app-deploy-date is empty'),
+        uiAssert('footer shows "Deployed:" label',      ([...d.querySelectorAll('#app-footer div')].some(el => el.textContent.includes('Deployed:'))), 'footer missing "Deployed:" label'),
         uiAnyContains(d, 'footer has ETCC club name',  '#app-footer div', 'East Tennessee Corvette Club'),
+      ]);
+
+      // ── Settings — Security & Version ─────────────────────────────────────
+      await suite('Settings — Security & Version', () => [
+        uiCheck(d,    'settings password input present', '#inp-settings-password'),
+        uiCheck(d,    'major version input present',     '#inp-version-major'),
+        uiCheck(d,    'minor version input present',     '#inp-version-minor'),
+        uiCheck(d,    'deploy date input present',       '#inp-deploy-date'),
+        uiAssert('changeSettingsPassword is defined',    typeof w.changeSettingsPassword === 'function', 'changeSettingsPassword not on window'),
+        uiAssert('authenticateSettings is defined',      typeof w.authenticateSettings === 'function', 'authenticateSettings not on window'),
+        uiAssert('updateFooterVersion is defined',       typeof w.updateFooterVersion === 'function', 'updateFooterVersion not on window'),
+        uiAssert('updateVersionDisplay is defined',      typeof w.updateVersionDisplay === 'function', 'updateVersionDisplay not on window'),
+      ]);
+
+      // ── Settings — Database Stats / Auction mgmt ──────────────────────────
+      await suite('Settings — Developer & Auction tools', () => [
+        uiCheck(d,    'database stats button present',   '#db-stats'),
+        uiCheck(d,    'delete-auction dropdown present', '#sel-delete-auction'),
+        uiAssert('showDatabaseStats is defined',         typeof w.showDatabaseStats === 'function', 'showDatabaseStats not on window'),
+        uiAssert('deleteAuctionByName is defined',       typeof w.deleteAuctionByName === 'function', 'deleteAuctionByName not on window'),
+        uiAssert('addRegisteredMembers is defined',      typeof w.addRegisteredMembers === 'function', 'addRegisteredMembers not on window'),
       ]);
 
       // ── Home screen title ─────────────────────────────────────────────────

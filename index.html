@@ -1324,7 +1324,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 20, 2026 5:56 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 20, 2026 6:14 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3671,10 +3671,11 @@ function loadSettingsForm() {
   updateFavicon(s.clubFavicon);
   document.getElementById('inp-version-major').value = s.versionMajor ?? 1;
   document.getElementById('inp-version-minor').value = s.versionMinor ?? 0;
-  document.getElementById('inp-deploy-date').value = s.deployDate || '';
+  // Deploy date comes from the footer span baked in at deploy time, not Settings
+  const footerDate = document.getElementById('app-deploy-date')?.textContent?.trim();
+  document.getElementById('inp-deploy-date').value = (footerDate && footerDate !== 'Never') ? footerDate : (s.deployDate || '');
   updateVersionDisplay();
   updateFooterVersion();
-  updateFooterDeployDate();
   document.getElementById('inp-settings-password').value = '';
 }
 
@@ -3692,12 +3693,9 @@ function updateFooterVersion() {
   if (versionEl) versionEl.textContent = 'v' + major + '.' + minor;
 }
 
-function updateFooterDeployDate() {
-  const s = DB.getSettings();
-  const deployDate = s.deployDate || 'Never';
-  const dateEl = document.getElementById('app-deploy-date');
-  if (dateEl) dateEl.textContent = deployDate;
-}
+// Deploy date is baked into the footer span by deploy.ps1; do not overwrite it
+// from Settings (which may be blank/stale after server sync).
+function updateFooterDeployDate() { /* no-op: footer value is authoritative */ }
 
 function changeSettingsPassword() {
   const newPassword = document.getElementById('inp-settings-password').value.trim();
@@ -3712,12 +3710,13 @@ function changeSettingsPassword() {
   alert('Password changed successfully.');
 }
 
-// Session-based authentication state
-let _settingsAuthenticatedAt = 0;
+// Session-based authentication state. Stored on window so the regression
+// harness can pre-authenticate (set window._settingsAuthAt = Date.now()).
 const SETTINGS_AUTH_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+if (typeof window._settingsAuthAt === 'undefined') window._settingsAuthAt = 0;
 
 function isSettingsAuthenticated() {
-  return Date.now() - _settingsAuthenticatedAt < SETTINGS_AUTH_TIMEOUT;
+  return Date.now() - (window._settingsAuthAt || 0) < SETTINGS_AUTH_TIMEOUT;
 }
 
 function authenticateSettings() {
@@ -3729,7 +3728,7 @@ function authenticateSettings() {
   if (password === null) return false;
 
   if (password === correctPassword) {
-    _settingsAuthenticatedAt = Date.now();
+    window._settingsAuthAt = Date.now();
     return true;
   }
   alert('Incorrect password.');
@@ -3875,7 +3874,6 @@ function saveSettings() {
   updateFavicon(settings.clubFavicon);
   updateVersionDisplay();
   updateFooterVersion();
-  updateFooterDeployDate();
 
   // Re-init OAuth client with new client ID
   if (clientId) reinitTokenClient();
@@ -3945,24 +3943,16 @@ function log(msg) {
 const navItems = document.querySelectorAll('#nav .nav-item[data-screen]');
 const screens  = document.querySelectorAll('.screen');
 
-// Sync deploy date from HTML data attribute to Settings and update footer
+// Deploy date is baked directly into the footer span (#app-deploy-date) by
+// deploy.ps1 at deploy time — no JS sync needed. Mirror it into the Settings
+// input so Settings shows the same value.
 function syncDeployDate() {
-  const deployDateEl = document.getElementById('inp-deploy-date');
-  const dataDeployDate = deployDateEl?.dataset.deployDate;
-  const s = DB.getSettings();
-
-  // If data attribute has a date, sync it to Settings
-  if (dataDeployDate && dataDeployDate !== s.deployDate) {
-    s.deployDate = dataDeployDate;
-    DB.saveSettings(s);
-  }
-
-  // Always update footer with latest deploy date from Settings
-  const dateEl = document.getElementById('app-deploy-date');
-  if (dateEl) dateEl.textContent = s.deployDate || 'Never';
+  const footerDate = document.getElementById('app-deploy-date')?.textContent?.trim();
+  const inp = document.getElementById('inp-deploy-date');
+  if (inp && footerDate && footerDate !== 'Never') inp.value = footerDate;
 }
 
-// Update footer version and deploy date from Settings
+// Update footer version from Settings
 updateFooterVersion();
 syncDeployDate();
 
@@ -4069,7 +4059,7 @@ function navigate(screenId) {
   const navItem = document.querySelector(`.nav-item[data-screen="${screenId}"]`);
   if (navItem) navItem.classList.add('active');
 
-  if (screenId === 'home') { updateHomeAuctionPanel(); renderAuctionsList(); refreshHomeMetrics(); }
+  if (screenId === 'home') { updateHomeAuctionPanel(); renderAuctionsList(); refreshHomeMetrics(); syncDeployDate(); }
   if (screenId === 'item-load') {
     renderEmailTable(scannedEmails);
     const emailEl = document.getElementById('gmail-login-email');
@@ -5646,7 +5636,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Never</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 20, 2026 6:14 PM</span></div>
 </div>
 </body>
 </html>

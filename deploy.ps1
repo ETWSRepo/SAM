@@ -17,7 +17,7 @@ $local      = $PSScriptRoot
 $netrcFile = "$env:TEMP\.netrc-sam"
 "machine $ftpHost login $ftpUser password $ftpPass" | Out-File -FilePath $netrcFile -Encoding ascii
 
-$exclude = @(".git", ".ftp-credentials", "deploy.ps1", "CLAUDE.md", "README.md")
+$exclude = @(".git", ".ftp-credentials", "deploy.ps1", "CLAUDE.md", "README.md", "node_modules", "run-tests.js", "package.json", "package-lock.json")
 
 function Should-Exclude($path) {
     foreach ($ex in $exclude) {
@@ -37,12 +37,15 @@ function Deploy-File($rel) {
     else { Write-Host "  FAILED: $out" -ForegroundColor Red }
 }
 
-# Update deploy date in Settings when deploying
+# Bake the deploy date directly into the footer span at deploy time.
+# This is the authoritative source the app reads — no JS/Settings sync needed.
 function Update-Version {
     $indexPath = Join-Path $local "index.html"
     $content = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
     $deployDate = Get-Date -Format "MMM d, yyyy h:mm tt"
-    # Update the deploy date data attribute so the app syncs it to Settings on page load
+    # Footer span (authoritative): <span id="app-deploy-date">...</span>
+    $content = $content -replace '(?<=id="app-deploy-date">)[^<]*', $deployDate
+    # Keep the Settings input data attribute in sync too
     $content = $content -replace '(inp-deploy-date.*?data-deploy-date=")[^"]*', "`${1}$deployDate"
     [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.Encoding]::UTF8)
     Write-Host "  Deployed: $deployDate" -ForegroundColor Cyan
