@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ETCC Silent Auction Manager</title>
+  <link rel="icon" type="image/png" href="Images/ETCClogoWhiteBackground.png" />
   <link rel="stylesheet" href="css/table.css" />
   <link rel="stylesheet" href="css/toolbar.css" />
   <style>
@@ -650,7 +651,7 @@
             <table class="tablekit" id="email-table" data-tk-sort="false">
               <thead style="position:sticky;top:0;z-index:1;">
                 <tr>
-                  <th>Email Date</th>
+                  <th>Submission Date</th>
                   <th>From</th>
                   <th>Subject</th>
                   <th>Preview</th>
@@ -683,7 +684,7 @@
             <thead>
               <tr>
                 <th>Item #</th>
-                <th>Email Date</th>
+                <th>Submission Date</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th>Value</th>
@@ -2002,7 +2003,7 @@ function refreshItemsTable() {
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
       <td>${escHtml(item.description)}</td>
       <td>${fmtDollar(item.item_value)}</td>
-      <td>${escHtml(item.reserve_amount || '')}</td>
+      <td>${parseFloat(item.reserve_amount) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td>${escHtml(item.donor_name)}</td>
       <td>${escHtml(item.donor_email)}</td>
       <td>${escHtml(item.donor_phone)}</td>
@@ -3243,11 +3244,11 @@ function refreshBsItemsTable() {
     tr.innerHTML = `
       <td style="text-align:center;"><input type="checkbox" class="bs-chk" /></td>
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
-      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.submission_date || '')}</td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.email_date || '')}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
       <td>${escHtml(item.description)}</td>
       <td>${fmtDollar(item.item_value)}</td>
-      <td>${escHtml(item.reserve_amount || '')}</td>
+      <td>${parseFloat(item.reserve_amount) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td>${escHtml(item.donor_name)}</td>
       <td style="font-size:11px;">${escHtml(item.donor_email)}</td>
       <td style="font-size:11px;">${escHtml(item.donor_phone)}</td>
@@ -3313,7 +3314,7 @@ function loadSettingsForm() {
 
 const LOADED_ITEMS_COL = {
   item_number:    'itemNumber',
-  email_date:     'Email Date',
+  email_date:     'Submission Date',
   category:       'ItemCategory',
   item_category:  'ItemCategory',
   description:    'itemDescription',
@@ -5008,7 +5009,7 @@ function showCategoryItems(code, name) {
       <td>${escHtml(item.submission_date || '')}</td>
       <td>${escHtml(item.description || '')}</td>
       <td>${fmtDollar(item.item_value)}</td>
-      <td>${escHtml(item.reserve_amount || '')}</td>
+      <td>${parseFloat(item.reserve_amount) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td>${escHtml(item.donor_name || '')}</td>
     `;
     tbody.appendChild(tr);
@@ -5052,7 +5053,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 East Tennessee Corvette Club &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.56</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 11:37 AM</span></div>
+  <div>Version: <span id="app-version">1.62</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 11:54 AM</span></div>
 </div>
 </body>
 </html>
