@@ -1324,7 +1324,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 20, 2026 5:53 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 20, 2026 5:56 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3945,20 +3945,21 @@ function log(msg) {
 const navItems = document.querySelectorAll('#nav .nav-item[data-screen]');
 const screens  = document.querySelectorAll('.screen');
 
-// Sync deploy date from HTML data attribute to Settings on page load
+// Sync deploy date from HTML data attribute to Settings and update footer
 function syncDeployDate() {
   const deployDateEl = document.getElementById('inp-deploy-date');
-  if (deployDateEl && deployDateEl.dataset.deployDate) {
-    const deployDate = deployDateEl.dataset.deployDate;
-    if (deployDate) {
-      const s = DB.getSettings();
-      s.deployDate = deployDate;
-      DB.saveSettings(s);
-      // Update footer immediately with the deploy date
-      const dateEl = document.getElementById('app-deploy-date');
-      if (dateEl) dateEl.textContent = deployDate;
-    }
+  const dataDeployDate = deployDateEl?.dataset.deployDate;
+  const s = DB.getSettings();
+
+  // If data attribute has a date, sync it to Settings
+  if (dataDeployDate && dataDeployDate !== s.deployDate) {
+    s.deployDate = dataDeployDate;
+    DB.saveSettings(s);
   }
+
+  // Always update footer with latest deploy date from Settings
+  const dateEl = document.getElementById('app-deploy-date');
+  if (dateEl) dateEl.textContent = s.deployDate || 'Never';
 }
 
 // Update footer version and deploy date from Settings
