@@ -48,6 +48,9 @@ function Update-Version {
         $dateStr = Get-Date -Format "MMM d, yyyy h:mm tt"
         $content = $content -replace '(?<=id="app-version">)[^<]+', $ver
         $content = $content -replace '(?<=id="app-build-date">)[^<]+', $dateStr
+        # Also update Settings version fields
+        $content = $content -replace '(inp-version-major.*?value=")[^"]*', "`${1}$major"
+        $content = $content -replace '(inp-version-minor.*?value=")[^"]*', "`${1}$minor"
         [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.Encoding]::UTF8)
         Write-Host "  Version bumped to $ver  |  Date: $dateStr" -ForegroundColor Cyan
     }

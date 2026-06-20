@@ -154,7 +154,7 @@
     .btn:hover { background: var(--bg-section); }
     .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     .btn.primary:hover { background: var(--accent-hover); }
-    .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .btn.danger { background: var(--danger); color: #000; border-color: var(--danger); }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
     /* ── Status badge ── */
@@ -363,12 +363,12 @@
       color: #ffffff;
     }
     .tk-btn-close {
-      border-color: var(--danger);
-      color: var(--danger);
+      border-color: #000;
+      color: #000;
     }
     .tk-btn-close:hover {
       background: var(--danger);
-      border-color: var(--danger);
+      border-color: #000;
       color: #ffffff;
     }
 
@@ -639,8 +639,8 @@
           <p>Scan the auction inbox, review emails, and load items into the database.</p>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;">
-          <button id="step1-complete-btn" class="tk-btn workflow-edit-btn" style="background:#fff;border-color:var(--success);color:var(--success);" onclick="markStepComplete('items')">Step Complete</button>
-          <button id="step1-uncomplete-btn" class="tk-btn workflow-edit-btn" style="background:#fff;border-color:#e65100;color:#e65100;" onclick="markStepUncomplete('items')">Step Uncomplete</button>
+          <button id="step1-complete-btn" class="tk-btn workflow-edit-btn" style="background:#fff;border-color:#000;color:#000;" onclick="markStepComplete('items')">Step Complete</button>
+          <button id="step1-uncomplete-btn" class="tk-btn workflow-edit-btn" style="background:#fff;border-color:#000;color:#000;" onclick="markStepUncomplete('items')">Step Uncomplete</button>
           <button class="tk-btn tk-btn-close" onclick="navigate('home')">&#x2715; Close</button>
         </div>
       </div>
@@ -1292,6 +1292,36 @@
             <button class="btn danger" id="btn-clear-items">Clear Items</button>
             <span style="font-size:12px;color:var(--text-secondary);">Clear all loaded auction items from the database.</span>
           </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn" onclick="showDatabaseStats()">Database Stats</button>
+            <span style="font-size:12px;color:var(--text-secondary);">List all tables with row counts.</span>
+          </div>
+          <div id="db-stats" style="margin-top:12px;font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
+      <!-- Security & Version -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Security & Version</div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;gap:12px;align-items:flex-end;">
+            <div style="flex:1;">
+              <label for="inp-settings-password" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Settings Password</label>
+              <input type="password" id="inp-settings-password" placeholder="Enter new password" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            </div>
+            <button class="btn primary" onclick="changeSettingsPassword()" style="font-size:12px;white-space:nowrap;">Change Password</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label for="inp-version-major" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Major Version</label>
+              <input type="number" id="inp-version-major" min="0" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            </div>
+            <div>
+              <label for="inp-version-minor" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Minor Version</label>
+              <input type="number" id="inp-version-minor" min="0" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            </div>
+          </div>
+          <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
         </div>
       </div>
 
@@ -3634,6 +3664,53 @@ function loadSettingsForm() {
   renderFieldMapTable();
   refreshDeleteAuctionDropdown();
   updateFavicon(s.clubFavicon);
+  document.getElementById('inp-version-major').value = s.versionMajor ?? 1;
+  document.getElementById('inp-version-minor').value = s.versionMinor ?? 0;
+  updateVersionDisplay();
+  document.getElementById('inp-settings-password').value = '';
+}
+
+function updateVersionDisplay() {
+  const major = document.getElementById('inp-version-major').value || '1';
+  const minor = document.getElementById('inp-version-minor').value || '0';
+  document.getElementById('version-display').textContent = 'Current Version: v' + major + '.' + minor;
+}
+
+function changeSettingsPassword() {
+  const newPassword = document.getElementById('inp-settings-password').value.trim();
+  if (!newPassword) {
+    alert('Please enter a new password.');
+    return;
+  }
+  const settings = DB.getSettings();
+  settings.settingsPassword = newPassword;
+  DB.saveSettings(settings);
+  document.getElementById('inp-settings-password').value = '';
+  alert('Password changed successfully.');
+}
+
+// Session-based authentication state
+let _settingsAuthenticatedAt = 0;
+const SETTINGS_AUTH_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+function isSettingsAuthenticated() {
+  return Date.now() - _settingsAuthenticatedAt < SETTINGS_AUTH_TIMEOUT;
+}
+
+function authenticateSettings() {
+  const defaultPassword = 'Gladiator#1';
+  const settings = DB.getSettings();
+  const correctPassword = settings.settingsPassword || defaultPassword;
+
+  const password = prompt('Enter Settings password:');
+  if (password === null) return false;
+
+  if (password === correctPassword) {
+    _settingsAuthenticatedAt = Date.now();
+    return true;
+  }
+  alert('Incorrect password.');
+  return false;
 }
 
 const LOADED_ITEMS_COL = {
@@ -3766,10 +3843,13 @@ function saveSettings() {
     clubShortName:  document.getElementById('inp-club-short-name').value.trim(),
     clubLogo:       document.getElementById('inp-club-logo').value.trim(),
     clubFavicon:    document.getElementById('inp-club-favicon').value.trim(),
+    versionMajor:   parseInt(document.getElementById('inp-version-major').value, 10) || 1,
+    versionMinor:   parseInt(document.getElementById('inp-version-minor').value, 10) || 0,
   };
   DB.saveSettings(settings);
   applyBranding(settings);
   updateFavicon(settings.clubFavicon);
+  updateVersionDisplay();
 
   // Re-init OAuth client with new client ID
   if (clientId) reinitTokenClient();
@@ -3912,7 +3992,7 @@ function addStepBtns(stepName, actions, closeBtn) {
     const b = document.createElement('button');
     b.className = 'tk-btn workflow-edit-btn';
     b.style.cssText = active
-      ? 'background:#fff;color:var(--success);border-color:var(--success);'
+      ? 'background:#fff;color:#000;border-color:#000;'
       : 'background:#fff;';
     b.textContent = label;
     b.addEventListener('click', fn);
@@ -3921,7 +4001,7 @@ function addStepBtns(stepName, actions, closeBtn) {
   actions.insertBefore(mkB('Step Complete',   () => markStepComplete(stepName),   isDone),  closeBtn);
   const uBtn = document.createElement('button');
   uBtn.className = 'tk-btn workflow-edit-btn';
-  uBtn.style.cssText = 'background:#fff;color:#e65100;border-color:#e65100;';
+  uBtn.style.cssText = 'background:#fff;color:#000;border-color:#000;';
   uBtn.textContent = 'Step Uncomplete';
   uBtn.addEventListener('click', () => markStepUncomplete(stepName));
   actions.insertBefore(uBtn, closeBtn);
@@ -3931,6 +4011,9 @@ function navigate(screenId) {
   const workflowScreens = ['item-load','bidding-sheets','bidder-reg','auction-close','print-invoices','winner-announce','payment-pickup','post-auction'];
   if (workflowScreens.includes(screenId) && !DB.getCurrentAuctionId()) {
     screenId = 'home';
+  }
+  if (screenId === 'settings' && !isSettingsAuthenticated()) {
+    if (!authenticateSettings()) return;
   }
   navItems.forEach(n => n.classList.remove('active'));
   screens.forEach(s => s.classList.remove('active'));
@@ -3947,8 +4030,8 @@ function navigate(screenId) {
     if (!isReadOnly()) {
       const cBtn = document.getElementById('step1-complete-btn');
       const uBtn = document.getElementById('step1-uncomplete-btn');
-      if (cBtn) cBtn.style.cssText = 'background:#fff;border-color:var(--success);color:var(--success);';
-      if (uBtn) uBtn.style.cssText = 'background:#fff;border-color:#e65100;color:#e65100;';
+      if (cBtn) cBtn.style.cssText = 'background:#fff;border-color:#000;color:#000;';
+      if (uBtn) uBtn.style.cssText = 'background:#fff;border-color:#000;color:#000;';
     }
   }
   if (screenId === 'settings')       loadSettingsForm();
@@ -5356,6 +5439,31 @@ function clearInboxEmails() {
   renderEmailTable([]);
 }
 
+function showDatabaseStats() {
+  const auction = currentAuction();
+  const stats = [];
+
+  // Global data
+  stats.push('--- Global Data ---');
+  stats.push('Auctions: ' + DB.getAuctions().length);
+  stats.push('Members: ' + DB.getMembers().length);
+  stats.push('Registration DB: ' + DB.getRegDB().length);
+
+  if (auction) {
+    stats.push('');
+    stats.push('--- Current Auction: ' + auction.name + ' ---');
+    stats.push('Items: ' + (DB.getItems ? DB.getItems().length : 0));
+    stats.push('Bidders: ' + Bidders.getAll().length);
+    stats.push('Winners: ' + Object.keys(DB.getWinners()).length);
+    stats.push('Payments: ' + Object.keys(DB.getPayments()).length);
+  }
+
+  const statsEl = document.getElementById('db-stats');
+  if (statsEl) {
+    statsEl.innerHTML = '<pre style="background:var(--bg);padding:8px;border-radius:4px;border:1px solid var(--border);overflow-x:auto;">' + escHtml(stats.join('\n')) + '</pre>';
+  }
+}
+
 function closeViewAll() {
   document.getElementById('view-all-modal').style.display = 'none';
 }
@@ -5468,7 +5576,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.118</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 5:03 PM</span></div>
+  <div>Version: <span id="app-version">1.125</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 5:19 PM</span></div>
 </div>
 </body>
 </html>
