@@ -28,7 +28,7 @@
     }
 
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
@@ -104,7 +104,7 @@
     .nav-divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 8px 14px; }
 
     /* ── Main ── */
-    #main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+    #main { flex: 1; overflow-y: auto; padding: 28px 32px calc(var(--footer-height) + 16px); }
 
     .screen { display: none; }
     .screen.active { display: block; }
@@ -455,6 +455,23 @@
     #manual-body p  { margin-bottom: 8px; }
     #manual-body ul { margin-left: 18px; margin-bottom: 8px; }
 
+    /* ── Workflow step badges ── */
+    .step-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--accent); color: #fff;
+      font-size: 11px; font-weight: 700;
+      min-width: 24px; height: 24px; padding: 0 6px;
+      border-radius: 12px; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .step-badge.done {
+      background: var(--success);
+    }
+    .step-badge.done::after {
+      content: ' ✓';
+      font-size: 10px;
+    }
+
     /* ── App footer ── */
     #app-footer {
       position: fixed;
@@ -497,7 +514,6 @@
   <nav id="nav">
     <div class="nav-item active" data-screen="home" style="font-size:13px;font-weight:600;color:#fff;padding:12px 16px 10px;">🏠 Home</div>
     <hr class="nav-divider" />
-    <hr class="nav-divider" />
     <div class="nav-section-label">Management</div>
 <div class="nav-item" data-screen="settings">
       ✦ Settings
@@ -518,59 +534,61 @@
     <!-- ══ Step 1: Item Load ══ -->
     <!-- ══ Home / Splash ══ -->
     <section class="screen active" id="screen-home">
-      <div style="max-width:700px;margin:16px auto 0;">
-        <div style="text-align:center;margin-bottom:16px;">
-          <img src="Images/ETCClogoWhiteBackground.png" alt="ETCC Logo" style="height:60px;margin-bottom:10px;" />
-          <h1 style="font-size:1.5rem;font-weight:700;color:var(--text);margin:0 0 4px;">Silent Auction Manager (SAM)</h1>
-          <p style="font-size:13px;color:var(--text-secondary);margin:0;">East Tennessee Corvette Club</p>
+      <div style="max-width:700px;margin:4px auto 0;">
+        <div style="text-align:center;margin-bottom:8px;">
+          <img src="Images/ETCClogoWhiteBackground.png" alt="ETCC Logo" style="height:44px;margin-bottom:4px;" />
+          <h1 style="font-size:1.2rem;font-weight:700;color:var(--text);margin:0 0 2px;">Silent Auction Manager (SAM)</h1>
+          <p style="font-size:12px;color:var(--text-secondary);margin:0;">East Tennessee Corvette Club</p>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="home-metrics"></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;" id="home-metrics"></div>
 
-        <div style="padding:16px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.7;color:var(--text);">
-          <div style="text-align:center;"><strong>Welcome to your new Auction Management site!</strong></div><br>This is your home base for running the whole show — from items rolling in automatically off email, to printing bidding forms, tracking winners, and getting invoices out the door without you lifting a finger. No database skills needed, nothing to maintain, just a tool built to take the busywork off your plate so you can focus on running a great auction. Glad to have you trying it out!
+        <div style="padding:10px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;font-size:12px;line-height:1.5;color:var(--text);text-align:center;">
+          <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. No database skills needed.
         </div>
 
         <div class="card" style="margin-bottom:0;">
           <div class="card-header">Auction Workflow</div>
-          <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,auto);grid-auto-flow:column dense;gap:10px;">
-            <div onclick="navigate('item-load')"       style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">1</span>
+          <div style="padding:10px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,auto);grid-auto-flow:column dense;gap:8px;">
+            <div id="step-card-1" onclick="navigate('item-load')"       style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-1" class="step-badge">1</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Load Item Emails</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Scan the auction inbox and import items from Gmail</div></div>
             </div>
-            <div onclick="navigate('bidding-sheets')"  style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">2</span>
+            <div id="step-card-2" onclick="navigate('bidding-sheets')"  style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-2" class="step-badge">2</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Create Bid Sheets</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Print bid sheets for each auction item</div></div>
             </div>
-            <div onclick="navigate('bidder-reg')"      style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">3</span>
+            <div id="step-card-3" onclick="navigate('bidder-reg')"      style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-3" class="step-badge">3</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Register Bidders</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Add bidders and assign bidder numbers</div></div>
             </div>
-            <div onclick="navigate('auction-close')"   style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">4</span>
+            <div id="step-card-4" onclick="navigate('auction-close')"   style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-4" class="step-badge">4</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Record Winning Bidders</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Enter the winning bidder number for each item</div></div>
             </div>
-            <div onclick="navigate('print-invoices')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">5</span>
+            <div id="step-card-5" onclick="navigate('print-invoices')"  style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-5" class="step-badge">5</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Print Invoices</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Print invoices for all winning bidders</div></div>
             </div>
-            <div onclick="navigate('winner-announce')" style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">6</span>
+            <div id="step-card-6" onclick="navigate('winner-announce')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-6" class="step-badge">6</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Announce Winners</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Display and email the list of winning bidders</div></div>
             </div>
-            <div onclick="navigate('payment-pickup')"  style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">7</span>
+            <div id="step-card-7" onclick="navigate('payment-pickup')"  style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-7" class="step-badge">7</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Pay &amp; Pickup</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Record payments and item pickup for each winner</div></div>
             </div>
-            <div onclick="navigate('post-auction')"    style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
-              <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;">8</span>
+            <div id="step-card-8" onclick="navigate('post-auction')"    style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:2px solid var(--accent);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--bg-section)'" onmouseout="this.style.background=''">
+              <span id="step-badge-8" class="step-badge">8</span>
               <div><div style="font-size:13px;font-weight:600;color:var(--text);">Post Auction</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Post-auction tasks and reporting</div></div>
             </div>
           </div>
         </div>
 
-        <div style="text-align:center;padding:14px 0 4px;">
-          <a href="https://etccapps.com" style="font-size:12px;color:var(--text-secondary);text-decoration:none;letter-spacing:.01em;">&#8592; Return to ETCC Dashboard</a>
+        <div style="display:flex;gap:8px;justify-content:center;padding:10px 0 2px;">
+          <button class="btn" onclick="clearWorkflow()" style="font-size:12px;">Clear Workflow</button>
+          <button class="btn" onclick="completeWorkflow()" style="font-size:12px;">Complete Workflow</button>
+          <a href="https://etccapps.com" class="btn" style="font-size:12px;text-decoration:none;">Return to Dashboard</a>
         </div>
 
       </div>
@@ -583,7 +601,11 @@
           <h2>Step 1 — Item Load</h2>
           <p>Scan the auction inbox, review emails, and load items into the database.</p>
         </div>
-        <button class="btn" style="flex-shrink:0;border-color:var(--danger);color:var(--danger);" onmouseover="this.style.background='var(--danger)';this.style.color='#fff';" onmouseout="this.style.background='';this.style.color='var(--danger)';" onclick="navigate('home')">Close</button>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button id="step1-complete-btn" class="tk-btn" style="background:#fff;border-color:var(--success);color:var(--success);" onclick="markStepComplete('sam_ts_items')">Step Complete</button>
+          <button id="step1-uncomplete-btn" class="tk-btn" style="background:#fff;border-color:#e65100;color:#e65100;" onclick="markStepUncomplete('sam_ts_items')">Step Uncomplete</button>
+          <button class="tk-btn tk-btn-close" onclick="navigate('home')">&#x2715; Close</button>
+        </div>
       </div>
 
       <!-- Metric summary -->
@@ -918,7 +940,7 @@
     <!-- ══ Print Invoices ══ -->
     <section class="screen" id="screen-print-invoices">
       <div class="page-header"><h2>Print Invoices</h2><p>Select winning bidders and print their invoices.</p></div>
-      <div class="card" id="print-invoices-card" style="max-width:640px;">
+      <div class="card" id="print-invoices-card" style="max-width:900px;">
         <div id="print-invoices-toolbar-wrap"></div>
         <div style="overflow-y:auto;max-height:calc(100vh - 278px);">
           <table class="tablekit" id="print-invoices-table" style="table-layout:fixed;width:100%;">
@@ -955,7 +977,7 @@
         <h2>Step 7 — Post Auction</h2>
         <p>Post-auction tasks and reporting.</p>
       </div>
-      <div class="card" id="post-auction-card">
+      <div class="card" id="post-auction-card" style="max-width:900px;">
         <div id="post-auction-toolbar-wrap"></div>
         <div style="padding:20px;">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:10px;">Reports</div>
@@ -3474,6 +3496,74 @@ function refreshHomeMetrics() {
       <div class="m-label">${m.label}</div>
       <div class="m-value accent">${m.value}</div>
     </div>`).join('');
+
+  const tsItems      = parseInt(localStorage.getItem('sam_ts_items')      || '0');
+  const done = [
+    tsItems > 0,                                             // 1 Load Items
+    parseInt(localStorage.getItem('sam_ts_bidsheets')  || '0') > 0, // 2 Bid Sheets
+    parseInt(localStorage.getItem('sam_ts_bidders')    || '0') > 0, // 3 Register Bidders
+    parseInt(localStorage.getItem('sam_ts_winners')    || '0') > 0, // 4 Record Winners
+    parseInt(localStorage.getItem('sam_ts_invoices')   || '0') > 0, // 5 Print Invoices
+    parseInt(localStorage.getItem('sam_ts_announce')   || '0') > 0, // 6 Announce Winners
+    parseInt(localStorage.getItem('sam_ts_paid')       || '0') > 0, // 7 Pay & Pickup
+    parseInt(localStorage.getItem('sam_ts_postauction')|| '0') > 0, // 8 Post Auction
+  ];
+  done.forEach((isDone, i) => {
+    const badge = document.getElementById('step-badge-' + (i + 1));
+    if (badge) badge.classList.toggle('done', isDone);
+    const card = document.getElementById('step-card-' + (i + 1));
+    if (card) card.style.borderColor = isDone ? 'var(--success)' : 'var(--accent)';
+  });
+}
+
+function markStepComplete(tsKey) {
+  localStorage.setItem(tsKey, Date.now());
+  refreshHomeMetrics();
+  navigate('home');
+}
+
+function markStepUncomplete(tsKey) {
+  localStorage.removeItem(tsKey);
+  refreshHomeMetrics();
+  navigate('home');
+}
+
+function clearWorkflow() {
+  if (!confirm('Clear all steps to uncomplete?')) return;
+  ['sam_ts_items','sam_ts_bidsheets','sam_ts_bidders','sam_ts_winners',
+   'sam_ts_invoices','sam_ts_announce','sam_ts_paid','sam_ts_postauction']
+    .forEach(k => localStorage.removeItem(k));
+  refreshHomeMetrics();
+}
+
+function completeWorkflow() {
+  if (!confirm('Mark all steps as complete?')) return;
+  const now = Date.now();
+  ['sam_ts_items','sam_ts_bidsheets','sam_ts_bidders','sam_ts_winners',
+   'sam_ts_invoices','sam_ts_announce','sam_ts_paid','sam_ts_postauction']
+    .forEach(k => localStorage.setItem(k, now));
+  refreshHomeMetrics();
+}
+
+function addStepBtns(tsKey, actions, closeBtn) {
+  const isDone = !!localStorage.getItem(tsKey);
+  const mkB = (label, fn, active) => {
+    const b = document.createElement('button');
+    b.className = 'tk-btn';
+    b.style.cssText = active
+      ? 'background:#fff;color:var(--success);border-color:var(--success);'
+      : 'background:#fff;';
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    return b;
+  };
+  actions.insertBefore(mkB('Step Complete',   () => markStepComplete(tsKey),   isDone),  closeBtn);
+  const uBtn = document.createElement('button');
+  uBtn.className = 'tk-btn';
+  uBtn.style.cssText = 'background:#fff;color:#e65100;border-color:#e65100;';
+  uBtn.textContent = 'Step Uncomplete';
+  uBtn.addEventListener('click', () => markStepUncomplete(tsKey));
+  actions.insertBefore(uBtn, closeBtn);
 }
 
 function navigate(screenId) {
@@ -3489,6 +3579,10 @@ function navigate(screenId) {
     renderEmailTable(scannedEmails);
     const emailEl = document.getElementById('gmail-login-email');
     if (emailEl) emailEl.textContent = DB.getSettings().inboxEmail || '(not set in Settings)';
+    const cBtn = document.getElementById('step1-complete-btn');
+    const uBtn = document.getElementById('step1-uncomplete-btn');
+    if (cBtn) cBtn.style.cssText = 'background:#fff;border-color:var(--success);color:var(--success);';
+    if (uBtn) uBtn.style.cssText = 'background:#fff;border-color:#e65100;color:#e65100;';
   }
   if (screenId === 'settings')       loadSettingsForm();
   if (screenId === 'bidding-sheets') {
@@ -3510,6 +3604,7 @@ function navigate(screenId) {
       actions.insertBefore(mkBtn('Check All',  bsCheckAll),       closeBtn);
       actions.insertBefore(mkBtn('Clear All',  bsClearAll),       closeBtn);
       actions.insertBefore(mkBtn('Print Bid Sheets', printBiddingSheets), closeBtn);
+      addStepBtns('sam_ts_bidsheets', actions, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
@@ -3550,6 +3645,7 @@ function navigate(screenId) {
       const closeBtn = actions.querySelector('.tk-btn-close');
       const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
       actions.insertBefore(mkBtn('Print', printBiddersList), closeBtn);
+      addStepBtns('sam_ts_bidders', actions, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
@@ -3581,6 +3677,7 @@ function navigate(screenId) {
       actions.insertBefore(mkBtn('Check All', () => document.querySelectorAll('#winners-tbody .win-print-chk').forEach(c => c.checked = true)), closeBtn);
       actions.insertBefore(mkBtn('Clear All', () => document.querySelectorAll('#winners-tbody .win-print-chk').forEach(c => c.checked = false)), closeBtn);
       actions.insertBefore(mkBtn('Save', saveAllWinners), closeBtn);
+      addStepBtns('sam_ts_winners', actions, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
@@ -3602,6 +3699,7 @@ function navigate(screenId) {
       actions.insertBefore(mkBtn('Check All',  () => document.querySelectorAll('#print-invoices-tbody .pi-chk').forEach(c => c.checked = true)),  closeBtn);
       actions.insertBefore(mkBtn('Clear All',  () => document.querySelectorAll('#print-invoices-tbody .pi-chk').forEach(c => c.checked = false)), closeBtn);
       actions.insertBefore(mkBtn('Print All',  printCheckedInvoices), closeBtn);
+      addStepBtns('sam_ts_invoices', actions, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
@@ -3622,6 +3720,7 @@ function navigate(screenId) {
       const closeBtn = actions.querySelector('.tk-btn-close');
       const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
       actions.insertBefore(mkBtn('Print', printAnnounceTable), closeBtn);
+      addStepBtns('sam_ts_announce', actions, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
@@ -3648,6 +3747,7 @@ function navigate(screenId) {
       const closeBtn = actions.querySelector('.tk-btn-close');
       const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
       actions.insertBefore(mkBtn('Print', printPaymentTable), closeBtn);
+      addStepBtns('sam_ts_paid', actions, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
@@ -3697,6 +3797,10 @@ function navigate(screenId) {
     // Remove every button except Close
     tb.querySelectorAll('.tk-btn:not(.tk-btn-close)').forEach(b => b.remove());
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
+    const actions8 = tb ? tb.querySelector('.tk-toolbar-actions') : null;
+    if (actions8 && closeBtn) {
+      addStepBtns('sam_ts_postauction', actions8, closeBtn);
+    }
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
       closeBtn.replaceWith(fresh);
@@ -4717,7 +4821,10 @@ document.getElementById('btn-scan').addEventListener('click', () => {
 document.getElementById('btn-load-items').addEventListener('click', () => {
   const loadedIds = new Set(DB.getItems().map(i => i.email_message_id).filter(Boolean));
   const newEmails = scannedEmails.filter(e => !loadedIds.has(e.id));
-  if (!newEmails.length) { document.getElementById('scan-note').textContent = 'Update complete — 0 new items added.'; return; }
+  if (!newEmails.length) {
+    document.getElementById('scan-note').textContent = 'Update complete — 0 new items added.';
+    return;
+  }
   processEmails(newEmails);
 });
 
@@ -4945,7 +5052,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 East Tennessee Corvette Club &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.25</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 7:37 AM</span></div>
+  <div>Version: <span id="app-version">1.56</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 11:37 AM</span></div>
 </div>
 </body>
 </html>

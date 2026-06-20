@@ -894,7 +894,42 @@ function runUITests() {
         uiAnyContains(d, 'Announce Winners card (step 6)','#screen-home .card span', '6'),
         uiAnyContains(d, 'Pay & Pickup card (step 7)',    '#screen-home .card span', '7'),
         uiAnyContains(d, 'Post Auction card (step 8)',    '#screen-home .card span', '8'),
+        uiCheck(d, 'step card 1 present',   '#step-card-1'),
+        uiCheck(d, 'step card 8 present',   '#step-card-8'),
+        uiCheck(d, 'Clear Workflow button',    '#screen-home button[onclick*="clearWorkflow"]'),
+        uiCheck(d, 'Complete Workflow button', '#screen-home button[onclick*="completeWorkflow"]'),
+        uiCheck(d, 'Return to Dashboard link', '#screen-home a[href*="etccapps"]'),
       ]);
+
+      // ── Workflow step badges ───────────────────────────────────────────────
+      nav('home');
+      await delay(60);
+      // Clear all timestamps first
+      const tsKeys = ['sam_ts_items','sam_ts_bidsheets','sam_ts_bidders','sam_ts_winners',
+                      'sam_ts_invoices','sam_ts_announce','sam_ts_paid','sam_ts_postauction'];
+      tsKeys.forEach(k => w.localStorage.removeItem(k));
+      w.refreshHomeMetrics();
+      await delay(30);
+      await suite('Workflow step badges — uncomplete', () => [
+        uiAssert('step 1 badge blue when uncomplete',
+          !d.getElementById('step-badge-1')?.classList.contains('done'), 'step 1 should not be done'),
+        uiAssert('step-card-1 border accent (blue)',
+          d.getElementById('step-card-1')?.style.borderColor.includes('accent') ||
+          d.getElementById('step-card-1')?.style.borderColor !== '',
+          'step-card-1 border not set'),
+      ]);
+      // Mark step 1 complete
+      w.localStorage.setItem('sam_ts_items', Date.now());
+      w.refreshHomeMetrics();
+      await delay(30);
+      await suite('Workflow step badges — complete', () => [
+        uiAssert('step 1 badge green when complete',
+          d.getElementById('step-badge-1')?.classList.contains('done'), 'step 1 should be done'),
+        uiAssert('step 2 badge stays blue (independent)',
+          !d.getElementById('step-badge-2')?.classList.contains('done'), 'step 2 should be independent'),
+      ]);
+      // Clear timestamps after test
+      tsKeys.forEach(k => w.localStorage.removeItem(k));
 
       // ── Nav: Load Items ────────────────────────────────────────────────────
       nav('item-load');
