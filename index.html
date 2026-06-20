@@ -5472,25 +5472,48 @@ function clearInboxEmails() {
 function showDatabaseStats() {
   const auction = currentAuction();
   const stats = [];
+  const auctions = DB.getAuctions();
 
-  // Global data
-  stats.push('--- Global Data ---');
-  stats.push('Auctions: ' + DB.getAuctions().length);
-  stats.push('Members: ' + DB.getMembers().length);
+  // Global tables
+  stats.push('═══════════════════════════════');
+  stats.push('GLOBAL TABLES');
+  stats.push('═══════════════════════════════');
+  stats.push('Auctions:        ' + auctions.length);
+  stats.push('Members:         ' + DB.getMembers().length);
   stats.push('Registration DB: ' + DB.getRegDB().length);
+  stats.push('Settings:        1');
+  stats.push('Field Map:       ' + (DB.getFieldMap() ? DB.getFieldMap().length : 0));
 
+  // Per-auction tables
   if (auction) {
     stats.push('');
-    stats.push('--- Current Auction: ' + auction.name + ' ---');
-    stats.push('Items: ' + (DB.getItems ? DB.getItems().length : 0));
-    stats.push('Bidders: ' + Bidders.getAll().length);
-    stats.push('Winners: ' + Object.keys(DB.getWinners()).length);
+    stats.push('───────────────────────────────');
+    stats.push('CURRENT AUCTION: ' + auction.name);
+    stats.push('───────────────────────────────');
+    stats.push('Items:    ' + (DB.getItems ? DB.getItems().length : 0));
+    stats.push('Bidders:  ' + Bidders.getAll().length);
+    stats.push('Winners:  ' + Object.keys(DB.getWinners()).length);
     stats.push('Payments: ' + Object.keys(DB.getPayments()).length);
+    stats.push('Emails:   ' + (scannedEmails ? scannedEmails.length : 0));
+  } else if (auctions.length > 0) {
+    stats.push('');
+    stats.push('───────────────────────────────');
+    stats.push('ALL AUCTIONS');
+    stats.push('───────────────────────────────');
+    auctions.forEach(a => {
+      const aId = a.id;
+      const items = JSON.parse(localStorage.getItem('sam_' + aId + '_items') || '[]').length;
+      const bidders = JSON.parse(localStorage.getItem('sam_' + aId + '_bidders') || '[]').length;
+      const winners = Object.keys(JSON.parse(localStorage.getItem('sam_' + aId + '_winners') || '{}')).length;
+      const payments = Object.keys(JSON.parse(localStorage.getItem('sam_' + aId + '_payments') || '{}')).length;
+      stats.push(a.name + ':');
+      stats.push('  Items: ' + items + ', Bidders: ' + bidders + ', Winners: ' + winners + ', Payments: ' + payments);
+    });
   }
 
   const statsEl = document.getElementById('db-stats');
   if (statsEl) {
-    statsEl.innerHTML = '<pre style="background:var(--bg);padding:8px;border-radius:4px;border:1px solid var(--border);overflow-x:auto;">' + escHtml(stats.join('\n')) + '</pre>';
+    statsEl.innerHTML = '<pre style="background:var(--bg);padding:12px;border-radius:4px;border:1px solid var(--border);overflow-x:auto;font-family:monospace;font-size:11px;line-height:1.6;">' + escHtml(stats.join('\n')) + '</pre>';
   }
 }
 
