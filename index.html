@@ -3667,6 +3667,7 @@ function loadSettingsForm() {
   document.getElementById('inp-version-major').value = s.versionMajor ?? 1;
   document.getElementById('inp-version-minor').value = s.versionMinor ?? 0;
   updateVersionDisplay();
+  updateFooterVersion();
   document.getElementById('inp-settings-password').value = '';
 }
 
@@ -3674,6 +3675,14 @@ function updateVersionDisplay() {
   const major = document.getElementById('inp-version-major').value || '1';
   const minor = document.getElementById('inp-version-minor').value || '0';
   document.getElementById('version-display').textContent = 'Current Version: v' + major + '.' + minor;
+}
+
+function updateFooterVersion() {
+  const s = DB.getSettings();
+  const major = s.versionMajor ?? 1;
+  const minor = s.versionMinor ?? 0;
+  const versionEl = document.getElementById('app-version');
+  if (versionEl) versionEl.textContent = 'v' + major + '.' + minor;
 }
 
 function changeSettingsPassword() {
@@ -3850,6 +3859,7 @@ function saveSettings() {
   applyBranding(settings);
   updateFavicon(settings.clubFavicon);
   updateVersionDisplay();
+  updateFooterVersion();
 
   // Re-init OAuth client with new client ID
   if (clientId) reinitTokenClient();
@@ -3918,6 +3928,9 @@ function log(msg) {
 // ══════════════════════════════════════
 const navItems = document.querySelectorAll('#nav .nav-item[data-screen]');
 const screens  = document.querySelectorAll('.screen');
+
+// Update footer version from Settings
+updateFooterVersion();
 
 function refreshHomeMetrics() {
   const el = document.getElementById('home-metrics');
@@ -5576,7 +5589,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">1.125</span> &nbsp;&middot;&nbsp; Date: <span id="app-build-date">Jun 20, 2026 5:19 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span></div>
 </div>
 </body>
 </html>

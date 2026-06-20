@@ -37,23 +37,9 @@ function Deploy-File($rel) {
     else { Write-Host "  FAILED: $out" -ForegroundColor Red }
 }
 
-# Auto-increment version and date in index.html before deploying
+# Version is now managed via Settings - no auto-increment on deployment
 function Update-Version {
-    $indexPath = Join-Path $local "index.html"
-    $content = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
-    if ($content -match 'id="app-version">(\d+)\.(\d+)<') {
-        $major   = [int]$Matches[1]
-        $minor   = [int]$Matches[2] + 1
-        $ver     = "$major.$minor"
-        $dateStr = Get-Date -Format "MMM d, yyyy h:mm tt"
-        $content = $content -replace '(?<=id="app-version">)[^<]+', $ver
-        $content = $content -replace '(?<=id="app-build-date">)[^<]+', $dateStr
-        # Also update Settings version fields
-        $content = $content -replace '(inp-version-major.*?value=")[^"]*', "`${1}$major"
-        $content = $content -replace '(inp-version-minor.*?value=")[^"]*', "`${1}$minor"
-        [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.Encoding]::UTF8)
-        Write-Host "  Version bumped to $ver  |  Date: $dateStr" -ForegroundColor Cyan
-    }
+    # Versions are managed in Settings, not auto-incremented on deploy
 }
 
 # Single file mode
