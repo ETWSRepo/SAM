@@ -824,9 +824,9 @@
     <!-- ══ Step 5: Announce Winners ══ -->
     <section class="screen" id="screen-winner-announce">
       <div class="page-header"><h2>Step 5 — Announce Winners</h2><p>Review and announce winning bidders for each item.</p></div>
-      <div class="card" id="announce-card" style="max-width:420px;">
+      <div class="card" id="announce-card" style="max-width:560px;">
         <div id="announce-toolbar-wrap"></div>
-        <div style="overflow-x:auto;max-height:calc(100vh - 220px);overflow-y:auto;">
+        <div style="overflow-y:auto;max-height:calc(100vh - 220px);">
           <table class="tablekit" id="announce-table" style="table-layout:fixed;width:380px;">
             <colgroup>
               <col style="width:120px;">
@@ -1117,6 +1117,22 @@
             <button class="btn danger" onclick="clearBiddersBySelection()">Delete Bidders</button>
           </div>
           <div id="bidder-db-status" style="margin-top:8px;font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
+      <!-- Data Backup -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Data Backup</div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn primary" onclick="exportBackup()">⬇ Export Backup</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Download all auction data (items, bidders, winners, payments) as a JSON file.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn" onclick="document.getElementById('import-backup-file').click()">⬆ Import Backup</button>
+            <input type="file" id="import-backup-file" accept=".json" style="display:none;" onchange="importBackup(this)">
+            <span style="font-size:12px;color:var(--text-secondary);">Restore auction data from a previously exported backup file. <strong style="color:var(--danger);">This will overwrite all current data.</strong></span>
+          </div>
         </div>
       </div>
 
@@ -1579,7 +1595,7 @@ function maybeInitTokenClient() {
   const inboxEmail = DB.getSettings().inboxEmail || '';
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/gmail.readonly',
+    scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
     callback: onTokenReceived,
     hint: inboxEmail,
     prompt: '',
@@ -1594,7 +1610,7 @@ function reinitTokenClient() {
   const inboxEmail = DB.getSettings().inboxEmail || '';
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/gmail.readonly',
+    scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
     callback: onTokenReceived,
     hint: inboxEmail,
     prompt: '',
@@ -1607,6 +1623,49 @@ function onTokenReceived(resp) {
   gapi.client.setToken({ access_token: accessToken });
   setGmailStatus(true);
   doScanInbox();
+}
+
+function buildMimeMessage(to, subject, bodyText) {
+  const msg = [
+    'To: ' + to,
+    'Subject: =?utf-8?B?' + btoa(unescape(encodeURIComponent(subject))) + '?=',
+    'Content-Type: text/plain; charset=utf-8',
+    'MIME-Version: 1.0',
+    '',
+    bodyText
+  ].join('\r\n');
+  return btoa(unescape(encodeURIComponent(msg))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Called from the Email Bidders popup via window.opener.sendEmailsViaGmail(emails)
+// emails = [{to, subject, body}]
+async function sendEmailsViaGmail(emails) {
+  if (!accessToken) {
+    throw new Error('Not connected to Gmail. Please go to Step 1 (Load Item Emails) and click Scan Inbox to connect, then try again.');
+  }
+  let sent = 0, failed = [];
+  for (const em of emails) {
+    try {
+      const raw = buildMimeMessage(em.to, em.subject, em.body);
+      const resp = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw })
+      });
+      if (resp.ok) {
+        sent++;
+      } else {
+        const err = await resp.json().catch(() => ({}));
+        const msg = err.error?.message || ('HTTP ' + resp.status);
+        console.error('Gmail send failed for', em.to, ':', msg);
+        failed.push(em.to + ' (' + msg + ')');
+      }
+    } catch (e) {
+      console.error('Gmail send error for', em.to, ':', e);
+      failed.push(em.to + ' (' + e.message + ')');
+    }
+  }
+  return { sent, failed };
 }
 
 function setGmailStatus(connected) {
@@ -2435,20 +2494,23 @@ function printAnnounceTable() {
     if (!w.bidder_number) return;
     winCount[w.bidder_number] = (winCount[w.bidder_number] || 0) + 1;
   });
-  const rows = bidders.slice().sort((a, b) => a.bidder_number - b.bidder_number).map(b => {
-    const count = winCount[b.bidder_number] || 0;
-    return `<tr>
-      <td>${escHtml(String(b.bidder_number))}</td>
-      <td>${escHtml(`${b.last_name}, ${b.first_name}`.trim())}</td>
-      <td style="text-align:center;${count > 0 ? 'font-weight:700;color:#1a7f37;' : 'color:#86868b;'}">${count > 0 ? count : '—'}</td>
-    </tr>`;
-  }).join('');
+  const rows = bidders.slice()
+    .filter(b => (winCount[b.bidder_number] || 0) > 0)
+    .sort((a, b) => a.bidder_number - b.bidder_number)
+    .map(b => {
+      const count = winCount[b.bidder_number];
+      return `<tr>
+        <td>${escHtml(String(b.bidder_number))}</td>
+        <td>${escHtml(`${b.last_name}, ${b.first_name}`.trim())}</td>
+        <td style="text-align:center;font-weight:700;color:#1a7f37;">${count}</td>
+      </tr>`;
+    }).join('');
   const html = `<!DOCTYPE html><html><head><title>Announce Winners</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 32px; color: #1d1d1f; }
+    body { font-family: system-ui, sans-serif; margin: 32px auto; max-width: 480px; color: #1d1d1f; }
     h2 { margin: 0 0 4px; }
     .sub { font-size: 13px; color: #555; margin-bottom: 16px; }
-    table { width: 560px; border-collapse: collapse; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { background: #dbeafe; padding: 6px 8px; text-align: left; border: 1px solid #000; font-weight: 600; }
     td { padding: 4px 8px; border: 1px solid #ccc; }
     tr:nth-child(even) td { background: #f0f7ff; }
@@ -2914,13 +2976,22 @@ function refreshAnnounceTable() {
   });
 
   const tdStyle = 'font-size:13px;padding:6px 8px;';
-  bidders.slice().sort((a, b) => a.bidder_number - b.bidder_number).forEach(b => {
-    const count = winCount[b.bidder_number] || 0;
+  const winners_list = bidders.slice()
+    .filter(b => (winCount[b.bidder_number] || 0) > 0)
+    .sort((a, b) => a.bidder_number - b.bidder_number);
+
+  if (!winners_list.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-secondary);">No winners recorded yet. Complete Step 4 first.</td></tr>';
+    return;
+  }
+
+  winners_list.forEach(b => {
+    const count = winCount[b.bidder_number];
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="${tdStyle}font-weight:600;">${escHtml(String(b.bidder_number))}</td>
       <td style="${tdStyle}">${escHtml(`${b.last_name}, ${b.first_name}`.trim())}</td>
-      <td style="${tdStyle}text-align:center;${count > 0 ? 'font-weight:600;color:var(--success);' : 'color:var(--text-tertiary);'}">${count > 0 ? count : '—'}</td>
+      <td style="${tdStyle}text-align:center;font-weight:600;color:var(--success);">${count}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -3483,6 +3554,8 @@ function navigate(screenId) {
       fresh.addEventListener('click', () => navigate('home'));
     }
     refreshAnnounceTable();
+    const tkWrap = document.querySelector('#announce-table')?.closest('.tk-wrap');
+    if (tkWrap) { tkWrap.style.overflow = 'visible'; tkWrap.style.overflowX = 'hidden'; }
   }
   if (screenId === 'payment-pickup') {
     if (!navigate._paymentTableInited) {
@@ -3578,10 +3651,11 @@ function openEmailBiddersPage() {
     </tr>`;
   }).join('');
 
-  const biddersJson = JSON.stringify(bidders.map(b => ({ email: b.email || '', name: `${b.first_name} ${b.last_name}`.trim(), isWinner: winnerNums.has(String(b.bidder_number)) })));
   const payments = DB.getPayments();
-  const winnersJson = JSON.stringify(winners);
-  const paymentsJson = JSON.stringify(payments);
+  window._emailBiddersData = {
+    bidders: bidders.map(b => ({ bidder_number: b.bidder_number, email: b.email || '', name: (b.first_name + ' ' + b.last_name).trim(), isWinner: winnerNums.has(String(b.bidder_number)) })),
+    winners
+  };
   // Build sample winner items table for the preview (use first winner found)
   const firstWinnerNum = Object.values(winners)[0]?.bidder_number;
   const sampleItems = firstWinnerNum
@@ -3735,7 +3809,8 @@ function openEmailBiddersPage() {
     </div>
   </div>
   <script>
-    const allBidders = ${biddersJson};
+    const allBidders = window.opener._emailBiddersData.bidders;
+    const allWinners = window.opener._emailBiddersData.winners;
     function updateStatus() {
       const total   = document.querySelectorAll('.bidder-cb').length;
       const checked = document.querySelectorAll('.bidder-cb:checked').length;
@@ -3762,32 +3837,67 @@ function openEmailBiddersPage() {
       updateStatus();
     }
     document.querySelectorAll('.bidder-cb').forEach(cb => cb.addEventListener('change', updateStatus));
-    function getCheckedAddrs(winnersOnly) {
-      const checked = [...document.querySelectorAll('.bidder-cb:checked')].map(cb => parseInt(cb.dataset.idx));
-      return checked.filter(i => winnersOnly ? allBidders[i].isWinner : !allBidders[i].isWinner).map(i => allBidders[i].email).filter(Boolean);
+
+    function buildWinnerBodyText(bidder) {
+      var subject = document.getElementById('email-subject').value.trim();
+      var bNum = String(bidder.bidder_number);
+      var myItems = Object.entries(allWinners)
+        .filter(function(e) { return String(e[1].bidder_number) === bNum; })
+        .sort(function(a, b) { return a[0].localeCompare(b[0]); });
+      var total = myItems.reduce(function(s, e) { return s + (parseFloat(e[1].winning_bid) || 0); }, 0);
+      var itemLines = myItems.map(function(e) {
+        return "  " + e[0] + "   " + (e[1].bidder_name || bidder.name) + "   $" + parseFloat(e[1].winning_bid || 0).toFixed(2);
+      }).join("\\n");
+      return subject + "\\n\\nDear " + bidder.name + ",\\n\\n"
+        + "Congratulations! You are a winner in the East Tennessee Corvette Club Silent Auction! "
+        + "Thank you for your enthusiastic bidding - your support makes a real difference for our club.\\n\\n"
+        + "Your Winning Item(s):\\n\\nItem #   Winner   Winning Bid\\n"
+        + itemLines + "\\n\\nTotal: $" + total.toFixed(2) + "\\n\\n"
+        + "Please make arrangements to pick up your item(s) at your earliest convenience. "
+        + "If you have any questions, please don't hesitate to reach out.\\n\\n"
+        + "We look forward to seeing you at future ETCC events!\\n\\n"
+        + "Warm regards,\\nEast Tennessee Corvette Club";
     }
-    function openMailto(addrs, count, isWinner) {
+
+    async function sendWinnerEmails() {
+      const checked = [...document.querySelectorAll('.bidder-cb:checked')].map(cb => parseInt(cb.dataset.idx));
+      const winners = checked.filter(i => allBidders[i].isWinner && allBidders[i].email).map(i => allBidders[i]);
+      if (!winners.length) { alert('No winners selected with email addresses.'); return; }
+      if (!window.opener || !window.opener.sendEmailsViaGmail) { alert('Cannot reach main window. Please close and reopen this screen.'); return; }
+
+      const subject = document.getElementById('email-subject').value.trim();
+      const emails = winners.map(b => ({ to: b.email, subject, body: buildWinnerBodyText(b) }));
+
+      const btn = document.querySelector('.footer .btn-primary');
+      const origText = btn ? btn.textContent : '';
+      if (btn) { btn.textContent = 'Sending…'; btn.disabled = true; }
+
+      try {
+        const { sent, failed } = await window.opener.sendEmailsViaGmail(emails);
+        const msg = 'Sent ' + sent + ' winner email' + (sent !== 1 ? 's' : '') + ' successfully.'
+          + (failed.length ? '\n\nFailed (' + failed.length + '):\n' + failed.join('\n') : '');
+        alert(msg);
+      } catch (e) {
+        alert('Error sending emails: ' + e.message);
+      } finally {
+        if (btn) { btn.textContent = origText; btn.disabled = false; }
+      }
+    }
+
+    function sendNowinEmails() {
+      const checked = [...document.querySelectorAll('.bidder-cb:checked')].map(cb => parseInt(cb.dataset.idx));
+      const addrs = checked.filter(i => !allBidders[i].isWinner && allBidders[i].email).map(i => allBidders[i].email);
+      if (!addrs.length) { alert('No non-winners selected with email addresses.'); return; }
       const subject  = encodeURIComponent(document.getElementById('email-subject').value.trim());
       const bcc      = encodeURIComponent(addrs.join(','));
       const panels   = document.querySelectorAll('.ep-body');
-      const bodyEl   = isWinner ? panels[1] : panels[0];
-      const bodyText = bodyEl ? bodyEl.innerText.trim() : '';
+      const bodyText = panels[0] ? panels[0].innerText.trim() : '';
       const body     = encodeURIComponent(bodyText);
-      const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=' + subject + '&cc=' + bcc + '&body=' + body;
-      if (!confirm('Send email to ' + count + ' recipient' + (count !== 1 ? 's' : '') + '?')) return;
+      if (!confirm('Send email to ' + addrs.length + ' non-winner' + (addrs.length !== 1 ? 's' : '') + '?')) return;
+      const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=' + subject + '&bcc=' + bcc + '&body=' + body;
       const a = document.createElement('a');
       a.href = gmailUrl; a.target = '_blank'; a.rel = 'noopener';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    }
-    function sendWinnerEmails() {
-      const addrs = getCheckedAddrs(true);
-if (!addrs.length) { alert('No winners selected with email addresses.'); return; }
-      openMailto(addrs, addrs.length, true);
-    }
-    function sendNowinEmails() {
-      const addrs = getCheckedAddrs(false);
-      if (!addrs.length) { alert('No non-winners selected with email addresses.'); return; }
-      openMailto(addrs, addrs.length, false);
     }
   <\/script>
   </div></body></html>`;
@@ -4610,6 +4720,39 @@ function showViewAll(type) {
     closeBtn.replaceWith(closeBtn.cloneNode(true)); // remove old listener
     wrap.querySelector('.tk-btn-close').addEventListener('click', closeViewAll);
   }
+}
+
+function exportBackup() {
+  const keys = ['sam_items','sam_bidders','sam_winners','sam_payments','sam_settings','sam_fieldmap','sam_emails'];
+  const backup = { exported: new Date().toISOString(), version: 1 };
+  keys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v) backup[k] = JSON.parse(v);
+  });
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `sam-backup-${date}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    let data;
+    try { data = JSON.parse(e.target.result); } catch { alert('Invalid backup file.'); return; }
+    if (!confirm('This will overwrite ALL current auction data with the backup. Continue?')) return;
+    const keys = ['sam_items','sam_bidders','sam_winners','sam_payments','sam_settings','sam_fieldmap','sam_emails'];
+    keys.forEach(k => { if (data[k] !== undefined) localStorage.setItem(k, JSON.stringify(data[k])); });
+    alert('Backup restored successfully. Reloading…');
+    location.reload();
+  };
+  reader.readAsText(file);
 }
 
 function clearInboxEmails() {

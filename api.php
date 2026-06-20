@@ -11,7 +11,7 @@ $db   = 'u177039107_sam';
 $user = 'u177039107_sam';
 $pass = 'uemk$td*TjnAD9t4HXeYdsBQfqDDSZ4m';
 
-$ALLOWED_KEYS = ['sam_items','sam_bidders','sam_winners','sam_payments','sam_settings','sam_fieldmap'];
+$ALLOWED_KEYS = ['sam_items','sam_bidders','sam_winners','sam_payments','sam_settings','sam_fieldmap','sam_emails'];
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, [
