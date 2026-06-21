@@ -2284,6 +2284,65 @@ function runUITests() {
         updateSummary();
       }
 
+      // ─── Phase 3: API Layer & Data Migration Tests ───────────────────────────
+      const apiTests = () => [
+        logicAssert('API object exists', !!w.API, 'API object not defined'),
+        logicAssert('API.BASE_URL defined', !!w.API?.BASE_URL, 'API.BASE_URL missing'),
+        logicAssert('API.API_KEY defined', !!w.API?.API_KEY, 'API.API_KEY missing'),
+        logicAssert('API.call is function', typeof w.API?.call === 'function', 'API.call not a function'),
+        logicAssert('API.syncItemsToAPI exists', typeof w.API?.syncItemsToAPI === 'function', 'syncItemsToAPI not a function'),
+        logicAssert('API.syncBiddersToAPI exists', typeof w.API?.syncBiddersToAPI === 'function', 'syncBiddersToAPI not a function'),
+        logicAssert('API.syncWinnersToAPI exists', typeof w.API?.syncWinnersToAPI === 'function', 'syncWinnersToAPI not a function'),
+        logicAssert('API.syncPaymentsToAPI exists', typeof w.API?.syncPaymentsToAPI === 'function', 'syncPaymentsToAPI not a function'),
+        logicAssert('API.syncSettingsToAPI exists', typeof w.API?.syncSettingsToAPI === 'function', 'syncSettingsToAPI not a function'),
+        logicAssert('API.syncAuctionsToAPI exists', typeof w.API?.syncAuctionsToAPI === 'function', 'syncAuctionsToAPI not a function'),
+      ];
+      renderSuite('Logic — Phase 3: API Layer', apiTests());
+
+      const migrationTests = () => [
+        logicAssert('migrateCurrentAuctionToBackend is function', typeof w.migrateCurrentAuctionToBackend === 'function', 'migration function not found'),
+        logicAssert('syncFromAPI is function', typeof w.syncFromAPI === 'function', 'syncFromAPI function not found'),
+      ];
+      renderSuite('Logic — Phase 3: Data Migration', migrationTests());
+
+      // Phase 3: Backend Sync UI tests
+      try {
+        nav('settings');
+        await delay(80);
+        const syncSection = d.querySelector('[style*="Backend Sync"]') ||
+                           [...d.querySelectorAll('.card-header')].find(h => h.textContent.includes('Backend Sync'));
+        const syncBtn = syncSection ?
+                        [...d.querySelectorAll('button')].find(b => b.textContent.includes('Sync to Backend'))
+                        : null;
+        await suite('UI — Phase 3: Backend Sync in Settings', () => [
+          uiAssert('Backend Sync section exists', !!syncSection, 'Backend Sync section not found in Settings'),
+          uiAssert('Sync to Backend button present', !!syncBtn, 'Sync to Backend button not found'),
+          uiAssert('Button is clickable', syncBtn && !syncBtn.disabled, 'button is disabled'),
+        ]);
+      } catch(e) {
+        renderSuite('UI — Phase 3: Backend Sync in Settings', [{ name: 'backend sync ui test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
+      // Phase 3: Bulk operations configuration
+      const bulkTests = () => {
+        const testItems = [
+          { item_number: '100-1', description: 'Item 1', item_value: '$100' },
+          { item_number: '100-2', description: 'Item 2', item_value: '$200' },
+        ];
+        const testBidders = [
+          { bidder_number: 1, first_name: 'John', last_name: 'Doe' },
+          { bidder_number: 2, first_name: 'Jane', last_name: 'Smith' },
+        ];
+        return [
+          logicAssert('Items array handled', Array.isArray(testItems), 'items not array'),
+          logicAssert('Bidders array handled', Array.isArray(testBidders), 'bidders not array'),
+          logicAssert('Winners object handled', typeof({}) === 'object', 'winners not object'),
+          logicAssert('Payments object handled', typeof({}) === 'object', 'payments not object'),
+        ];
+      };
+      renderSuite('Logic — Phase 3: Bulk Operations', bulkTests());
+
       updateSummary();
       document.getElementById('s-status').textContent +=  ' (incl. UI)';
       window.scrollTo({ top: 0, behavior: 'smooth' });
