@@ -930,6 +930,7 @@ function runUITests() {
         uiCheck(d, 'home metrics container',              '#home-metrics'),
         uiCheck(d, 'new items metric',                    '#m-new'),
         uiCheck(d, 'categories metric',                   '#m-cats'),
+        uiAnyContains(d, 'welcome message has "the"',     '#screen-home strong', 'Welcome to the Silent Auction Manager'),
         uiCheck(d, 'workflow card present',               '#screen-home .card'),
         uiAnyContains(d, 'Print Invoices card (step 5)',  '#screen-home .card span', '5'),
         uiAnyContains(d, 'Announce Winners card (step 6)','#screen-home .card span', '6'),
@@ -977,6 +978,8 @@ function runUITests() {
         uiAnyContains(d, 'Value column header',    '#items-table th', 'Value'),
         uiCheck(d, 'items tbody present',       '#items-tbody'),
         uiCheck(d, 'email table present',       '#email-table'),
+        uiCheck(d, 'email checkbox header',     '#email-check-all'),
+        uiCheck(d, 'delete checked button',     '#email-list-wrap [onclick*="deleteChecked"]'),
       ]);
 
       // ── Nav: Bid Sheets ────────────────────────────────────────────────────
@@ -1049,6 +1052,8 @@ function runUITests() {
         uiCheck(d, 'bid count field',           '#inp-bid-count'),
         uiCheck(d, 'venue name field',          '#inp-venue-name'),
         uiCheck(d, 'venue address field',       '#inp-venue-address'),
+        uiCheck(d, 'clear items button',        '#btn-clear-items'),
+        uiCheck(d, 'clear bidders button',      '#btn-clear-bidders'),
       ]);
 
       // ── Member DB modal ────────────────────────────────────────────────────

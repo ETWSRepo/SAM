@@ -117,14 +117,14 @@
     .page-header p  { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
 
     /* ── Metric cards ── */
-    .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+    .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
     .metric-card {
       background: var(--bg-section);
       border-radius: 8px;
-      padding: 14px 16px;
+      padding: 8px 12px;
     }
-    .metric-card .m-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
-    .metric-card .m-value { font-size: 22px; font-weight: 500; color: var(--text); }
+    .metric-card .m-label { font-size: 10px; color: var(--text-secondary); margin-bottom: 2px; }
+    .metric-card .m-value { font-size: 18px; font-weight: 500; color: var(--text); }
     .metric-card .m-value.accent { color: var(--accent); }
 
     /* ── Toolbar bar ── */
@@ -555,7 +555,7 @@
         <!-- Current auction panel (shown when auction is selected) -->
         <div id="home-auction-panel" style="display:none;">
           <div style="padding:10px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-top:16px;margin-bottom:20px;font-size:12px;line-height:1.5;color:var(--text);text-align:center;">
-            <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. You run the auction and I'll manage the administration.
+            <strong>Welcome to the Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. You run the auction and I'll manage the administration.
           </div>
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:8px 12px;background:var(--bg-section);border:1px solid var(--border);border-radius:8px;">
@@ -615,7 +615,7 @@
 
         <!-- Welcome card (shown when no auction is selected, above auction picker) -->
         <div id="home-no-auction-welcome" style="padding:10px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;margin-top:16px;margin-bottom:20px;font-size:12px;line-height:1.5;color:var(--text);text-align:center;display:none;">
-          <strong>Welcome to Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. You run the auction and I'll manage the administration.
+          <strong>Welcome to the Silent Auction Manager (SAM)!</strong><br>Your home base for running the whole auction — from loading items off email, printing bid sheets, tracking winners, and getting invoices out the door. You run the auction and I'll manage the administration.
         </div>
 
         <!-- Auctions list (shown only when no auction is selected) -->
@@ -680,14 +680,16 @@
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
             <span>Inbox Emails</span>
             <div style="display:flex;gap:8px;">
+              <button class="btn workflow-edit-btn" style="font-size:11px;padding:3px 10px;" onclick="deleteCheckedEmails()">🗑 Delete Checked</button>
               <button class="btn primary workflow-edit-btn" id="btn-scan-inline" style="font-size:11px;padding:3px 10px;">📧 Scan</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('emails')">View All</button>
             </div>
           </div>
-          <div style="overflow-x:auto;max-height:185px;overflow-y:auto;">
+          <div style="overflow-x:auto;max-height:210px;overflow-y:auto;">
             <table class="tablekit" id="email-table" data-tk-sort="false">
               <thead style="position:sticky;top:0;z-index:1;">
                 <tr>
+                  <th style="width:40px;text-align:center;"><input type="checkbox" id="email-check-all" style="cursor:pointer;" onchange="toggleAllEmailCheckboxes(this.checked)"></th>
                   <th>Submission Date</th>
                   <th>From</th>
                   <th>Subject</th>
@@ -1292,6 +1294,10 @@
             <span style="font-size:12px;color:var(--text-secondary);">Clear all loaded auction items from the database.</span>
           </div>
           <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn danger" id="btn-clear-bidders">Clear Bidders</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Clear all registered bidders from the database.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
             <button class="btn" onclick="showDatabaseStats()">Database Stats</button>
             <span style="font-size:12px;color:var(--text-secondary);">List all tables with row counts.</span>
           </div>
@@ -1323,7 +1329,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 20, 2026 10:37 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 20, 2026 10:59 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2297,6 +2303,7 @@ function renderEmailTable(emails) {
   emails.forEach((email, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="text-align:center;width:40px;"><input type="checkbox" class="email-row-checkbox" data-idx="${idx}" style="cursor:pointer;"></td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(email.date)}</td>
       <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.from)}</td>
       <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.subject)}</td>
@@ -2307,6 +2314,19 @@ function renderEmailTable(emails) {
     tbody.appendChild(tr);
   });
 
+}
+
+function toggleAllEmailCheckboxes(checked) {
+  document.querySelectorAll('.email-row-checkbox').forEach(cb => cb.checked = checked);
+}
+
+function deleteCheckedEmails() {
+  const checked = [...document.querySelectorAll('.email-row-checkbox:checked')].map(cb => parseInt(cb.dataset.idx));
+  if (!checked.length) { alert('No emails selected.'); return; }
+  if (!confirm('Delete ' + checked.length + ' email' + (checked.length !== 1 ? 's' : '') + '?')) return;
+  scannedEmails = scannedEmails.filter((email, idx) => !checked.includes(idx));
+  renderEmailTable(scannedEmails);
+  document.getElementById('email-check-all').checked = false;
 }
 
 // ══════════════════════════════════════
@@ -5459,6 +5479,12 @@ document.getElementById('btn-clear-items').addEventListener('click', () => {
   refreshMetrics();
 });
 
+document.getElementById('btn-clear-bidders').addEventListener('click', () => {
+  if (!confirm('Clear all registered bidders? This cannot be undone.')) return;
+  Bidders.clear();
+  renderBiddersTable();
+});
+
 
 document.getElementById('inp-debug-mode').addEventListener('change', function() {
   const s = DB.getSettings();
@@ -5740,7 +5766,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 20, 2026 10:37 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 20, 2026 10:59 PM</span></div>
 </div>
 </body>
 </html>
