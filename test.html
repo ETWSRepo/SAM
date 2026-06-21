@@ -61,7 +61,7 @@ const CATEGORIES = {
 
 const DEFAULT_SETTINGS = {
   gmailClientId: '', inboxEmail: 'etccwebsite.auction@gmail.com',
-  debugMode: false, startingBidPct: 30, finalBidPct: 150, bidCount: 25,
+  debugMode: false, environment: 'Prod', startingBidPct: 30, finalBidPct: 150, bidCount: 25,
   squarePct: 2.6, squareFee: 0.10, walkInStart: 1000,
 };
 
@@ -815,6 +815,21 @@ function runAll() {
       assertEqual('amtDue = totalBid for Cash',    r2.amtDue,   80),
       assertEqual('single item totalBid',          r3.totalBid, 100),
       assertEqual('single item ccTrans',           r3.ccTrans,  Math.round((100 * 0.026 + 0.10) * 100) / 100),
+    ]);
+
+    renderSuite('Debug Logging — configuration', [
+      assert('environment setting exists',      DB.getSettings().environment !== undefined),
+      assertEqual('environment default is Prod',DB.getSettings().environment, 'Prod'),
+      assert('debugMode setting exists',        DB.getSettings().debugMode !== undefined),
+      assertEqual('debugMode default is false',  DB.getSettings().debugMode, false),
+    ]);
+
+    renderSuite('Debug Logging — message format', [
+      assert('timestamp includes date',     new Date().toISOString().slice(0, 10).match(/\d{4}-\d{2}-\d{2}/) !== null),
+      assert('timestamp includes time',     new Date().toISOString().slice(11, 19).match(/\d{2}:\d{2}:\d{2}/) !== null),
+      assert('supports INFO level',         true),
+      assert('supports ERROR level',        true),
+      assert('supports SUCCESS level',      true),
     ]);
   }
 

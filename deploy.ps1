@@ -12,7 +12,7 @@ $ftpPass    = $creds["FTP_PASS"]
 $ftpPort    = $creds["FTP_PORT"]
 $remotePath = $creds["FTP_REMOTE_PATH"]
 $local      = $PSScriptRoot
-$appUrl     = "https://etccapps.com/apps/samtest/"
+$appUrl     = "https://etccapps.com/apps/sam/"
 
 # Write netrc to temp file so password special chars aren't interpreted by shell
 $netrcFile = "$env:TEMP\.netrc-sam"

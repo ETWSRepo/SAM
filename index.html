@@ -1352,7 +1352,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 4:26 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 4:44 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1654,7 +1654,7 @@ const DEFAULT_SETTINGS = {
 //  API LAYER
 // ══════════════════════════════════════
 const API = {
-  BASE_URL: 'https://etccapps.com/apps/samtest/backend',
+  BASE_URL: 'https://etccapps.com/apps/sam/backend',
   API_KEY: 'sam_prod_2026_F1G4W8ZrfEJ2gTOBRnlLsD3y',
 
   async call(method, endpoint, body = null) {
@@ -2219,6 +2219,7 @@ function onTokenReceived(resp) {
   accessToken = resp.access_token;
   gapi.client.setToken({ access_token: accessToken });
   setGmailStatus(true);
+  setUserFromGmail(); // Capture user email for debug logging
   doScanInbox();
 }
 
@@ -5440,17 +5441,52 @@ function printClubIncomeReport() {
 
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
 
+// User and device tracking
+let currentUser = null;
+let currentDevice = null;
+
+function detectDevice() {
+  const ua = navigator.userAgent;
+  const isMobile = /iPhone|iPad|Android|Mobile|Touch/.test(ua);
+  const isTablet = /iPad|Android/.test(ua) && !/Mobile/.test(ua);
+
+  if (isTablet) return 'Tablet';
+  if (isMobile) return 'Mobile';
+  return 'Desktop';
+}
+
+function getUserEmail() {
+  return currentUser || 'Unknown';
+}
+
+async function setUserFromGmail() {
+  try {
+    if (gapi.client.getToken()) {
+      const profile = await gapi.client.gmail.users.getProfile({ userId: 'me' });
+      currentUser = profile.result.emailAddress;
+      await debugLog(`User authenticated: ${currentUser}`, 'INFO');
+    }
+  } catch (e) {
+    // Silent fail - user not authenticated
+  }
+}
+
 // Debug logging helper
 async function debugLog(message, level = 'INFO') {
   const settings = DB.getSettings();
   if (!settings.debugMode) return; // Only log if debug mode enabled
 
-  // Format: "Prod/Test date time: message"
+  // Ensure device is detected
+  if (!currentDevice) currentDevice = detectDevice();
+
+  // Format: "Prod/Test [User] [Device] date time: message"
   const env = settings.environment || 'Prod';
+  const user = currentUser || 'Anonymous';
+  const device = currentDevice || 'Unknown';
   const now = new Date();
   const date = now.toLocaleDateString('en-US');
   const time = now.toLocaleTimeString('en-US');
-  const formattedMessage = `${env} ${date} ${time}: ${message}`;
+  const formattedMessage = `${env} [${user}] [${device}] ${date} ${time}: ${message}`;
 
   console.log(`[${level}] ${formattedMessage}`);
   try {
@@ -6344,6 +6380,11 @@ async function migrateCurrentAuctionToBackend() {
   if (!settings.gmailClientId) {
     document.getElementById('no-client-id-alert').style.display = 'block';
   }
+
+  // Initialize device detection and user tracking
+  currentDevice = detectDevice();
+  await debugLog(`App started on ${currentDevice} device`);
+
   // Token client is initialized via onGapiScriptLoad + onGisScriptLoad callbacks
 })();
 </script>
@@ -6351,7 +6392,7 @@ async function migrateCurrentAuctionToBackend() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 4:26 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 4:44 PM</span></div>
 </div>
 </body>
 </html>
