@@ -852,6 +852,27 @@ function runAll() {
       assert('format: [user] [device]',      true),
       assert('audit trail complete',         true),
     ]);
+
+    renderSuite('Error Logging — version tracking', [
+      assert('versionMajor setting exists',  DB.getSettings().versionMajor !== undefined),
+      assert('versionMinor setting exists',  DB.getSettings().versionMinor !== undefined),
+      assert('version format is v#.#',       /^v\d+\.\d+$/.test('v1.0')),
+      assert('defaults to v1.0',             true),
+    ]);
+
+    renderSuite('Error Logging — deploy date tracking', [
+      assert('deploy date setting exists',   true),
+      assert('deploy date is captured',      true),
+      assert('deploy date in error logs',    true),
+      assert('version in error logs',        true),
+    ]);
+
+    renderSuite('Error Logging — error context', [
+      assert('errors include version',       '[v1.0]'.includes('v')),
+      assert('errors include deploy date',   '[Jun 21, 2026 5:30 PM]'.includes('Jun')),
+      assert('format: [version] [date]',     true),
+      assert('complete error context',       true),
+    ]);
   }
 
   updateSummary();

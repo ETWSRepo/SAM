@@ -1352,7 +1352,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 4:50 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 5:31 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2261,12 +2261,16 @@ async function sendEmailsViaGmail(emails) {
       } else {
         const err = await resp.json().catch(() => ({}));
         const msg = err.error?.message || ('HTTP ' + resp.status);
-        await debugLog(`✗ Gmail send failed for ${em.to}: ${msg}`, 'ERROR');
+        const version = getAppVersion();
+        const deployDate = getDeployDate();
+        await debugLog(`✗ Gmail send failed for ${em.to}: ${msg} [${version}] [${deployDate}]`, 'ERROR');
         console.error('Gmail send failed for', em.to, ':', msg);
         failed.push(em.to + ' (' + msg + ')');
       }
     } catch (e) {
-      await debugLog(`✗ Gmail send error for ${em.to}: ${e.message}`, 'ERROR');
+      const version = getAppVersion();
+      const deployDate = getDeployDate();
+      await debugLog(`✗ Gmail send error for ${em.to}: ${e.message} [${version}] [${deployDate}]`, 'ERROR');
       console.error('Gmail send error for', em.to, ':', e);
       failed.push(em.to + ' (' + e.message + ')');
     }
@@ -2365,7 +2369,9 @@ async function doScanInbox() {
 
   } catch (err) {
     const errMsg = err.result?.error?.message || err.message || err;
-    await debugLog(`✗ Scan error: ${errMsg}`, 'ERROR');
+    const version = getAppVersion();
+    const deployDate = getDeployDate();
+    await debugLog(`✗ Scan error: ${errMsg} [${version}] [${deployDate}]`, 'ERROR');
     log('❌ Scan error: ' + errMsg);
     const _b1 = document.getElementById('btn-scan'); if (_b1) _b1.disabled = false;
     const _b2 = document.getElementById('btn-scan-inline'); if (_b2) _b2.disabled = false;
@@ -2995,7 +3001,9 @@ function addRegisteredMembers() {
     alert(added + ' registered member' + (added !== 1 ? 's' : '') + ' added.');
   } catch(err) {
     const errMsg = err.message || err;
-    debugLog(`✗ Error adding registered members: ${errMsg}`, 'ERROR');
+    const version = getAppVersion();
+    const deployDate = getDeployDate();
+    debugLog(`✗ Error adding registered members: ${errMsg} [${version}] [${deployDate}]`, 'ERROR');
     console.error('addRegisteredMembers error:', err);
     alert('Error adding registered members: ' + errMsg);
   }
@@ -5476,6 +5484,20 @@ async function setUserFromGmail() {
   }
 }
 
+function getAppVersion() {
+  const settings = DB.getSettings();
+  const major = settings.versionMajor || 1;
+  const minor = settings.versionMinor || 0;
+  return `v${major}.${minor}`;
+}
+
+function getDeployDate() {
+  const deployEl = document.getElementById('app-deploy-date');
+  if (deployEl) return deployEl.textContent.trim();
+  const settings = DB.getSettings();
+  return settings.deployDate || 'Unknown';
+}
+
 // Debug logging helper
 async function debugLog(message, level = 'INFO') {
   const settings = DB.getSettings();
@@ -5505,14 +5527,18 @@ async function debugLog(message, level = 'INFO') {
 
 // Global error handler for uncaught errors
 window.addEventListener('error', (event) => {
-  const message = `✗ Error: ${event.message} at ${event.filename}:${event.lineno}`;
+  const version = getAppVersion();
+  const deployDate = getDeployDate();
+  const message = `✗ Error: ${event.message} at ${event.filename}:${event.lineno} [${version}] [${deployDate}]`;
   debugLog(message, 'ERROR');
   console.error(message, event.error);
 });
 
 // Global promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
-  const message = `✗ Unhandled Promise Rejection: ${event.reason}`;
+  const version = getAppVersion();
+  const deployDate = getDeployDate();
+  const message = `✗ Unhandled Promise Rejection: ${event.reason} [${version}] [${deployDate}]`;
   debugLog(message, 'ERROR');
   console.error(message, event.reason);
 });
@@ -6397,7 +6423,7 @@ async function migrateCurrentAuctionToBackend() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 4:50 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 5:31 PM</span></div>
 </div>
 </body>
 </html>
