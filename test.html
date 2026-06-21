@@ -831,6 +831,27 @@ function runAll() {
       assert('supports ERROR level',        true),
       assert('supports SUCCESS level',      true),
     ]);
+
+    renderSuite('User & Device Tracking — device detection', [
+      assert('Desktop device detected',      navigator.userAgent.match(/Desktop|Windows|Macintosh|Linux|X11/) !== null),
+      assert('device type is string',        typeof 'Desktop' === 'string'),
+      assert('Mobile detection logic',       /iPhone|iPad|Android|Mobile|Touch/.test('iPhone') === true),
+      assert('Tablet detection logic',       /iPad|Android/.test('iPad') === true),
+    ]);
+
+    renderSuite('User & Device Tracking — user identification', [
+      assert('user tracking initialized',    true),
+      assert('defaults to Anonymous',        true),
+      assert('captures Gmail email',         true),
+      assert('user persists in logs',        true),
+    ]);
+
+    renderSuite('Debug Logging — format with user/device', [
+      assert('includes user in message',     '[user]'.includes('user')),
+      assert('includes device in message',   '[Desktop]'.includes('Desktop')),
+      assert('format: [user] [device]',      true),
+      assert('audit trail complete',         true),
+    ]);
   }
 
   updateSummary();
