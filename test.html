@@ -1062,8 +1062,8 @@ function runUITests() {
           'member-db-modal not visible'),
         uiCheck(d, 'modal table present',       '#member-db-modal-table'),
         uiAnyContains(d, 'Add to Bidders button', '#member-db-modal button', 'Add to Bidders'),
-        uiAnyContains(d, 'Select All button',    '#member-db-modal button', 'Select All'),
-        uiAnyContains(d, 'Clear All button',     '#member-db-modal button', 'Clear All'),
+        uiAnyContains(d, 'Select button',        '#member-db-modal button', 'Select'),
+        uiAnyContains(d, 'Clear button',         '#member-db-modal button', 'Clear'),
         uiCheck(d, 'search box present',        '#member-search'),
       ]);
       // Close modal
@@ -1170,21 +1170,21 @@ function runUITests() {
         ]));
         w.showMemberDBModal();
         await delay(80);
-        // Click Select All
-        const selAllBtn = [...d.querySelectorAll('#member-db-modal button')].find(b => b.textContent.trim() === 'Select All');
+        // Click Select
+        const selAllBtn = [...d.querySelectorAll('#member-db-modal button')].find(b => b.textContent.trim() === 'Select');
         if (selAllBtn) selAllBtn.click();
         await delay(30);
         const allChecked = [...d.querySelectorAll('#member-db-modal-tbody input[type="checkbox"]')].every(cb => cb.checked);
-        // Click Clear All
-        const clrAllBtn = [...d.querySelectorAll('#member-db-modal button')].find(b => b.textContent.trim() === 'Clear All');
+        // Click Clear
+        const clrAllBtn = [...d.querySelectorAll('#member-db-modal button')].find(b => b.textContent.trim() === 'Clear');
         if (clrAllBtn) clrAllBtn.click();
         await delay(30);
         const allUnchecked = [...d.querySelectorAll('#member-db-modal-tbody input[type="checkbox"]')].every(cb => !cb.checked);
-        await suite('Member DB — Select All / Clear All', () => [
-          uiAssert('Select All button found',     !!selAllBtn,  'No Select All button in modal'),
-          uiAssert('Select All checks all rows',  allChecked,   'Not all checkboxes checked after Select All'),
-          uiAssert('Clear All button found',      !!clrAllBtn,  'No Clear All button in modal'),
-          uiAssert('Clear All unchecks all rows', allUnchecked, 'Not all checkboxes unchecked after Clear All'),
+        await suite('Member DB — Select / Clear', () => [
+          uiAssert('Select button found',     !!selAllBtn,  'No Select button in modal'),
+          uiAssert('Select checks all rows',  allChecked,   'Not all checkboxes checked after Select'),
+          uiAssert('Clear button found',      !!clrAllBtn,  'No Clear button in modal'),
+          uiAssert('Clear unchecks all rows', allUnchecked, 'Not all checkboxes unchecked after Clear'),
         ]);
         d.getElementById('member-db-modal').style.display = 'none';
         w.localStorage.removeItem('sam_members');
