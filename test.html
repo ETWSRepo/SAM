@@ -1880,6 +1880,38 @@ function runUITests() {
         updateSummary();
       }
 
+      // ── Home metrics — Winners count unique bidders ──────────────────────────
+      try {
+        const savedAuctions = w.localStorage.getItem('sam_auctions');
+        const curId = w.localStorage.getItem('sam_current_auction') || '';
+        w.localStorage.setItem('sam_auctions', JSON.stringify([
+          { id: curId, name:'Metrics', status:'active', created:new Date().toISOString() },
+        ]));
+        w.localStorage.setItem(samKey('bidders'), JSON.stringify([
+          {bidder_number:1, first_name:'A', last_name:'A', email:'a@x.com', phone:'1'},
+          {bidder_number:2, first_name:'B', last_name:'B', email:'b@x.com', phone:'2'},
+        ]));
+        w.localStorage.setItem(samKey('winners'), JSON.stringify({
+          '100-1': {bidder_number:1, bidder_name:'A A', winning_bid:'100'},
+          '100-2': {bidder_number:1, bidder_name:'A A', winning_bid:'150'},
+          '200-1': {bidder_number:2, bidder_name:'B B', winning_bid:'200'},
+        }));
+        nav('home');
+        await delay(40);
+        const metricsCard = [...d.querySelectorAll('.metric-card')].find(c => c.textContent.includes('Winners'));
+        const winnerCount = metricsCard?.querySelector('.m-value')?.textContent?.trim();
+        await suite('Home metrics — Winners count unique bidders', () => [
+          uiAssert('winners metric shows 2 (bidders, not items)', winnerCount === '2', 'winners count: ' + winnerCount + ' (expected 2, have 3 items from 2 bidders)'),
+        ]);
+        if (savedAuctions === null) w.localStorage.removeItem('sam_auctions'); else w.localStorage.setItem('sam_auctions', savedAuctions);
+        w.localStorage.removeItem(samKey('bidders'));
+        w.localStorage.removeItem(samKey('winners'));
+        nav('home'); await delay(20);
+      } catch(e) {
+        renderSuite('UI — Home metrics — Winners count unique bidders', [{ name: 'winners count test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
       // ── buildMimeMessage ──────────────────────────────────────────────────
       await suite('buildMimeMessage', () => {
         const fn = w.buildMimeMessage;
