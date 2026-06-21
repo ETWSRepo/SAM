@@ -689,6 +689,7 @@
             <div style="display:flex;gap:8px;">
               <button class="btn workflow-edit-btn" style="font-size:11px;padding:3px 10px;" onclick="deleteCheckedEmails()">🗑 Delete Checked</button>
               <button class="btn primary workflow-edit-btn" id="btn-scan-inline" style="font-size:11px;padding:3px 10px;">📧 Scan</button>
+              <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearTableFilters('#email-table')">Clear Filter</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('emails')">View All</button>
             </div>
           </div>
@@ -715,6 +716,7 @@
           <span>Loaded Items</span>
           <div style="display:flex;gap:8px;">
             <button class="btn primary workflow-edit-btn" id="btn-load-items" style="font-size:11px; padding:4px 10px;">Update Items</button>
+            <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearTableFilters('#items-table')">Clear Filter</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showCategories()">View Categories</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('items')">View All</button>
           </div>
@@ -1336,7 +1338,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 7:58 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 10:22 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -5704,6 +5706,25 @@ function clearInboxEmails() {
   renderEmailTable([]);
 }
 
+// Reset all TableKit column filters/sorts on a table so every row shows again.
+// Mirrors PageToolbar's Clear Filters (which isn't exposed for inline tables).
+function clearTableFilters(tableSelector) {
+  const table = document.querySelector(tableSelector);
+  if (!table) return;
+  // Re-check every filter checkbox and clear search inputs, firing the events
+  // TableKit listens for so its internal filter state resets too.
+  table.querySelectorAll('.tk-dropdown input[type="search"], .tk-dropdown input[type="checkbox"]').forEach(input => {
+    if (input.type === 'checkbox') input.checked = true;
+    else input.value = '';
+    input.dispatchEvent(new Event('input',  { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  // Safety net: unhide all rows and clear filter/sort indicators.
+  table.querySelectorAll('tbody tr').forEach(row => { row.dataset.tkHidden = 'false'; });
+  table.querySelectorAll('.tk-th-inner[data-filtered]').forEach(inner => { delete inner.dataset.filtered; });
+  table.querySelectorAll('.tk-th-inner[data-sort]').forEach(inner => { delete inner.dataset.sort; });
+}
+
 function showDatabaseStats() {
   const auction = currentAuction();
   const stats = [];
@@ -5865,7 +5886,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 7:58 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 10:22 AM</span></div>
 </div>
 </body>
 </html>

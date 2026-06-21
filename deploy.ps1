@@ -12,6 +12,7 @@ $ftpPass    = $creds["FTP_PASS"]
 $ftpPort    = $creds["FTP_PORT"]
 $remotePath = $creds["FTP_REMOTE_PATH"]
 $local      = $PSScriptRoot
+$appUrl     = "https://etccapps.com/apps/samtest/"
 
 # Write netrc to temp file so password special chars aren't interpreted by shell
 $netrcFile = "$env:TEMP\.netrc-sam"
@@ -59,6 +60,7 @@ if ($args.Count -gt 0) {
     if ($args[0] -eq "index.html") { Update-Version }
     Deploy-File $args[0]
     Remove-Item $netrcFile -Force -ErrorAction SilentlyContinue
+    Write-Host "URL: $appUrl" -ForegroundColor Cyan
     exit
 }
 
@@ -75,3 +77,4 @@ foreach ($file in $files) {
 }
 Remove-Item $netrcFile -Force -ErrorAction SilentlyContinue
 Write-Host "Deploy complete." -ForegroundColor Green
+Write-Host "URL: $appUrl" -ForegroundColor Cyan

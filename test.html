@@ -1104,6 +1104,43 @@ function runUITests() {
         updateSummary();
       }
 
+      // ── Load Items — Clear Filter button ──────────────────────────────────
+      try {
+        const savedAuctions = w.localStorage.getItem('sam_auctions');
+        const savedItems = w.localStorage.getItem(samKey('items'));
+        w.localStorage.setItem('sam_auctions', JSON.stringify([{ id: w.localStorage.getItem('sam_current_auction')||'', name:'CF', status:'active', created:new Date().toISOString() }]));
+        w.localStorage.setItem(samKey('items'), JSON.stringify([
+          { item_number:'200-1', description:'Alpha', category_code:'200', category_name:'Corvette Items' },
+          { item_number:'300-1', description:'Beta',  category_code:'300', category_name:"Men's Items" },
+        ]));
+        nav('item-load');
+        await delay(60);
+        const emailBtn = [...d.querySelectorAll('#email-list-wrap .card-header button')].some(b => b.textContent.trim() === 'Clear Filter');
+        const itemsBtn = [...d.querySelectorAll('#items-card .card-header button')].some(b => b.textContent.trim() === 'Clear Filter');
+        // Apply a filter on items-table, then clear it
+        const tbl = d.getElementById('items-table');
+        const dropBtn = tbl.querySelector('thead th .tk-drop-btn');
+        if (dropBtn) dropBtn.click();
+        const checklist = tbl.querySelector('.tk-dropdown.open .tk-checklist-wrap') || tbl.querySelector('.tk-checklist-wrap');
+        const cbs = checklist ? [...checklist.querySelectorAll('input[type=checkbox]')] : [];
+        if (cbs.length) { const vc = cbs[cbs.length-1]; vc.checked = false; vc.dispatchEvent(new Event('change',{bubbles:true})); }
+        const hiddenAfterFilter = [...tbl.querySelectorAll('tbody tr')].filter(r => r.dataset.tkHidden === 'true').length;
+        w.clearTableFilters('#items-table');
+        const hiddenAfterClear = [...tbl.querySelectorAll('tbody tr')].filter(r => r.dataset.tkHidden === 'true').length;
+        await suite('Load Items — Clear Filter', () => [
+          uiAssert('Emails Clear Filter button present', emailBtn, 'no Clear Filter on Inbox Emails'),
+          uiAssert('Items Clear Filter button present',  itemsBtn, 'no Clear Filter on Loaded Items'),
+          uiAssert('filter hid a row',        hiddenAfterFilter > 0, 'filter did not hide any row (setup issue)'),
+          uiAssert('Clear Filter shows all rows', hiddenAfterClear === 0, hiddenAfterClear + ' rows still hidden after clear'),
+        ]);
+        if (savedAuctions === null) w.localStorage.removeItem('sam_auctions'); else w.localStorage.setItem('sam_auctions', savedAuctions);
+        if (savedItems === null) w.localStorage.removeItem(samKey('items')); else w.localStorage.setItem(samKey('items'), savedItems);
+        nav('home'); await delay(20);
+      } catch(e) {
+        renderSuite('UI — Load Items — Clear Filter', [{ name: 'clear filter test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
       // ── Nav: Bid Sheets ────────────────────────────────────────────────────
       nav('bidding-sheets');
       await delay(60);
