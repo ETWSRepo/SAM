@@ -1336,7 +1336,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 6:01 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 6:05 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -5510,10 +5510,21 @@ document.getElementById('btn-add-field').addEventListener('click', () => {
 // ══════════════════════════════════════
 //  VIEW ALL MODAL
 // ══════════════════════════════════════
+// Per-type configuration for the View All modal. Add a new view-all type, a
+// title, or a toolbar button by editing one entry here — no scattered ternaries.
+const VIEW_ALL_CONFIG = {
+  emails:     { table: 'email-table',    tbody: 'email-tbody',    title: 'Inbox Emails View All',
+                extraButtons: [{ label: '🗑 Delete Checked', onClick: () => deleteCheckedEmails() }] },
+  'bs-items': { table: 'bs-items-table', tbody: 'bs-items-tbody', title: 'Auction Items',
+                extraButtons: [] },
+  items:      { table: 'items-table',    tbody: 'items-tbody',    title: 'Loaded Items View All',
+                extraButtons: [] },
+};
+
 function showViewAll(type) {
+  const cfg = VIEW_ALL_CONFIG[type] || VIEW_ALL_CONFIG.items;
   const modal = document.getElementById('view-all-modal');
-  const tableId = type === 'emails' ? 'email-table' : type === 'bs-items' ? 'bs-items-table' : 'items-table';
-  const srcTable = document.getElementById(tableId);
+  const srcTable = document.getElementById(cfg.table);
   const destTable = document.getElementById('view-all-table');
 
   // Clone thead — strip all TableKit UI to get plain headers
@@ -5531,8 +5542,7 @@ function showViewAll(type) {
     theadClone.querySelectorAll('th').forEach(th => { th.removeAttribute('data-tk'); });
     destTable.appendChild(theadClone);
   }
-  const tbodyId = type === 'emails' ? 'email-tbody' : type === 'bs-items' ? 'bs-items-tbody' : 'items-tbody';
-  const tbody = document.getElementById(tbodyId);
+  const tbody = document.getElementById(cfg.tbody);
   if (tbody) destTable.appendChild(tbody.cloneNode(true));
 
   modal.style.display = 'flex';
@@ -5540,9 +5550,8 @@ function showViewAll(type) {
   // Init toolbar inside modal
   const wrap = document.getElementById('view-all-toolbar-wrap');
   wrap.innerHTML = '';
-  const title = type === 'emails' ? 'Inbox Emails View All' : type === 'bs-items' ? 'Auction Items' : 'Loaded Items View All';
   PageToolbar.init({
-    title:         title,
+    title:         cfg.title,
     tableSelector: '#view-all-table',
     onRefresh:     () => showViewAll(type),
   });
@@ -5560,16 +5569,16 @@ function showViewAll(type) {
     wrap.querySelector('.tk-btn-close').addEventListener('click', closeViewAll);
   }
 
-  // Add Delete Checked button for emails view
-  if (type === 'emails') {
-    const btnGroup = wrap.querySelector('.tk-toolbar-actions');
-    if (btnGroup) {
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'tk-btn';
-      deleteBtn.textContent = '🗑 Delete Checked';
-      deleteBtn.onclick = deleteCheckedEmails;
-      btnGroup.insertBefore(deleteBtn, btnGroup.firstChild);
-    }
+  // Add any per-type toolbar buttons (e.g. Delete Checked for emails)
+  const btnGroup = wrap.querySelector('.tk-toolbar-actions');
+  if (btnGroup) {
+    cfg.extraButtons.forEach(spec => {
+      const btn = document.createElement('button');
+      btn.className = 'tk-btn';
+      btn.textContent = spec.label;
+      btn.onclick = spec.onClick;
+      btnGroup.insertBefore(btn, btnGroup.firstChild);
+    });
   }
 }
 
@@ -5785,7 +5794,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 6:01 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 6:05 AM</span></div>
 </div>
 </body>
 </html>
