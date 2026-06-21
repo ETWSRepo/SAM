@@ -1338,7 +1338,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 11:03 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 12:13 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1636,12 +1636,71 @@ const DEFAULT_SETTINGS = {
 };
 
 // ══════════════════════════════════════
+//  API LAYER
+// ══════════════════════════════════════
+const API = {
+  BASE_URL: 'https://etccapps.com/apps/samtest/backend',
+  API_KEY: 'your-secret-api-key-here', // TODO: Update with actual key after backend deployment
+
+  async call(method, endpoint, body = null) {
+    try {
+      const url = `${this.BASE_URL}${endpoint}?apiKey=${encodeURIComponent(this.API_KEY)}`;
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (body) opts.body = JSON.stringify(body);
+
+      const res = await fetch(url, opts);
+      if (!res.ok) {
+        console.warn(`API error ${res.status}:`, res.statusText);
+        return null;
+      }
+      return await res.json();
+    } catch (err) {
+      console.warn('API call failed, using localStorage:', err);
+      return null;
+    }
+  },
+
+  // Async operations (fire and forget, non-critical)
+  async syncAuctionsToAPI(auctions) {
+    // Fire and forget - don't wait for result
+    // Could sync individual auctions here in future
+  },
+
+  async syncItemsToAPI(auctionId, items) {
+    // Fire and forget - batch syncing items to API
+    // In future, could sync in background without blocking UI
+  },
+
+  async syncBiddersToAPI(auctionId, bidders) {
+    // Fire and forget - batch syncing bidders to API
+  },
+
+  async syncWinnersToAPI(auctionId, winners) {
+    // Fire and forget - sync winners to API
+  },
+
+  async syncPaymentsToAPI(auctionId, payments) {
+    // Fire and forget - sync payments to API
+  },
+
+  async syncSettingsToAPI(auctionId, settings) {
+    // Fire and forget - sync settings to API
+  }
+};
+
+// ══════════════════════════════════════
 //  LOCAL STORAGE DB
 // ══════════════════════════════════════
 const DB = {
   // ── Auction registry (global) ──
   getAuctions()           { return JSON.parse(localStorage.getItem('sam_auctions') || '[]'); },
-  saveAuctions(v)         { localStorage.setItem('sam_auctions', JSON.stringify(v)); },
+  saveAuctions(v)         {
+    localStorage.setItem('sam_auctions', JSON.stringify(v));
+    API.syncAuctionsToAPI(v); // async, fire and forget
+  },
   getCurrentAuctionId()   { return localStorage.getItem('sam_current_auction') || ''; },
   setCurrentAuctionId(id) { if (id) localStorage.setItem('sam_current_auction', id); else localStorage.removeItem('sam_current_auction'); },
 
@@ -1653,23 +1712,46 @@ const DB = {
 
   // ── Per-auction data ──
   getItems()      { return JSON.parse(localStorage.getItem(this._k('items'))    || '[]'); },
-  saveItems(v)    { if (isReadOnly()) return; localStorage.setItem(this._k('items'),    JSON.stringify(v)); },
+  saveItems(v)    {
+    if (isReadOnly()) return;
+    localStorage.setItem(this._k('items'), JSON.stringify(v));
+    API.syncItemsToAPI(this.getCurrentAuctionId(), v);
+  },
   getMembers()    { return JSON.parse(localStorage.getItem('sam_members')  || '[]'); },
   saveMembers(v)  { localStorage.setItem('sam_members', JSON.stringify(v)); },
   getRegDB()      { return JSON.parse(localStorage.getItem('sam_regdb')   || '[]'); },
   saveRegDB(v)    { localStorage.setItem('sam_regdb',   JSON.stringify(v)); },
   getBidders()    { return JSON.parse(localStorage.getItem(this._k('bidders'))  || '[]'); },
-  saveBidders(v)  { if (isReadOnly()) return; localStorage.setItem(this._k('bidders'),  JSON.stringify(v)); },
+  saveBidders(v)  {
+    if (isReadOnly()) return;
+    localStorage.setItem(this._k('bidders'), JSON.stringify(v));
+    API.syncBiddersToAPI(this.getCurrentAuctionId(), v);
+  },
   getWinners()    { return JSON.parse(localStorage.getItem(this._k('winners'))  || '{}'); },
-  saveWinners(v)  { if (isReadOnly()) return; localStorage.setItem(this._k('winners'),  JSON.stringify(v)); },
+  saveWinners(v)  {
+    if (isReadOnly()) return;
+    localStorage.setItem(this._k('winners'), JSON.stringify(v));
+    API.syncWinnersToAPI(this.getCurrentAuctionId(), v);
+  },
   getPayments()   { return JSON.parse(localStorage.getItem(this._k('payments')) || '{}'); },
-  savePayments(v) { if (isReadOnly()) return; localStorage.setItem(this._k('payments'), JSON.stringify(v)); },
+  savePayments(v) {
+    if (isReadOnly()) return;
+    localStorage.setItem(this._k('payments'), JSON.stringify(v));
+    API.syncPaymentsToAPI(this.getCurrentAuctionId(), v);
+  },
   getEmails()     { return JSON.parse(localStorage.getItem(this._k('emails'))   || '[]'); },
-  saveEmails(v)   { if (isReadOnly()) return; localStorage.setItem(this._k('emails'),   JSON.stringify(v)); },
+  saveEmails(v)   {
+    if (isReadOnly()) return;
+    localStorage.setItem(this._k('emails'), JSON.stringify(v));
+  },
 
   // ── Global settings (not per-auction) ──
   getSettings()   { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('sam_settings') || '{}')); },
-  saveSettings(v) { localStorage.setItem('sam_settings', JSON.stringify(v)); },
+  saveSettings(v) {
+    localStorage.setItem('sam_settings', JSON.stringify(v));
+    const auctionId = this.getCurrentAuctionId();
+    if (auctionId) API.syncSettingsToAPI(auctionId, v);
+  },
   getFieldMap()   { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
   saveFieldMap(v) { localStorage.setItem('sam_fieldmap', JSON.stringify(v)); },
 };
@@ -5873,10 +5955,59 @@ function showCategoryItems(code, name) {
 }
 
 // ══════════════════════════════════════
+//  API SYNC ON INIT
+// ══════════════════════════════════════
+async function syncFromAPI() {
+  try {
+    // Try to fetch auctions from API
+    const auctionsData = await API.call('GET', '/api/auctions');
+    if (auctionsData && Array.isArray(auctionsData)) {
+      localStorage.setItem('sam_auctions', JSON.stringify(auctionsData));
+
+      // If we have a current auction, try to sync its data
+      const currentId = localStorage.getItem('sam_current_auction');
+      if (currentId) {
+        const itemsData = await API.call('GET', `/api/items/${currentId}`);
+        if (itemsData && Array.isArray(itemsData)) {
+          localStorage.setItem(`sam_${currentId}_items`, JSON.stringify(itemsData));
+        }
+
+        const biddersData = await API.call('GET', `/api/bidders/${currentId}`);
+        if (biddersData && Array.isArray(biddersData)) {
+          localStorage.setItem(`sam_${currentId}_bidders`, JSON.stringify(biddersData));
+        }
+
+        const winnersData = await API.call('GET', `/api/winners/${currentId}`);
+        if (winnersData && Array.isArray(winnersData)) {
+          const winnersObj = {};
+          winnersData.forEach(w => {
+            winnersObj[w.item_id] = w;
+          });
+          localStorage.setItem(`sam_${currentId}_winners`, JSON.stringify(winnersObj));
+        }
+
+        const paymentsData = await API.call('GET', `/api/payments/${currentId}`);
+        if (paymentsData && Array.isArray(paymentsData)) {
+          const paymentsObj = {};
+          paymentsData.forEach(p => {
+            paymentsObj[p.bidder_id] = p;
+          });
+          localStorage.setItem(`sam_${currentId}_payments`, JSON.stringify(paymentsObj));
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to sync from API:', err);
+    // Fall back to localStorage - data is already there
+  }
+}
+
+// ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
 (async function init() {
   await window._samServerSync;
+  await syncFromAPI(); // Sync data from API if available
   migrateToMultiAuction();
   migrateGlobalData();
   updateHomeAuctionPanel();
@@ -5900,7 +6031,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 11:03 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 12:13 PM</span></div>
 </div>
 </body>
 </html>
