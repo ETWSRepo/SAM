@@ -35,23 +35,29 @@ router.get('/:auctionId/:bidderId', async (req, res) => {
   }
 });
 
-// POST create bidder
+// POST create bidder (single or bulk)
 router.post('/:auctionId', async (req, res) => {
   try {
-    const { bidder_number, first_name, last_name, email, phone } = req.body;
+    const isBulk = Array.isArray(req.body);
+    const bidders = isBulk ? req.body : [req.body];
 
-    if (!bidder_number) {
-      return res.status(400).json({ error: 'bidder_number required' });
+    const created = [];
+    for (const bidder of bidders) {
+      const { bidder_number, first_name, last_name, email, phone } = bidder;
+
+      if (!bidder_number) continue;
+
+      const id = uuidv4();
+      await pool.query(
+        'INSERT INTO bidders (id, auction_id, bidder_number, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, req.params.auctionId, bidder_number, first_name, last_name, email, phone]
+      );
+
+      const [rows] = await pool.query('SELECT * FROM bidders WHERE id = ?', [id]);
+      created.push(rows[0]);
     }
 
-    const id = uuidv4();
-    await pool.query(
-      'INSERT INTO bidders (id, auction_id, bidder_number, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, req.params.auctionId, bidder_number, first_name, last_name, email, phone]
-    );
-
-    const [rows] = await pool.query('SELECT * FROM bidders WHERE id = ?', [id]);
-    res.status(201).json(rows[0]);
+    res.status(201).json(isBulk ? created : created[0]);
   } catch (error) {
     console.error('Error creating bidder:', error);
     res.status(500).json({ error: error.message });

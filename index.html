@@ -1281,6 +1281,21 @@
         </div>
       </div>
 
+      <!-- Backend Sync -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Backend Sync</div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <p style="font-size:12px;color:var(--text-secondary);margin:0;">
+            Sync current auction data to the backend MySQL database. This one-time operation ensures data persistence and prepares for multi-user features.
+          </p>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn primary" onclick="migrateCurrentAuctionToBackend()">⬆ Sync to Backend</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Upload all items, bidders, winners, and payments for the current auction.</span>
+          </div>
+          <div id="backend-sync-status" style="font-size:12px;color:var(--text-secondary);"></div>
+        </div>
+      </div>
+
             <!-- Developer Tools -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">Developer Tools</div>
@@ -1338,7 +1353,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 12:18 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 12:20 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1663,31 +1678,34 @@ const API = {
     }
   },
 
-  // Async operations (fire and forget, non-critical)
-  async syncAuctionsToAPI(auctions) {
-    // Fire and forget - don't wait for result
-    // Could sync individual auctions here in future
-  },
-
+  // Bulk sync operations (fire and forget, async background)
   async syncItemsToAPI(auctionId, items) {
-    // Fire and forget - batch syncing items to API
-    // In future, could sync in background without blocking UI
+    if (!auctionId || !items?.length) return;
+    await this.call('POST', `/api/items/${auctionId}`, items);
   },
 
   async syncBiddersToAPI(auctionId, bidders) {
-    // Fire and forget - batch syncing bidders to API
+    if (!auctionId || !bidders?.length) return;
+    await this.call('POST', `/api/bidders/${auctionId}`, bidders);
   },
 
   async syncWinnersToAPI(auctionId, winners) {
-    // Fire and forget - sync winners to API
+    if (!auctionId || !winners || typeof winners !== 'object') return;
+    const winnersArray = Object.values(winners).filter(w => w && w.item_id && w.bidder_id);
+    if (!winnersArray.length) return;
+    await this.call('POST', `/api/winners/${auctionId}`, winnersArray);
   },
 
   async syncPaymentsToAPI(auctionId, payments) {
-    // Fire and forget - sync payments to API
+    if (!auctionId || !payments || typeof payments !== 'object') return;
+    const paymentsArray = Object.values(payments).filter(p => p && p.bidder_id);
+    if (!paymentsArray.length) return;
+    await this.call('POST', `/api/payments/${auctionId}`, paymentsArray);
   },
 
   async syncSettingsToAPI(auctionId, settings) {
-    // Fire and forget - sync settings to API
+    if (!auctionId || !settings) return;
+    await this.call('POST', `/api/settings/${auctionId}`, settings);
   }
 };
 
@@ -6003,6 +6021,86 @@ async function syncFromAPI() {
 }
 
 // ══════════════════════════════════════
+//  DATA MIGRATION TO BACKEND
+// ══════════════════════════════════════
+async function migrateCurrentAuctionToBackend() {
+  const auctionId = DB.getCurrentAuctionId();
+  if (!auctionId) {
+    alert('No auction selected. Please open an auction first.');
+    return false;
+  }
+
+  const auction = currentAuction();
+  if (!auction) {
+    alert('Auction not found.');
+    return false;
+  }
+
+  try {
+    // Show status to user
+    const statusEl = document.getElementById('migration-status') || (() => {
+      const el = document.createElement('div');
+      el.id = 'migration-status';
+      el.style.cssText = 'position:fixed;top:20px;right:20px;background:#0071e3;color:white;padding:16px 20px;border-radius:8px;font-size:14px;z-index:10000;max-width:300px;';
+      document.body.appendChild(el);
+      return el;
+    })();
+
+    const updateStatus = (msg) => {
+      statusEl.textContent = msg;
+      console.log('Migration:', msg);
+    };
+
+    updateStatus('Starting migration...');
+
+    // Sync items
+    const items = DB.getItems();
+    if (items.length > 0) {
+      updateStatus(`Syncing ${items.length} items...`);
+      await API.call('POST', `/api/items/${auctionId}`, items);
+    }
+
+    // Sync bidders
+    const bidders = DB.getBidders();
+    if (bidders.length > 0) {
+      updateStatus(`Syncing ${bidders.length} bidders...`);
+      await API.call('POST', `/api/bidders/${auctionId}`, bidders);
+    }
+
+    // Sync winners
+    const winners = DB.getWinners();
+    const winnersArray = Object.values(winners).filter(w => w && w.item_id && w.bidder_id);
+    if (winnersArray.length > 0) {
+      updateStatus(`Syncing ${winnersArray.length} winners...`);
+      await API.call('POST', `/api/winners/${auctionId}`, winnersArray);
+    }
+
+    // Sync payments
+    const payments = DB.getPayments();
+    const paymentsArray = Object.values(payments).filter(p => p && p.bidder_id);
+    if (paymentsArray.length > 0) {
+      updateStatus(`Syncing ${paymentsArray.length} payments...`);
+      await API.call('POST', `/api/payments/${auctionId}`, paymentsArray);
+    }
+
+    // Sync settings (per-auction settings)
+    const settings = DB.getSettings();
+    if (Object.keys(settings).length > 0) {
+      updateStatus('Syncing settings...');
+      await API.call('POST', `/api/settings/${auctionId}`, settings);
+    }
+
+    updateStatus('✅ Migration complete! Data synced to backend.');
+    setTimeout(() => statusEl.remove(), 3000);
+    return true;
+  } catch (error) {
+    console.error('Migration error:', error);
+    alert(`Migration failed: ${error.message}`);
+    return false;
+  }
+}
+
+// ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
 (async function init() {
@@ -6031,7 +6129,7 @@ async function syncFromAPI() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 12:18 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 12:20 PM</span></div>
 </div>
 </body>
 </html>

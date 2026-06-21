@@ -35,30 +35,37 @@ router.get('/:auctionId/:itemId', async (req, res) => {
   }
 });
 
-// POST create item
+// POST create item (single or bulk)
 router.post('/:auctionId', async (req, res) => {
   try {
-    const {
-      item_number, description, item_value, category_code, category_name,
-      donor_name, donor_email, donor_phone, reserve_amount, email_message_id
-    } = req.body;
+    // Check if bulk (array) or single (object)
+    const isBulk = Array.isArray(req.body);
+    const items = isBulk ? req.body : [req.body];
 
-    if (!item_number) {
-      return res.status(400).json({ error: 'item_number required' });
+    const created = [];
+    for (const item of items) {
+      const {
+        item_number, description, item_value, category_code, category_name,
+        donor_name, donor_email, donor_phone, reserve_amount, email_message_id
+      } = item;
+
+      if (!item_number) continue;
+
+      const id = uuidv4();
+      await pool.query(
+        `INSERT INTO items (
+          id, auction_id, item_number, description, item_value, category_code,
+          category_name, donor_name, donor_email, donor_phone, reserve_amount, email_message_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, req.params.auctionId, item_number, description, item_value, category_code,
+         category_name, donor_name, donor_email, donor_phone, reserve_amount, email_message_id]
+      );
+
+      const [rows] = await pool.query('SELECT * FROM items WHERE id = ?', [id]);
+      created.push(rows[0]);
     }
 
-    const id = uuidv4();
-    await pool.query(
-      `INSERT INTO items (
-        id, auction_id, item_number, description, item_value, category_code,
-        category_name, donor_name, donor_email, donor_phone, reserve_amount, email_message_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, req.params.auctionId, item_number, description, item_value, category_code,
-       category_name, donor_name, donor_email, donor_phone, reserve_amount, email_message_id]
-    );
-
-    const [rows] = await pool.query('SELECT * FROM items WHERE id = ?', [id]);
-    res.status(201).json(rows[0]);
+    res.status(201).json(isBulk ? created : created[0]);
   } catch (error) {
     console.error('Error creating item:', error);
     res.status(500).json({ error: error.message });

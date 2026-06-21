@@ -39,23 +39,29 @@ router.get('/:auctionId/:paymentId', async (req, res) => {
   }
 });
 
-// POST create payment
+// POST create payment (single or bulk)
 router.post('/:auctionId', async (req, res) => {
   try {
-    const { bidder_id, method, amount, paid } = req.body;
+    const isBulk = Array.isArray(req.body);
+    const payments = isBulk ? req.body : [req.body];
 
-    if (!bidder_id) {
-      return res.status(400).json({ error: 'bidder_id required' });
+    const created = [];
+    for (const payment of payments) {
+      const { bidder_id, method, amount, paid } = payment;
+
+      if (!bidder_id) continue;
+
+      const id = uuidv4();
+      await pool.query(
+        'INSERT INTO payments (id, auction_id, bidder_id, method, amount, paid) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, req.params.auctionId, bidder_id, method, amount, paid || false]
+      );
+
+      const [rows] = await pool.query('SELECT * FROM payments WHERE id = ?', [id]);
+      created.push(rows[0]);
     }
 
-    const id = uuidv4();
-    await pool.query(
-      'INSERT INTO payments (id, auction_id, bidder_id, method, amount, paid) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, req.params.auctionId, bidder_id, method, amount, paid || false]
-    );
-
-    const [rows] = await pool.query('SELECT * FROM payments WHERE id = ?', [id]);
-    res.status(201).json(rows[0]);
+    res.status(201).json(isBulk ? created : created[0]);
   } catch (error) {
     console.error('Error creating payment:', error);
     res.status(500).json({ error: error.message });

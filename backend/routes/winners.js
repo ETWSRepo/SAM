@@ -40,23 +40,29 @@ router.get('/:auctionId/:winnerId', async (req, res) => {
   }
 });
 
-// POST create winner
+// POST create winner (single or bulk)
 router.post('/:auctionId', async (req, res) => {
   try {
-    const { item_id, bidder_id, winning_bid } = req.body;
+    const isBulk = Array.isArray(req.body);
+    const winners = isBulk ? req.body : [req.body];
 
-    if (!item_id || !bidder_id) {
-      return res.status(400).json({ error: 'item_id and bidder_id required' });
+    const created = [];
+    for (const winner of winners) {
+      const { item_id, bidder_id, winning_bid } = winner;
+
+      if (!item_id || !bidder_id) continue;
+
+      const id = uuidv4();
+      await pool.query(
+        'INSERT INTO winners (id, auction_id, item_id, bidder_id, winning_bid) VALUES (?, ?, ?, ?, ?)',
+        [id, req.params.auctionId, item_id, bidder_id, winning_bid]
+      );
+
+      const [rows] = await pool.query('SELECT * FROM winners WHERE id = ?', [id]);
+      created.push(rows[0]);
     }
 
-    const id = uuidv4();
-    await pool.query(
-      'INSERT INTO winners (id, auction_id, item_id, bidder_id, winning_bid) VALUES (?, ?, ?, ?, ?)',
-      [id, req.params.auctionId, item_id, bidder_id, winning_bid]
-    );
-
-    const [rows] = await pool.query('SELECT * FROM winners WHERE id = ?', [id]);
-    res.status(201).json(rows[0]);
+    res.status(201).json(isBulk ? created : created[0]);
   } catch (error) {
     console.error('Error creating winner:', error);
     res.status(500).json({ error: error.message });
