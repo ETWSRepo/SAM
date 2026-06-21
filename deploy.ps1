@@ -47,6 +47,9 @@ function Update-Version {
     $content = $content -replace '(?<=id="app-deploy-date">)[^<]*', $deployDate
     # Keep the Settings input data attribute in sync too
     $content = $content -replace '(inp-deploy-date.*?data-deploy-date=")[^"]*', "`${1}$deployDate"
+    # Test environment marker — ensure the home title ends with " - Test"
+    # (idempotent: strips any existing " - Test" first, so re-deploys don't stack)
+    $content = $content -replace '(>Silent Auction Manager \(SAM\))( - Test)?(</h1>)', '${1} - Test${3}'
     [System.IO.File]::WriteAllText($indexPath, $content, [System.Text.Encoding]::UTF8)
     Write-Host "  Deployed: $deployDate" -ForegroundColor Cyan
 }
