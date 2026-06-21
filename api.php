@@ -82,6 +82,20 @@ if ($action === 'get_all') {
     $pdo->exec("TRUNCATE TABLE sam_store");
     echo json_encode(['ok' => true, 'message' => 'All data cleared']);
 
+} elseif ($action === 'log') {
+    $message = $input['message'] ?? '';
+    $level = $input['level'] ?? 'INFO';
+    if (!$message) {
+        echo json_encode(['error' => 'No message provided']);
+        exit;
+    }
+    // Append to debug_log.txt
+    $logFile = __DIR__ . '/debug_log.txt';
+    $timestamp = date('Y-m-d H:i:s');
+    $logEntry = "[$timestamp] [$level] $message\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+    echo json_encode(['ok' => true, 'message' => 'Logged']);
+
 } else {
     echo json_encode(['error' => 'Unknown action']);
 }
