@@ -1177,8 +1177,8 @@ function runUITests() {
           {id:'e2', date:'2026', from:'b@x.com', subject:'S2'},
         ]));
         w.localStorage.setItem(samKey('items'), JSON.stringify([
-          {item_number:'100-1', description:'Car Item', value:'$150', category_name:'General Auto'},
-          {item_number:'200-1', description:'Corvette Item', value:'$250', category_name:'Corvette'},
+          {item_number:'100-1', description:'Car Item', item_value:'$150', category_name:'General Auto'},
+          {item_number:'200-1', description:'Corvette Item', item_value:'$250', category_name:'Corvette'},
         ]));
         nav('item-load');
         await delay(40);
