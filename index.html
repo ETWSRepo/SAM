@@ -1338,7 +1338,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 10:36 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 10:43 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -4432,6 +4432,11 @@ async function navigate(screenId) {
     const tb   = document.getElementById('page-toolbar');
     const wrap = document.getElementById('payment-toolbar-wrap');
     if (tb && wrap) wrap.appendChild(tb);
+    // Remove Clear Filters button when auction is archived (read-only).
+    if (isReadOnly() && tb) {
+      const clearBtn = [...tb.querySelectorAll('button')].find(b => /Clear Filters/i.test(b.textContent));
+      if (clearBtn) clearBtn.remove();
+    }
     navigate._payDirty = false;
     const actions = tb ? tb.querySelector('.tk-toolbar-actions') : null;
     if (actions) {
@@ -5886,7 +5891,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 10:36 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 10:43 AM</span></div>
 </div>
 </body>
 </html>

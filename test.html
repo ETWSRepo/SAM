@@ -2026,6 +2026,32 @@ function runUITests() {
           ];
         });
 
+        // ── Pay & Pickup — Clear Filters removed for archived ──────────────────
+        try {
+          const savedAuctions = w.localStorage.getItem('sam_auctions');
+          const curId = w.localStorage.getItem('sam_current_auction') || '';
+          w.localStorage.setItem('sam_auctions', JSON.stringify([
+            { id: curId, name:'PP Archived', status:'archived', created:new Date().toISOString() },
+          ]));
+          w.localStorage.setItem(samKey('bidders'), JSON.stringify([{ bidder_number:1, first_name:'A', last_name:'A', email:'a@x.com', phone:'1' }]));
+          w.localStorage.setItem(samKey('winners'), JSON.stringify({'200-1':{bidder_number:1, bidder_name:'A A', winning_bid:'50'}}));
+          nav('payment-pickup');
+          await delay(60);
+          const tb = d.getElementById('page-toolbar');
+          const clearBtn = tb ? [...tb.querySelectorAll('button')].find(b => /Clear Filters/i.test(b.textContent)) : null;
+          const bodyArchived = d.body.classList.contains('archived-mode');
+          await suite('Pay & Pickup — Clear Filters removed for archived', () => [
+            uiAssert('archived-mode class set', bodyArchived, 'body not in archived-mode'),
+            uiAssert('Clear Filters button removed', !clearBtn, 'Clear Filters button still present in archived mode'),
+          ]);
+          if (savedAuctions === null) w.localStorage.removeItem('sam_auctions'); else w.localStorage.setItem('sam_auctions', savedAuctions);
+          w.localStorage.removeItem(samKey('bidders'));
+          w.localStorage.removeItem(samKey('winners'));
+        } catch(e) {
+          renderSuite('UI — Pay & Pickup — Clear Filters removed for archived', [{ name: 'pay pickup clear filter test', pass: false, detail: e.message }]);
+          updateSummary();
+        }
+
         // ── Step 8: Post Auction ────────────────────────────────────────────────
         nav('post-auction');
         await delay(80);
