@@ -1336,7 +1336,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 6:05 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 21, 2026 6:35 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2325,6 +2325,23 @@ function renderEmailTable(emails) {
 
 function toggleAllEmailCheckboxes(checked) {
   document.querySelectorAll('.email-row-checkbox').forEach(cb => cb.checked = checked);
+}
+
+// TableKit.initAll() rebuilds every <th>, which wipes the select-all checkbox
+// from the email table's first header cell. Restore it here (called once after
+// TableKit.initAll). The checkbox column needs no sort/filter dropdown, so we
+// clear TableKit's markup for that cell and put the checkbox back.
+function restoreEmailCheckAll() {
+  const table = document.getElementById('email-table');
+  const th = table && table.querySelector('thead th');
+  if (!th || document.getElementById('email-check-all')) return;
+  th.innerHTML = '';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.id = 'email-check-all';
+  cb.style.cursor = 'pointer';
+  cb.addEventListener('change', () => toggleAllEmailCheckboxes(cb.checked));
+  th.appendChild(cb);
 }
 
 function deleteCheckedEmails() {
@@ -5781,6 +5798,7 @@ function showCategoryItems(code, name) {
   refreshMetrics();
   TableKit.initAll();
   fixAllStickyHeaders();
+  restoreEmailCheckAll();
   applyBranding();
 
   const settings = DB.getSettings();
@@ -5794,7 +5812,7 @@ function showCategoryItems(code, name) {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 6:05 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 21, 2026 6:35 AM</span></div>
 </div>
 </body>
 </html>

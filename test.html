@@ -871,7 +871,30 @@ function runUITests() {
 
     function nav(id) { try { w.navigate(id); } catch(e) {} }
 
-    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+    // delay() — the app renders synchronously inside navigate()/render fns, so a
+    // full fixed sleep is unnecessary. Cap each wait at a small value to reclaim
+    // most of the old fixed-delay time. NOTE: must use setTimeout, NOT
+    // requestAnimationFrame — the UI test iframe is positioned offscreen
+    // (left:-9999px), so rAF callbacks are throttled/never fire in real browsers
+    // and the suite hangs. setTimeout always fires regardless of visibility.
+    function delay(ms) {
+      return new Promise(r => setTimeout(r, Math.min(ms || 0, 15)));
+    }
+
+    // waitFor() — resolve the instant a condition becomes true (polling every
+    // `interval` ms), or after `maxMs` as a safety cap. Prefer this over delay()
+    // for waits that have a concrete DOM/state condition.
+    function waitFor(predicate, maxMs = 1000, interval = 8) {
+      return new Promise(resolve => {
+        const start = Date.now();
+        (function poll() {
+          let ok = false;
+          try { ok = !!predicate(); } catch (e) { ok = false; }
+          if (ok || Date.now() - start >= maxMs) return resolve(ok);
+          setTimeout(poll, interval);
+        })();
+      });
+    }
 
     // Returns the correct localStorage key for per-auction data (mirrors DB._k in
     // the app). The app's DB is a `const` (not on window), so we read the current
@@ -891,7 +914,15 @@ function runUITests() {
       // ── Global cleanup before any tests ────────────────────────────────────
       // 1. Wait for the server sync (api.php get_all) to finish loading, so it
       //    can't asynchronously re-populate localStorage AFTER we clear it.
-      try { await w._samServerSync; } catch (e) {}
+      //    Guard with a hard timeout: if api.php stalls (e.g. a misconfigured
+      //    test DB holds the connection open), never block the whole UI suite —
+      //    proceed after 8s so a server hiccup can't freeze the run indefinitely.
+      try {
+        await Promise.race([
+          w._samServerSync,
+          new Promise(r => setTimeout(r, 8000)),
+        ]);
+      } catch (e) {}
       // 2. Permanently block server writes for the rest of the test session.
       //    The setItem override skips the api.php POST while this flag is true,
       //    so tests write only to localStorage and never pollute the MySQL DB.
