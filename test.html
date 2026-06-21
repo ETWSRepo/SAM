@@ -1305,6 +1305,31 @@ function runUITests() {
         updateSummary();
       }
 
+      // ── Load Items — Emails View All (title + Delete Checked) ──────────────
+      try {
+        nav('item-load');
+        await delay(80);
+        w.showViewAll('emails');
+        await delay(60);
+        const modalVisible = d.getElementById('view-all-modal')?.style.display !== 'none';
+        const titleEl = d.querySelector('#view-all-toolbar-wrap .tk-toolbar-title');
+        const titleVisible = titleEl && w.getComputedStyle(titleEl).display !== 'none';
+        const deleteBtn = [...d.querySelectorAll('#view-all-toolbar-wrap .tk-btn')]
+          .find(b => b.textContent.includes('Delete Checked'));
+        await suite('Load Items — Emails View All', () => [
+          uiAssert('Emails View All modal opens', modalVisible,  'view-all-modal not visible after showViewAll(emails)'),
+          uiAssert('Title element present',        !!titleEl,    'No .tk-toolbar-title in view-all toolbar'),
+          uiAssert('Title text is "Inbox Emails View All"', titleEl && titleEl.textContent.trim() === 'Inbox Emails View All', 'Title text mismatch: "' + (titleEl ? titleEl.textContent.trim() : 'none') + '"'),
+          uiAssert('Title is visible (not display:none)', titleVisible, 'Title hidden via display:none'),
+          uiAssert('Delete Checked button present', !!deleteBtn,  'No Delete Checked button in emails View All toolbar'),
+        ]);
+        w.closeViewAll();
+        await delay(20);
+      } catch(e) {
+        renderSuite('UI — Load Items — Emails View All', [{ name: 'emails view all test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
       // ── Load Items — View Categories button ────────────────────────────────
       try {
         nav('item-load');

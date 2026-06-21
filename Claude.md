@@ -11,7 +11,7 @@ Always read the instructions in "Z:\Backup\Websites\Web Utilities\components\too
 
 A browser-based silent auction management tool for the East Tennessee Corvette Club (ETCC). It runs entirely in the browser with no backend — all data is stored in localStorage. Members use it to manage the full auction lifecycle from item intake through payment and pickup.
 
-The app is accessed at: https://etccapps.com/apps/sam
+The app is accessed at: https://etccapps.com/apps/samtest
 
 ---
 
