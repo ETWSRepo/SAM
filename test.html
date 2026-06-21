@@ -1417,6 +1417,39 @@ function runUITests() {
         updateSummary();
       }
 
+      // ── Register Bidders — Clear Filters button ────────────────────────────
+      try {
+        const savedBidders = w.localStorage.getItem(samKey('bidders'));
+        w.localStorage.setItem(samKey('bidders'), JSON.stringify([
+          { bidder_number: 1, last_name: 'Alpha', first_name: 'A', email: 'a@x.com', phone: '1' },
+          { bidder_number: 2, last_name: 'Beta',  first_name: 'B', email: 'b@x.com', phone: '2' },
+        ]));
+        nav('bidder-reg');
+        await delay(60);
+        const tbl = d.getElementById('bidders-table');
+        out.rowsTotal = tbl.querySelectorAll('tbody tr').length;
+        // Apply a filter on the first column (Last Name)
+        const dropBtn = tbl.querySelector('thead th .tk-drop-btn');
+        if (dropBtn) dropBtn.click();
+        const checklist = tbl.querySelector('.tk-dropdown.open .tk-checklist-wrap') || tbl.querySelector('.tk-checklist-wrap');
+        const cbs = checklist ? [...checklist.querySelectorAll('input[type=checkbox]')] : [];
+        if (cbs.length) { const vc = cbs[cbs.length-1]; vc.checked = false; vc.dispatchEvent(new Event('change',{bubbles:true})); }
+        const hiddenAfterFilter = [...tbl.querySelectorAll('tbody tr')].filter(r => r.dataset.tkHidden === 'true').length;
+        // Click the toolbar Clear Filters
+        const clearBtn = [...d.querySelectorAll('#page-toolbar button')].find(b => /Clear Filters/i.test(b.textContent));
+        if (clearBtn) clearBtn.click();
+        const hiddenAfterClear = [...tbl.querySelectorAll('tbody tr')].filter(r => r.dataset.tkHidden === 'true').length;
+        await suite('Register Bidders — Clear Filters', () => [
+          uiAssert('Clear Filters button exists', !!clearBtn, 'no Clear Filters button in toolbar'),
+          uiAssert('filter hid a row', hiddenAfterFilter > 0, 'filter did not hide any row (setup issue)'),
+          uiAssert('Clear Filters shows all rows', hiddenAfterClear === 0, hiddenAfterClear + ' rows still hidden'),
+        ]);
+        if (savedBidders === null) w.localStorage.removeItem(samKey('bidders')); else w.localStorage.setItem(samKey('bidders'), savedBidders);
+      } catch(e) {
+        renderSuite('UI — Register Bidders — Clear Filters', [{ name: 'bidders clear filter test', pass: false, detail: e.message }]);
+        updateSummary();
+      }
+
       // ── Bidder Edit modal — Cancel button ──────────────────────────────────
       try {
         nav('bidder-reg');
@@ -1939,6 +1972,32 @@ function runUITests() {
             uiAssert('Step Uncomplete present',btns.some(b => b.textContent.trim() === 'Step Uncomplete'),'no Step Uncomplete'),
           ];
         });
+
+        // ── Print Invoices — Checkboxes enabled for archived auction ──────────
+        try {
+          const savedAuctions = w.localStorage.getItem('sam_auctions');
+          const curId = w.localStorage.getItem('sam_current_auction') || '';
+          w.localStorage.setItem('sam_auctions', JSON.stringify([
+            { id: curId, name:'PI Archived', status:'archived', created:new Date().toISOString() },
+          ]));
+          w.localStorage.setItem(samKey('bidders'), JSON.stringify([{ bidder_number:1, first_name:'A', last_name:'A', email:'a@x.com', phone:'1' }]));
+          w.localStorage.setItem(samKey('winners'), JSON.stringify({'200-1':{bidder_number:1, bidder_name:'A A', winning_bid:'50'}}));
+          nav('print-invoices');
+          await delay(60);
+          const cbx = d.querySelector('#print-invoices-tbody .pi-chk');
+          const bodyArchived = d.body.classList.contains('archived-mode');
+          await suite('Print Invoices — Checkboxes enabled for archived', () => [
+            uiAssert('archived-mode class set', bodyArchived, 'body not in archived-mode'),
+            uiAssert('checkbox exists', !!cbx, 'no checkbox in print-invoices-tbody'),
+            uiAssert('checkbox is NOT disabled', cbx && !cbx.disabled, 'checkbox is disabled (should be enabled)'),
+          ]);
+          if (savedAuctions === null) w.localStorage.removeItem('sam_auctions'); else w.localStorage.setItem('sam_auctions', savedAuctions);
+          w.localStorage.removeItem(samKey('bidders'));
+          w.localStorage.removeItem(samKey('winners'));
+        } catch(e) {
+          renderSuite('UI — Print Invoices — Checkboxes enabled for archived', [{ name: 'print invoices archived test', pass: false, detail: e.message }]);
+          updateSummary();
+        }
 
         // ── Step 6: Announce Winners ────────────────────────────────────────────
         nav('winner-announce');
