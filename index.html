@@ -1185,6 +1185,16 @@
               <div class="pa-card-title">Club Financial Summary</div>
               <div class="pa-card-desc">Cash, check, credit card, other</div>
             </div>
+            <div onclick="printItemsNotPaidReport()" class="pa-card">
+              <div class="pa-card-icon">💰</div>
+              <div class="pa-card-title">Items Not Paid</div>
+              <div class="pa-card-desc">Won items without payment received</div>
+            </div>
+            <div onclick="printItemsNotWonReport()" class="pa-card">
+              <div class="pa-card-icon">❌</div>
+              <div class="pa-card-title">Items Not Won</div>
+              <div class="pa-card-desc">Items with no winning bid and donor info</div>
+            </div>
           </div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:10px;">Email</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
@@ -1535,7 +1545,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 9:14 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 9:27 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -5943,6 +5953,191 @@ function printClubIncomeReport() {
   win.document.close();
 }
 
+function printItemsNotPaidReport() {
+  const items = Items.getAll();
+  const winners = DB.getWinners();
+  const payments = DB.getPayments();
+  const bidders = Bidders.getAll();
+  const logoUrl = new URL(getClub().logo, window.location.href).href;
+
+  const bidderMap = {};
+  bidders.forEach(b => { bidderMap[String(b.bidder_number)] = b; });
+
+  // Find items won but not paid
+  const notPaid = items.filter(item => {
+    const winner = winners[item.item_number];
+    if (!winner) return false;
+    const payment = payments[winner.bidder_number];
+    return !payment || !payment.paid;
+  }).sort((a, b) => {
+    const numA = parseInt(a.item_number.split('-')[0]);
+    const numB = parseInt(b.item_number.split('-')[0]);
+    return numA - numB;
+  });
+
+  const rows = notPaid.map(item => {
+    const winner = winners[item.item_number];
+    const bidder = bidderMap[String(winner.bidder_number)] || {};
+    const bidderName = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '(not found)';
+    const bidderEmail = bidder ? (bidder.email || '(not provided)') : '(not found)';
+    const bidderPhone = bidder ? (bidder.phone || '(not provided)') : '(not found)';
+    return `<tr>
+      <td>${escHtml(item.item_number)}</td>
+      <td>${escHtml(item.description || '')}</td>
+      <td>${escHtml(item.category_name || '')}</td>
+      <td style="text-align:right;">${fmtDollar(winner.winning_bid || '0')}</td>
+      <td>${winner.bidder_number} - ${escHtml(bidderName)}</td>
+      <td>${escHtml(bidderEmail)}</td>
+      <td>${escHtml(bidderPhone)}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Items Not Paid</title>
+  <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th { background: #dbeafe; padding: 10px; text-align: left; font-weight: bold; border-bottom: 2px solid #999; }
+  td { padding: 8px; border-bottom: 1px solid #ddd; }
+  tr:nth-child(even) { background: #f0f7ff; }
+  h1 { text-align: center; }
+  .header { text-align: center; margin: 20px 0; color: #666; }
+  .total { text-align: center; margin: 20px 0; color: #666; }
+  .footer { text-align: center; margin: 30px 0; }
+  .report-btn { padding: 10px 20px; margin: 0 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .print-btn { background: #0071e3; color: white; }
+  .print-btn:hover { background: #0077ed; }
+  .close-btn { background: #c62828; color: white; }
+  .close-btn:hover { background: #a01f1f; }
+  @media print {
+    body { margin: 0; padding: 10px; font-size: 10px; }
+    h1 { font-size: 14px; margin: 5px 0; }
+    .header { margin: 5px 0; font-size: 10px; }
+    .total { margin: 5px 0; font-size: 10px; }
+    table { margin: 5px 0; }
+    th { padding: 3px; font-size: 9px; }
+    td { padding: 2px; font-size: 9px; }
+    .footer { display: none; }
+  }</style>
+</head>
+<body>
+  <h1>Items Not Paid For</h1>
+  <p class="header">Won items without payment received</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Item #</th>
+        <th>Description</th>
+        <th>Category</th>
+        <th style="text-align:right;">Winning Bid</th>
+        <th>Winning Bidder</th>
+        <th>Email</th>
+        <th>Phone</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+  <p class="total">Total not paid: ${notPaid.length} items</p>
+  <div class="footer">
+    <button class="report-btn print-btn" onclick="window.print()">🖨 Print Report</button>
+    <button class="report-btn close-btn" onclick="window.close()">✕ Close Report</button>
+  </div>
+</body>
+</html>`;
+
+  const win = openPrintWindow();
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+}
+
+function printItemsNotWonReport() {
+  const items = Items.getAll();
+  const winners = DB.getWinners();
+  const logoUrl = new URL(getClub().logo, window.location.href).href;
+
+  // Find items not won
+  const notWon = items.filter(item => !winners[item.item_number]).sort((a, b) => {
+    const numA = parseInt(a.item_number.split('-')[0]);
+    const numB = parseInt(b.item_number.split('-')[0]);
+    return numA - numB;
+  });
+
+  const rows = notWon.map(item => `<tr>
+    <td>${escHtml(item.item_number)}</td>
+    <td>${escHtml(item.description || '')}</td>
+    <td>${escHtml(item.category_name || '')}</td>
+    <td>${escHtml(item.donor_name || '(unknown)')}</td>
+    <td>${escHtml(item.donor_email || '(unknown)')}</td>
+    <td>${escHtml(item.donor_phone || '(unknown)')}</td>
+  </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Items Not Won</title>
+  <style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th { background: #dbeafe; padding: 10px; text-align: left; font-weight: bold; border-bottom: 2px solid #999; }
+  td { padding: 8px; border-bottom: 1px solid #ddd; }
+  tr:nth-child(even) { background: #f0f7ff; }
+  h1 { text-align: center; }
+  .header { text-align: center; margin: 20px 0; color: #666; }
+  .total { text-align: center; margin: 20px 0; color: #666; }
+  .footer { text-align: center; margin: 30px 0; }
+  .report-btn { padding: 10px 20px; margin: 0 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .print-btn { background: #0071e3; color: white; }
+  .print-btn:hover { background: #0077ed; }
+  .close-btn { background: #c62828; color: white; }
+  .close-btn:hover { background: #a01f1f; }
+  @media print {
+    body { margin: 0; padding: 10px; font-size: 10px; }
+    h1 { font-size: 14px; margin: 5px 0; }
+    .header { margin: 5px 0; font-size: 10px; }
+    .total { margin: 5px 0; font-size: 10px; }
+    table { margin: 5px 0; }
+    th { padding: 3px; font-size: 9px; }
+    td { padding: 2px; font-size: 9px; }
+    .footer { display: none; }
+  }</style>
+</head>
+<body>
+  <h1>Items Not Won</h1>
+  <p class="header">Items with no winning bid and donor information</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Item #</th>
+        <th>Description</th>
+        <th>Category</th>
+        <th>Donor Name</th>
+        <th>Donor Email</th>
+        <th>Donor Phone</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+  <p class="total">Total not won: ${notWon.length} items</p>
+  <div class="footer">
+    <button class="report-btn print-btn" onclick="window.print()">🖨 Print Report</button>
+    <button class="report-btn close-btn" onclick="window.close()">✕ Close Report</button>
+  </div>
+</body>
+</html>`;
+
+  const win = openPrintWindow();
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+}
+
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
 
 // User and device tracking
@@ -7224,7 +7419,7 @@ async function migrateCurrentAuctionToBackend() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 9:14 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 9:27 AM</span></div>
 </div>
 </body>
 </html>
