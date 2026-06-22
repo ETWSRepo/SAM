@@ -537,6 +537,93 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-12px); }
     }
+
+    /* ── Password Screen ── */
+    #password-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      gap: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    #password-screen.hidden { display: none; }
+    #password-screen-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 100%;
+    }
+    #password-screen-logo {
+      height: 60px;
+      width: 60px;
+      display: block;
+      margin: 0 auto 20px;
+      object-fit: contain;
+    }
+    #password-screen-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      color: #1d1d1f;
+      margin: 0 0 10px;
+    }
+    #password-screen-subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: #6e6e73;
+      margin: 0 0 24px;
+    }
+    #password-input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 14px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+    }
+    #password-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    #password-input.error {
+      border-color: var(--danger);
+    }
+    #password-error {
+      color: var(--danger);
+      font-size: 12px;
+      margin: 8px 0 0;
+      display: none;
+      text-align: center;
+    }
+    #password-error.show { display: block; }
+    #password-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background 0.2s;
+    }
+    #password-btn:hover { background: var(--accent-hover); }
+    #password-btn:active { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -546,6 +633,18 @@
   <div id="loading-emoji">🏎️</div>
   <div id="loading-spinner"></div>
   <div id="loading-text">Revving up the auction engine...</div>
+</div>
+
+<!-- Password Screen -->
+<div id="password-screen">
+  <div id="password-screen-container">
+    <img src="Images/ETCClogoWhiteBackground.png" id="password-screen-logo" alt="ETCC Logo" />
+    <h1 id="password-screen-title">Welcome!</h1>
+    <p id="password-screen-subtitle">Enter password to access Silent Auction Manager</p>
+    <input type="password" id="password-input" placeholder="Enter password" />
+    <div id="password-error">Incorrect password</div>
+    <button id="password-btn">Sign In</button>
+  </div>
 </div>
 
 <!-- Hero -->
@@ -1102,6 +1201,21 @@
     <section class="screen" id="screen-settings">
       <div class="page-header"><h2>Settings</h2><p>Configure Gmail access and email field extraction mapping.</p></div>
 
+      <!-- Security -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Security</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-app-password">App Access Password</label>
+            <input type="password" id="inp-app-password" style="width:250px;" placeholder="Enter new password" />
+            <span class="form-hint">Password required to access the Silent Auction Manager (default: ETCCauctionoct2026)</span>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn primary" onclick="changeAppPassword()" style="font-size:12px;white-space:nowrap;">Update Password</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Club Branding -->
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header">Club Branding</div>
@@ -1421,7 +1535,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 9:05 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 9:14 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3138,18 +3252,20 @@ function addBidder() {
     const lastEl  = tr.querySelector('.nb-last');
     const firstEl = tr.querySelector('.nb-first');
     const emailEl = tr.querySelector('.nb-email');
+    const phoneEl = tr.querySelector('.nb-phone');
     const last  = lastEl.value.trim();
     const first = firstEl.value.trim();
     const email = emailEl.value.trim();
-    const phone = tr.querySelector('.nb-phone').value.trim();
-    [lastEl, firstEl, emailEl].forEach(el => el.style.borderColor = '');
+    const phone = phoneEl.value.trim();
+    [lastEl, firstEl, emailEl, phoneEl].forEach(el => el.style.borderColor = '');
     const missing = [];
     if (!last)  { missing.push('Last Name');  lastEl.style.borderColor  = 'var(--danger)'; }
     if (!first) { missing.push('First Name'); firstEl.style.borderColor = 'var(--danger)'; }
     if (!email) { missing.push('Email');      emailEl.style.borderColor = 'var(--danger)'; }
+    if (!phone) { missing.push('Phone');      phoneEl.style.borderColor = 'var(--danger)'; }
     if (missing.length) { alert(`Required: ${missing.join(', ')}`); return; }
     Bidders.add({ bidder_number: nextNum, last_name: last, first_name: first, email, phone, bidder_type: 'walk-in' });
-    debugLog(`Added bidder: ${first} ${last} (${nextNum})`);
+    debugLog(`Added bidder: ${first} ${last} (${nextNum}) - Phone: ${phone}`);
     refreshBiddersTable();
   });
 
@@ -5930,6 +6046,78 @@ document.addEventListener('click', (event) => {
   }
 }, true);
 
+// ══════════════════════════════════════
+//  PASSWORD SCREEN
+// ══════════════════════════════════════
+const DEFAULT_PASSWORD = 'ETCCauctionoct2026';
+let passwordAuthenticated = false;
+
+function initializePasswordScreen() {
+  const passwordInput = document.getElementById('password-input');
+  const passwordBtn = document.getElementById('password-btn');
+  const passwordError = document.getElementById('password-error');
+  const passwordScreen = document.getElementById('password-screen');
+
+  // Get stored password or use default
+  const settings = DB.getSettings();
+  const storedPassword = settings.password || DEFAULT_PASSWORD;
+
+  const checkPassword = () => {
+    const enteredPassword = passwordInput.value;
+    if (enteredPassword === storedPassword) {
+      passwordAuthenticated = true;
+      console.log('[Password] ✓ Authenticated');
+      passwordScreen.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    } else {
+      console.log('[Password] ✗ Incorrect password');
+      passwordError.classList.add('show');
+      passwordInput.classList.add('error');
+      passwordInput.value = '';
+      passwordInput.focus();
+      setTimeout(() => {
+        passwordError.classList.remove('show');
+        passwordInput.classList.remove('error');
+      }, 3000);
+    }
+  };
+
+  passwordBtn.addEventListener('click', checkPassword);
+  passwordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkPassword();
+  });
+
+  // Focus on password input
+  passwordInput.focus();
+  document.body.style.overflow = 'hidden';
+}
+
+function changeAppPassword() {
+  const newPassword = document.getElementById('inp-app-password').value.trim();
+
+  if (!newPassword) {
+    alert('Please enter a new password');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    alert('Password must be at least 6 characters');
+    return;
+  }
+
+  // Update settings with new password
+  const settings = DB.getSettings();
+  settings.password = newPassword;
+  DB.saveSettings(settings);
+
+  console.log('[Password] ✓ Password updated');
+  debugLog(`✓ App access password updated`);
+
+  document.getElementById('inp-app-password').value = '';
+  showSettingsSavedMessage();
+  alert('Password updated successfully. Use the new password on next login.');
+}
+
 // View debug log file
 async function viewDebugLog() {
   const settings = DB.getSettings();
@@ -6054,6 +6242,9 @@ async function downloadDebugLog() {
 
 // Load all data from API (database) on startup
 (async () => {
+  // Initialize password screen first
+  initializePasswordScreen();
+
   try {
     console.log('🔄 Loading data from database...');
     await debugLog('Initializing app - loading data from database');
@@ -7033,7 +7224,7 @@ async function migrateCurrentAuctionToBackend() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 9:05 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 9:14 AM</span></div>
 </div>
 </body>
 </html>
