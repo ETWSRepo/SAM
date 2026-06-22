@@ -494,9 +494,59 @@
     }
     #app-footer a { color: #aaa; text-decoration: none; }
     #app-footer a:hover { color: #fff; }
+
+    /* ── Loading Overlay ── */
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      gap: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    #loading-overlay.hidden { display: none; }
+    #loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #loading-text {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 500;
+      text-align: center;
+    }
+    #loading-emoji {
+      font-size: 48px;
+      animation: bounce 1.4s infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
   </style>
 </head>
 <body>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay">
+  <div id="loading-emoji">🏎️</div>
+  <div id="loading-spinner"></div>
+  <div id="loading-text">Revving up the auction engine...</div>
+</div>
 
 <!-- Hero -->
 <div id="hero">
@@ -1371,7 +1421,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 8:21 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 9:05 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1815,22 +1865,50 @@ const DB = {
   getWinners()    { return JSON.parse(localStorage.getItem(this._k('winners'))  || '{}'); },
   saveWinners(v)  {
     if (isReadOnly()) return;
+    const count = Object.keys(v).length;
+    console.log(`[DB.saveWinners] Saving ${count} winners...`);
+    console.log(`[DB.saveWinners] Winners data:`, v);
+    if (count > 0) {
+      const firstKey = Object.keys(v)[0];
+      console.log(`[DB.saveWinners] First winner (${firstKey}):`, v[firstKey]);
+    }
     localStorage.setItem(this._k('winners'), JSON.stringify(v));
+    const payload = { action: 'save_winners', data: v };
+    console.log(`[DB.saveWinners] Sending payload to API...`);
     fetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_winners', data: v })
-    }).catch(e => console.warn('Failed to save winners to database:', e));
+      body: JSON.stringify(payload)
+    }).then(r => {
+      console.log(`[DB.saveWinners] API response status: ${r.status}`);
+      return r.json();
+    }).then(data => {
+      console.log(`[DB.saveWinners] API response:`, data);
+    }).catch(e => console.warn(`[DB.saveWinners] FAILED:`, e));
   },
   getPayments()   { return JSON.parse(localStorage.getItem(this._k('payments')) || '{}'); },
   savePayments(v) {
     if (isReadOnly()) return;
+    const count = Object.keys(v).length;
+    console.log(`[DB.savePayments] Saving ${count} payments...`);
+    console.log(`[DB.savePayments] Payments data:`, v);
+    if (count > 0) {
+      const firstKey = Object.keys(v)[0];
+      console.log(`[DB.savePayments] First payment (bidder ${firstKey}):`, v[firstKey]);
+    }
     localStorage.setItem(this._k('payments'), JSON.stringify(v));
+    const payload = { action: 'save_payments', data: v };
+    console.log(`[DB.savePayments] Sending payload to API...`);
     fetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_payments', data: v })
-    }).catch(e => console.warn('Failed to save payments to database:', e));
+      body: JSON.stringify(payload)
+    }).then(r => {
+      console.log(`[DB.savePayments] API response status: ${r.status}`);
+      return r.json();
+    }).then(data => {
+      console.log(`[DB.savePayments] API response:`, data);
+    }).catch(e => console.warn(`[DB.savePayments] FAILED:`, e));
   },
   getEmails()     { return JSON.parse(localStorage.getItem(this._k('emails'))   || '[]'); },
   saveEmails(v)   {
@@ -3780,8 +3858,12 @@ function refreshPaymentTable() {
   // Payment handlers
   const savePayField = (el, field, value) => {
     const num = parseInt(el.dataset.num, 10);
+    console.log(`[savePayField] Saving payment field: bidder=${num}, field=${field}, value=${value}`);
     const p   = DB.getPayments();
+    console.log(`[savePayField] Current payments before update:`, p);
     p[num]    = Object.assign(p[num] || {}, { [field]: value });
+    console.log(`[savePayField] Updated payments:`, p);
+    console.log(`[savePayField] Total payments to save: ${Object.keys(p).length}`);
     DB.savePayments(p);
   };
   tbody.querySelectorAll('.pay-checknum').forEach(inp => inp.addEventListener('change', () => savePayField(inp, 'checknum', inp.value.trim())));
@@ -3987,7 +4069,8 @@ function refreshWinnersTable() {
       sel.style.borderColor = '';
       if (!num) {
         const existing = winners[key] || {};
-        winners[key] = { winning_bid: existing.winning_bid || '' };
+        // Preserve winning_bid when clearing bidder
+        winners[key] = Object.assign({}, existing, { bidder_number: undefined, bidder_name: undefined });
         DB.saveWinners(winners);
         return;
       }
@@ -4000,6 +4083,7 @@ function refreshWinnersTable() {
       bidEl.style.borderColor = '';
       const bidder = Bidders.getAll().find(b => b.bidder_number === num);
       const name   = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '(not found)';
+      // Preserve winning_bid when setting bidder
       winners[key] = Object.assign(winners[key] || {}, { bidder_number: num, bidder_name: name });
       DB.saveWinners(winners);
       sel.style.borderColor = bidder ? '' : 'var(--danger)';
@@ -4458,6 +4542,29 @@ function markStepComplete(stepName) {
   const auctionId = DB.getCurrentAuctionId();
   const timestamp = Date.now();
 
+  // Save screen data before marking complete
+  if (stepName === 'paid') {
+    console.log(`[markStepComplete] Saving payments before completing step...`);
+    const payments = DB.getPayments();
+    DB.savePayments(payments);
+    debugLog(`💾 Persisted payments table before completing step: ${Object.keys(payments).length} records`);
+  } else if (stepName === 'items') {
+    console.log(`[markStepComplete] Saving items before completing step...`);
+    const items = Items.getAll();
+    DB.saveItems(items);
+    debugLog(`💾 Persisted items table before completing step: ${items.length} records`);
+  } else if (stepName === 'bidders') {
+    console.log(`[markStepComplete] Saving bidders before completing step...`);
+    const bidders = Bidders.getAll();
+    DB.saveBidders(bidders);
+    debugLog(`💾 Persisted bidders table before completing step: ${bidders.length} records`);
+  } else if (stepName === 'auction-close') {
+    console.log(`[markStepComplete] Saving winners before completing step...`);
+    const winners = DB.getWinners();
+    DB.saveWinners(winners);
+    debugLog(`💾 Persisted winners table before completing step: ${Object.keys(winners).length} records`);
+  }
+
   localStorage.setItem(DB._k('ts_' + stepName), timestamp);
 
   // Persist to database
@@ -4607,6 +4714,37 @@ async function navigate(screenId) {
 
   const screenName = screenNames[screenId] || screenId;
   const currentAuction = DB.getCurrentAuctionId() ? ` [${DB.getCurrentAuctionId()}]` : '';
+
+  // Save screen data from current screen before navigating away
+  console.log(`[navigate] Saving data from current screen before navigating...`);
+  const currentScreen = document.querySelector('.screen.active');
+  if (currentScreen) {
+    const currentScreenId = currentScreen.id.replace('screen-', '');
+    console.log(`[navigate] Current screen: ${currentScreenId}`);
+
+    // Save screen-specific data
+    if (currentScreenId === 'payment-pickup' || currentScreenId === 'paid') {
+      console.log(`[navigate] Saving payments before leaving payment screen...`);
+      const payments = DB.getPayments();
+      DB.savePayments(payments);
+      await debugLog(`💾 Auto-persisted payments table when leaving screen: ${Object.keys(payments).length} records`);
+    } else if (currentScreenId === 'item-load') {
+      console.log(`[navigate] Saving items before leaving item screen...`);
+      const items = Items.getAll();
+      DB.saveItems(items);
+      await debugLog(`💾 Auto-persisted items table when leaving screen: ${items.length} records`);
+    } else if (currentScreenId === 'bidder-reg') {
+      console.log(`[navigate] Saving bidders before leaving bidder screen...`);
+      const bidders = Bidders.getAll();
+      DB.saveBidders(bidders);
+      await debugLog(`💾 Auto-persisted bidders table when leaving screen: ${bidders.length} records`);
+    } else if (currentScreenId === 'auction-close' || currentScreenId === 'winner-announce') {
+      console.log(`[navigate] Saving winners before leaving winner screen...`);
+      const winners = DB.getWinners();
+      DB.saveWinners(winners);
+      await debugLog(`💾 Auto-persisted winners table when leaving screen: ${Object.keys(winners).length} records`);
+    }
+  }
 
   // Load data from database for this screen before displaying
   console.log(`[navigate] Loading data from database for screen: ${screenId}`);
@@ -5947,6 +6085,14 @@ async function downloadDebugLog() {
   }
   // Always show the app, whether database load succeeded or not
   refreshHomeMetrics();
+
+  // Hide loading overlay once app is ready
+  const loadingOverlay = document.getElementById('loading-overlay');
+  if (loadingOverlay) {
+    loadingOverlay.classList.add('hidden');
+  }
+  console.log('[App] ✓ Initialization complete, loading overlay hidden');
+  await debugLog('✓ App initialization complete');
 })();
 
 // ══════════════════════════════════════
@@ -6887,7 +7033,7 @@ async function migrateCurrentAuctionToBackend() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 8:21 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 9:05 AM</span></div>
 </div>
 </body>
 </html>

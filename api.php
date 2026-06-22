@@ -226,27 +226,31 @@ if ($action === 'get_all') {
             INDEX idx_email (email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        // Drop old winners table to recreate with corrected schema
+        $pdo->exec("DROP TABLE IF EXISTS winners");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS winners (
             id INT AUTO_INCREMENT PRIMARY KEY,
             item_number VARCHAR(20),
-            bidder_number INT,
+            bidder_number INT NULL,
             bidder_name VARCHAR(255),
             winning_bid VARCHAR(20),
             UNIQUE KEY unique_item (item_number),
-            FOREIGN KEY (item_number) REFERENCES items(item_number),
-            FOREIGN KEY (bidder_number) REFERENCES bidders(bidder_number)
+            FOREIGN KEY (item_number) REFERENCES items(item_number)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Drop old payments table to recreate with corrected schema
+        $pdo->exec("DROP TABLE IF EXISTS payments");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS payments (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            bidder_number INT,
+            bidder_number INT NULL,
             checknum VARCHAR(50),
             method VARCHAR(50),
             paid INT,
             other VARCHAR(255),
             otherReason VARCHAR(255),
-            UNIQUE KEY unique_bidder (bidder_number),
-            FOREIGN KEY (bidder_number) REFERENCES bidders(bidder_number)
+            UNIQUE KEY unique_bidder (bidder_number)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $pdo->exec("CREATE TABLE IF NOT EXISTS settings (
@@ -399,7 +403,8 @@ if ($action === 'get_all') {
 
     try {
         // Upsert items (insert or update if exists)
-        $insertQuery = "INSERT INTO items (item_number, category_code, category_name, email_message_id, description, value, reserve_amount, donor_name, donor_email, donor_phone, loaded_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE category_code=VALUES(category_code), category_name=VALUES(category_name), description=VALUES(description), value=VALUES(value), reserve_amount=VALUES(reserve_amount), donor_name=VALUES(donor_name), donor_email=VALUES(donor_email), donor_phone=VALUES(donor_phone)";
+        // Map fields to correct database column names
+        $insertQuery = "INSERT INTO items (item_number, item_category, email_message_id, description, item_value, reserve_amount, donor_name, donor_email, donor_phone, submission_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE item_category=VALUES(item_category), description=VALUES(description), item_value=VALUES(item_value), reserve_amount=VALUES(reserve_amount), donor_name=VALUES(donor_name), donor_email=VALUES(donor_email), donor_phone=VALUES(donor_phone)";
         $stmt = $pdo->prepare($insertQuery);
 
         foreach ($data as $idx => $item) {
@@ -412,18 +417,22 @@ if ($action === 'get_all') {
                     continue;
                 }
 
+                // Map item fields to correct database columns
+                $category = $item['category_name'] ?? $item['item_category'] ?? $item['category_code'] ?? null;
+                $value = $item['item_value'] ?? $item['value'] ?? null;
+                $submissionDate = $item['submission_date'] ?? $item['loaded_date'] ?? date('Y-m-d H:i:s');
+
                 $execData = [
                     $itemNum,
-                    $item['category_code'] ?? null,
-                    $item['category_name'] ?? null,
+                    $category,
                     $item['email_message_id'] ?? null,
                     $desc,
-                    $item['value'] ?? $item['item_value'] ?? null,
+                    $value,
                     $item['reserve_amount'] ?? null,
                     $item['donor_name'] ?? null,
                     $item['donor_email'] ?? null,
                     $item['donor_phone'] ?? null,
-                    $item['loaded_date'] ?? date('c')
+                    $submissionDate
                 ];
 
                 $stmt->execute($execData);
@@ -517,6 +526,16 @@ if ($action === 'get_all') {
 } elseif ($action === 'save_winners') {
     $data = $input['data'] ?? [];
     $count = 0;
+
+    // Log detailed info about what's being received
+    error_log("[save_winners] Received " . count($data) . " winners");
+    if (count($data) > 0) {
+        $firstItem = array_key_first($data);
+        if ($firstItem) {
+            error_log("[save_winners] First item ($firstItem): " . json_encode($data[$firstItem]));
+        }
+    }
+
     try {
         // Upsert winners (insert or update if exists)
         $insertQuery = "INSERT INTO winners (item_number, bidder_number, bidder_name, winning_bid) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE bidder_number=VALUES(bidder_number), bidder_name=VALUES(bidder_name), winning_bid=VALUES(winning_bid)";
@@ -524,11 +543,17 @@ if ($action === 'get_all') {
 
         foreach ($data as $itemNum => $winner) {
             try {
+                $bidNum = $winner['bidder_number'] ?? null;
+                $bidName = $winner['bidder_name'] ?? null;
+                $bid = $winner['winning_bid'] ?? null;
+
+                error_log("[save_winners] Inserting: item=$itemNum, bidder_number=$bidNum, bidder_name=$bidName, winning_bid=$bid");
+
                 $stmt->execute([
                     $itemNum,
-                    $winner['bidder_number'] ?? null,
-                    $winner['bidder_name'] ?? null,
-                    $winner['winning_bid'] ?? null
+                    $bidNum,
+                    $bidName,
+                    $bid
                 ]);
                 $count++;
             } catch (Exception $winErr) {
@@ -570,6 +595,18 @@ if ($action === 'get_all') {
 } elseif ($action === 'save_payments') {
     $data = $input['data'] ?? [];
     $count = 0;
+
+    // Log detailed info about what's being received
+    error_log("[save_payments] Received " . count($data) . " payments");
+    if (count($data) > 0) {
+        $firstKey = array_key_first($data);
+        if ($firstKey !== null) {
+            error_log("[save_payments] First payment (bidder $firstKey): " . json_encode($data[$firstKey]));
+        }
+    }
+
+    logQuery($action, 'START', 'INFO', "Received " . count($data) . " payments to save");
+
     try {
         // Upsert payments (insert or update if exists)
         $insertQuery = "INSERT INTO payments (bidder_number, checknum, method, paid, other, otherReason) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE checknum=VALUES(checknum), method=VALUES(method), paid=VALUES(paid), other=VALUES(other), otherReason=VALUES(otherReason)";
@@ -577,13 +614,21 @@ if ($action === 'get_all') {
 
         foreach ($data as $bidderNum => $payment) {
             try {
+                $checknum = $payment['checknum'] ?? null;
+                $method = $payment['method'] ?? null;
+                $paid = $payment['paid'] ?? null;
+                $other = $payment['other'] ?? null;
+                $otherReason = $payment['otherReason'] ?? null;
+
+                error_log("[save_payments] Inserting: bidder=$bidderNum, checknum=$checknum, method=$method, paid=$paid");
+
                 $stmt->execute([
                     $bidderNum,
-                    $payment['checknum'] ?? null,
-                    $payment['method'] ?? null,
-                    $payment['paid'] ?? null,
-                    $payment['other'] ?? null,
-                    $payment['otherReason'] ?? null
+                    $checknum,
+                    $method,
+                    $paid,
+                    $other,
+                    $otherReason
                 ]);
                 $count++;
             } catch (Exception $payErr) {
