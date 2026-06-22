@@ -656,9 +656,9 @@
           <span id="gmail-status-text">Not connected to Gmail</span>
         </div>
         <span id="gmail-login-note" style="font-size:12px;color:#633806;background:#ffd54f;border:1px solid #fac775;border-radius:8px;padding:10px 14px;"><strong>Note:</strong> The first time emails are scanned, you will be required to log in to the auction email account <strong id="gmail-login-email"></strong>. Please obtain the credentials from your administrator.</span>
+        <span id="scan-note" style="font-size:14px; font-weight:600; color:var(--accent); background:rgba(0,113,227,0.08); padding:8px 14px; border-radius:6px; border:1px solid var(--accent); min-height:24px;"></span>
         <button class="btn primary workflow-edit-btn" id="btn-scan" style="display:none;">📧 Scan</button>
         <div class="spacer"></div>
-        <span id="scan-note" style="font-size:11px; color:var(--text-tertiary);"></span>
       </div>
 
       <!-- No client ID warning -->
@@ -1325,6 +1325,25 @@
             <span style="font-size:12px;color:var(--text-secondary);">List all tables with row counts.</span>
           </div>
           <div id="db-stats" style="margin-top:12px;font-size:12px;color:var(--text-secondary);"></div>
+
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+            <label for="sel-table-viewer" style="font-size:13px;font-weight:600;">View Table:</label>
+            <select id="sel-table-viewer" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:var(--bg);color:var(--text);cursor:pointer;">
+              <option value="">-- Select a table --</option>
+              <option value="sam_store">Key-Value Store (sam_store)</option>
+              <option value="auctions">Auctions</option>
+              <option value="items">Items</option>
+              <option value="bidders">Bidders</option>
+              <option value="winners">Winners</option>
+              <option value="payments">Payments</option>
+              <option value="settings">Settings</option>
+              <option value="emails">Emails</option>
+              <option value="members">Members</option>
+              <option value="registrations">Registrations</option>
+            </select>
+            <button class="btn" onclick="loadTableData()">Load</button>
+          </div>
+          <div id="table-viewer-container" style="margin-top:16px;"></div>
         </div>
       </div>
 
@@ -1352,7 +1371,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 5:59 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 22, 2026 7:37 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1723,6 +1742,12 @@ const DB = {
   getAuctions()           { return JSON.parse(localStorage.getItem('sam_auctions') || '[]'); },
   saveAuctions(v)         {
     localStorage.setItem('sam_auctions', JSON.stringify(v));
+    // Persist to MySQL via API (async, fire and forget)
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_auctions', data: v })
+    }).catch(e => console.warn('Failed to save auctions to database:', e));
     API.syncAuctionsToAPI(v); // async, fire and forget
   },
   getCurrentAuctionId()   { return localStorage.getItem('sam_current_auction') || ''; },
@@ -1739,45 +1764,96 @@ const DB = {
   saveItems(v)    {
     if (isReadOnly()) return;
     localStorage.setItem(this._k('items'), JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_items', data: v })
+    }).catch(e => console.warn('Failed to save items to database:', e));
     API.syncItemsToAPI(this.getCurrentAuctionId(), v);
   },
   getMembers()    { return JSON.parse(localStorage.getItem('sam_members')  || '[]'); },
-  saveMembers(v)  { localStorage.setItem('sam_members', JSON.stringify(v)); },
+  saveMembers(v)  {
+    localStorage.setItem('sam_members', JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_members', data: v })
+    }).catch(e => console.warn('Failed to save members to database:', e));
+  },
   getRegDB()      { return JSON.parse(localStorage.getItem('sam_regdb')   || '[]'); },
-  saveRegDB(v)    { localStorage.setItem('sam_regdb',   JSON.stringify(v)); },
+  saveRegDB(v)    {
+    localStorage.setItem('sam_regdb', JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_registrations', data: v })
+    }).catch(e => console.warn('Failed to save registrations to database:', e));
+  },
   getBidders()    { return JSON.parse(localStorage.getItem(this._k('bidders'))  || '[]'); },
   saveBidders(v)  {
     if (isReadOnly()) return;
     localStorage.setItem(this._k('bidders'), JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_bidders', data: v })
+    }).catch(e => console.warn('Failed to save bidders to database:', e));
     API.syncBiddersToAPI(this.getCurrentAuctionId(), v);
   },
   getWinners()    { return JSON.parse(localStorage.getItem(this._k('winners'))  || '{}'); },
   saveWinners(v)  {
     if (isReadOnly()) return;
     localStorage.setItem(this._k('winners'), JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_winners', data: v })
+    }).catch(e => console.warn('Failed to save winners to database:', e));
     API.syncWinnersToAPI(this.getCurrentAuctionId(), v);
   },
   getPayments()   { return JSON.parse(localStorage.getItem(this._k('payments')) || '{}'); },
   savePayments(v) {
     if (isReadOnly()) return;
     localStorage.setItem(this._k('payments'), JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_payments', data: v })
+    }).catch(e => console.warn('Failed to save payments to database:', e));
     API.syncPaymentsToAPI(this.getCurrentAuctionId(), v);
   },
   getEmails()     { return JSON.parse(localStorage.getItem(this._k('emails'))   || '[]'); },
   saveEmails(v)   {
     if (isReadOnly()) return;
     localStorage.setItem(this._k('emails'), JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_emails', data: v })
+    }).catch(e => console.warn('Failed to save emails to database:', e));
   },
 
   // ── Global settings (not per-auction) ──
   getSettings()   { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('sam_settings') || '{}')); },
   saveSettings(v) {
     localStorage.setItem('sam_settings', JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_settings', data: v })
+    }).catch(e => console.warn('Failed to save settings to database:', e));
     const auctionId = this.getCurrentAuctionId();
     if (auctionId) API.syncSettingsToAPI(auctionId, v);
   },
   getFieldMap()   { return JSON.parse(localStorage.getItem('sam_fieldmap') || 'null') || DEFAULT_FIELD_MAP; },
-  saveFieldMap(v) { localStorage.setItem('sam_fieldmap', JSON.stringify(v)); },
+  saveFieldMap(v) {
+    localStorage.setItem('sam_fieldmap', JSON.stringify(v));
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_fieldmap', data: v })
+    }).catch(e => console.warn('Failed to save field map to database:', e));
+  },
 };
 
 // ══════════════════════════════════════
@@ -1905,6 +1981,14 @@ async function deleteAuctionFromList(id) {
   if (!await authenticateSettings()) return;
   // Remove the auction from the list
   DB.saveAuctions(auctions.filter(a => a.id !== id));
+
+  // Delete from SQL database
+  fetch('https://etccapps.com/apps/sam/api.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete_auction', id: id })
+  }).catch(e => console.warn('Failed to delete auction from database:', e));
+
   debugLog(`Deleted auction: ${auction.name}`);
   // If this was the current auction, deselect it
   if (DB.getCurrentAuctionId() === id) {
@@ -4324,29 +4408,78 @@ function refreshHomeMetrics() {
 }
 
 function markStepComplete(stepName) {
-  localStorage.setItem(DB._k('ts_' + stepName), Date.now());
+  const auctionId = DB.getCurrentAuctionId();
+  const timestamp = Date.now();
+
+  localStorage.setItem(DB._k('ts_' + stepName), timestamp);
+
+  // Persist to database
+  fetch('https://etccapps.com/apps/sam/api.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'save_workflow_step', auction_id: auctionId, step_name: stepName, timestamp: timestamp })
+  }).catch(e => console.warn('Failed to save workflow step to database:', e));
+
+  debugLog(`✓ Completed workflow step: ${stepName}`);
   refreshHomeMetrics();
   navigate('home');
 }
 
 function markStepUncomplete(stepName) {
+  const auctionId = DB.getCurrentAuctionId();
+
   localStorage.removeItem(DB._k('ts_' + stepName));
+
+  // Delete from database
+  fetch('https://etccapps.com/apps/sam/api.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete_workflow_step', auction_id: auctionId, step_name: stepName })
+  }).catch(e => console.warn('Failed to delete workflow step from database:', e));
+
+  debugLog(`Uncompleted workflow step: ${stepName}`);
   refreshHomeMetrics();
   navigate('home');
 }
 
 function clearWorkflow() {
   if (!confirm('Clear all steps to uncomplete?')) return;
-  ['items','bidsheets','bidders','winners','invoices','announce','paid','postauction']
-    .forEach(k => localStorage.removeItem(DB._k('ts_' + k)));
+  const auctionId = DB.getCurrentAuctionId();
+  const steps = ['items','bidsheets','bidders','winners','invoices','announce','paid','postauction'];
+
+  steps.forEach(k => localStorage.removeItem(DB._k('ts_' + k)));
+
+  // Delete all workflow steps from database
+  steps.forEach(stepName => {
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_workflow_step', auction_id: auctionId, step_name: stepName })
+    }).catch(e => console.warn('Failed to delete workflow step from database:', e));
+  });
+
+  debugLog(`Cleared all workflow steps`);
   refreshHomeMetrics();
 }
 
 function completeWorkflow() {
   if (!confirm('Mark all steps as complete?')) return;
+  const auctionId = DB.getCurrentAuctionId();
   const now = Date.now();
-  ['items','bidsheets','bidders','winners','invoices','announce','paid','postauction']
-    .forEach(k => localStorage.setItem(DB._k('ts_' + k), now));
+  const steps = ['items','bidsheets','bidders','winners','invoices','announce','paid','postauction'];
+
+  steps.forEach(k => localStorage.setItem(DB._k('ts_' + k), now));
+
+  // Save all workflow steps to database
+  steps.forEach(stepName => {
+    fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_workflow_step', auction_id: auctionId, step_name: stepName, timestamp: now })
+    }).catch(e => console.warn('Failed to save workflow step to database:', e));
+  });
+
+  debugLog(`✓ Completed all workflow steps`);
   refreshHomeMetrics();
 }
 
@@ -5743,7 +5876,11 @@ function importMemberCSV() {
 
     DB.saveMembers(members);
     const memberImportDate = new Date().toLocaleString();
-    DB.saveSettings(Object.assign(DB.getSettings(), { memberImportDate }));
+    const isoTimestamp = new Date().toISOString();
+    DB.saveSettings(Object.assign(DB.getSettings(), { memberImportDate, memberImportTimestamp: isoTimestamp }));
+
+    debugLog(`✓ Imported ${members.length} members - Timestamp: ${memberImportDate}`);
+
     const mDateEl = document.getElementById('member-import-date');
     if (mDateEl) mDateEl.value = memberImportDate;
     document.getElementById('member-import-status').textContent = members.length + ' members imported.';
@@ -5889,7 +6026,11 @@ function importRegCSV() {
     DB.saveRegDB(records);
 
     const regImportDate = new Date().toLocaleString();
-    DB.saveSettings(Object.assign(DB.getSettings(), { regImportDate }));
+    const isoTimestamp = new Date().toISOString();
+    DB.saveSettings(Object.assign(DB.getSettings(), { regImportDate, regImportTimestamp: isoTimestamp }));
+
+    debugLog(`✓ Imported ${records.length} registrations - Timestamp: ${regImportDate}`);
+
     const rDateEl = document.getElementById('reg-import-date');
     if (rDateEl) rDateEl.value = regImportDate;
     document.getElementById('reg-import-status').textContent = records.length + ' members imported.';
@@ -6057,26 +6198,73 @@ function showViewAll(type) {
   }
 }
 
-function exportBackup() {
+async function exportBackup() {
   const auction = currentAuction();
-  const dataKeys = ['items','bidders','winners','payments','emails'];
-  const backup = { exported: new Date().toISOString(), version: 2, auctionName: auction ? auction.name : '' };
-  dataKeys.forEach(k => {
-    const v = localStorage.getItem(DB._k(k));
-    if (v) backup[k] = JSON.parse(v);
-  });
-  ['settings','fieldmap'].forEach(k => {
-    const v = localStorage.getItem('sam_' + k);
-    if (v) backup[k] = JSON.parse(v);
-  });
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const date = new Date().toISOString().slice(0,10);
-  const slug = (auction ? auction.name : 'sam').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-  const a    = document.createElement('a');
-  a.href = url; a.download = `sam-backup-${slug}-${date}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (!auction) {
+    alert('Please select an auction to export.');
+    return;
+  }
+
+  try {
+    // Fetch all data from database
+    const [itemsRes, biddersRes, winnersRes, paymentsRes, settingsRes] = await Promise.all([
+      fetch('https://etccapps.com/apps/sam/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_items' })
+      }),
+      fetch('https://etccapps.com/apps/sam/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_bidders' })
+      }),
+      fetch('https://etccapps.com/apps/sam/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_winners' })
+      }),
+      fetch('https://etccapps.com/apps/sam/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_payments' })
+      }),
+      fetch('https://etccapps.com/apps/sam/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_settings' })
+      })
+    ]);
+
+    // Get current auction data from localStorage (most recent)
+    const backup = {
+      exported: new Date().toISOString(),
+      version: 2,
+      auctionName: auction.name,
+      items: DB.getItems(),
+      bidders: DB.getBidders(),
+      winners: DB.getWinners(),
+      payments: DB.getPayments(),
+      emails: DB.getEmails(),
+      settings: DB.getSettings(),
+      fieldmap: DB.getFieldMap()
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const date = new Date().toISOString().slice(0,10);
+    const slug = auction.name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sam-backup-${slug}-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    await debugLog('✓ Auction backup exported: ' + a.download);
+  } catch (err) {
+    alert('Error exporting backup: ' + err.message);
+    console.error('Export error:', err);
+  }
 }
 
 function importBackup(input) {
@@ -6084,20 +6272,65 @@ function importBackup(input) {
   if (!file) return;
   input.value = '';
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async e => {
     let data;
     try { data = JSON.parse(e.target.result); } catch { alert('Invalid backup file.'); return; }
     if (!confirm('This will overwrite the current auction\'s data with the backup. Continue?')) return;
-    const dataKeys = ['items','bidders','winners','payments','emails'];
-    dataKeys.forEach(k => { if (data[k] !== undefined) localStorage.setItem(DB._k(k), JSON.stringify(data[k])); });
-    ['settings','fieldmap'].forEach(k => { if (data[k] !== undefined) localStorage.setItem('sam_' + k, JSON.stringify(data[k])); });
-    // support old v1 format (keys had sam_ prefix)
-    if (data.version !== 2) {
-      const legacyMap = { sam_items:'items', sam_bidders:'bidders', sam_winners:'winners', sam_payments:'payments', sam_emails:'emails' };
-      Object.entries(legacyMap).forEach(([old, k]) => { if (data[old] !== undefined) localStorage.setItem(DB._k(k), JSON.stringify(data[old])); });
+
+    try {
+      // Save to localStorage first
+      const dataKeys = ['items','bidders','winners','payments','emails'];
+      dataKeys.forEach(k => {
+        if (data[k] !== undefined) localStorage.setItem(DB._k(k), JSON.stringify(data[k]));
+      });
+      ['settings','fieldmap'].forEach(k => {
+        if (data[k] !== undefined) localStorage.setItem('sam_' + k, JSON.stringify(data[k]));
+      });
+
+      // support old v1 format (keys had sam_ prefix)
+      if (data.version !== 2) {
+        const legacyMap = { sam_items:'items', sam_bidders:'bidders', sam_winners:'winners', sam_payments:'payments', sam_emails:'emails' };
+        Object.entries(legacyMap).forEach(([old, k]) => {
+          if (data[old] !== undefined) localStorage.setItem(DB._k(k), JSON.stringify(data[old]));
+        });
+      }
+
+      // Save to database via API
+      await Promise.all([
+        data.items && fetch('https://etccapps.com/apps/sam/api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save_items', data: data.items })
+        }),
+        data.bidders && fetch('https://etccapps.com/apps/sam/api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save_bidders', data: data.bidders })
+        }),
+        data.winners && fetch('https://etccapps.com/apps/sam/api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save_winners', data: data.winners })
+        }),
+        data.payments && fetch('https://etccapps.com/apps/sam/api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save_payments', data: data.payments })
+        }),
+        data.settings && fetch('https://etccapps.com/apps/sam/api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save_settings', data: data.settings })
+        })
+      ].filter(Boolean));
+
+      await debugLog('✓ Backup restored from: ' + file.name);
+      alert('Backup restored successfully. Reloading…');
+      location.reload();
+    } catch (err) {
+      alert('Error importing backup: ' + err.message);
+      console.error('Import error:', err);
     }
-    alert('Backup restored successfully. Reloading…');
-    location.reload();
   };
   reader.readAsText(file);
 }
@@ -6128,51 +6361,119 @@ function clearTableFilters(tableSelector) {
   table.querySelectorAll('.tk-th-inner[data-sort]').forEach(inner => { delete inner.dataset.sort; });
 }
 
-function showDatabaseStats() {
-  const auction = currentAuction();
-  const stats = [];
-  const auctions = DB.getAuctions();
+async function showDatabaseStats() {
+  const statsEl = document.getElementById('db-stats');
+  if (!statsEl) return;
 
-  // Global tables
-  stats.push('═══════════════════════════════');
-  stats.push('GLOBAL TABLES');
-  stats.push('═══════════════════════════════');
-  stats.push('Auctions:        ' + auctions.length);
-  stats.push('Members:         ' + DB.getMembers().length);
-  stats.push('Registration DB: ' + DB.getRegDB().length);
-  stats.push('Settings:        1');
-  stats.push('Field Map:       ' + (DB.getFieldMap() ? DB.getFieldMap().length : 0));
+  statsEl.innerHTML = '<div style="padding:12px;color:var(--text-secondary);">Loading database statistics...</div>';
 
-  // Per-auction tables
-  if (auction) {
-    stats.push('');
-    stats.push('───────────────────────────────');
-    stats.push('CURRENT AUCTION: ' + auction.name);
-    stats.push('───────────────────────────────');
-    stats.push('Items:    ' + (DB.getItems ? DB.getItems().length : 0));
-    stats.push('Bidders:  ' + Bidders.getAll().length);
-    stats.push('Winners:  ' + Object.keys(DB.getWinners()).length);
-    stats.push('Payments: ' + Object.keys(DB.getPayments()).length);
-    stats.push('Emails:   ' + (scannedEmails ? scannedEmails.length : 0));
-  } else if (auctions.length > 0) {
-    stats.push('');
-    stats.push('───────────────────────────────');
-    stats.push('ALL AUCTIONS');
-    stats.push('───────────────────────────────');
-    auctions.forEach(a => {
-      const aId = a.id;
-      const items = JSON.parse(localStorage.getItem('sam_' + aId + '_items') || '[]').length;
-      const bidders = JSON.parse(localStorage.getItem('sam_' + aId + '_bidders') || '[]').length;
-      const winners = Object.keys(JSON.parse(localStorage.getItem('sam_' + aId + '_winners') || '{}')).length;
-      const payments = Object.keys(JSON.parse(localStorage.getItem('sam_' + aId + '_payments') || '{}')).length;
-      stats.push(a.name + ':');
-      stats.push('  Items: ' + items + ', Bidders: ' + bidders + ', Winners: ' + winners + ', Payments: ' + payments);
+  try {
+    const response = await fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'db_stats' })
     });
+    const result = await response.json();
+
+    if (result.error) {
+      statsEl.innerHTML = '<pre style="background:var(--bg);padding:12px;border-radius:4px;border:1px solid var(--border);color:var(--danger);font-family:monospace;font-size:11px;">' + escHtml('Error: ' + result.error) + '</pre>';
+      return;
+    }
+
+    // Format statistics
+    const stats = [];
+    stats.push('═══════════════════════════════════════');
+    stats.push('DATABASE STATISTICS (from MySQL)');
+    stats.push('═══════════════════════════════════════');
+    stats.push('Total Tables:    ' + result.table_count);
+    stats.push('Total Rows:      ' + result.total_rows);
+    stats.push('');
+    stats.push('TABLE DETAILS:');
+    stats.push('───────────────────────────────────────');
+
+    // Sort tables alphabetically
+    const sortedTables = Object.keys(result.stats).sort();
+    sortedTables.forEach(table => {
+      const count = result.stats[table];
+      const paddedTable = table.padEnd(20);
+      stats.push(paddedTable + ': ' + count + ' rows');
+    });
+
+    statsEl.innerHTML = '<pre style="background:var(--bg);padding:12px;border-radius:4px;border:1px solid var(--border);overflow-x:auto;font-family:monospace;font-size:11px;line-height:1.6;">' + escHtml(stats.join('\n')) + '</pre>';
+  } catch (err) {
+    statsEl.innerHTML = '<pre style="background:var(--bg);padding:12px;border-radius:4px;border:1px solid var(--border);color:var(--danger);font-family:monospace;font-size:11px;">Error: ' + escHtml(err.message) + '</pre>';
+    console.error('Database stats error:', err);
+  }
+}
+
+async function loadTableData() {
+  const selector = document.getElementById('sel-table-viewer');
+  const table = selector.value;
+  const container = document.getElementById('table-viewer-container');
+
+  if (!table) {
+    container.innerHTML = '';
+    return;
   }
 
-  const statsEl = document.getElementById('db-stats');
-  if (statsEl) {
-    statsEl.innerHTML = '<pre style="background:var(--bg);padding:12px;border-radius:4px;border:1px solid var(--border);overflow-x:auto;font-family:monospace;font-size:11px;line-height:1.6;">' + escHtml(stats.join('\n')) + '</pre>';
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Loading...</div>';
+
+  try {
+    const response = await fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_table_data', table: table })
+    });
+    const result = await response.json();
+
+    if (result.error) {
+      container.innerHTML = '<div style="padding:12px;color:var(--danger);">' + escHtml(result.error) + '</div>';
+      return;
+    }
+
+    // Build HTML table
+    let html = '<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary);">';
+    html += '<strong>Table:</strong> ' + escHtml(table) + ' &nbsp; <strong>Rows:</strong> ' + result.count;
+    html += '</div>';
+    html += '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:4px;background:var(--bg);">';
+    html += '<table class="tablekit" style="width:100%;border-collapse:collapse;">';
+
+    // Header
+    html += '<thead><tr>';
+    result.columns.forEach(col => {
+      html += '<th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:#dbeafe;font-weight:600;font-size:12px;">' + escHtml(col) + '</th>';
+    });
+    html += '</tr></thead>';
+
+    // Rows
+    html += '<tbody>';
+    result.rows.forEach((row, idx) => {
+      const rowBg = idx % 2 === 0 ? '#f0f7ff' : '#ffffff';
+      html += '<tr style="background:' + rowBg + ';">';
+      result.columns.forEach(col => {
+        let val = row[col];
+        if (val === null || val === undefined) {
+          val = '<em style="color:var(--text-tertiary);">null</em>';
+        } else if (typeof val === 'object') {
+          val = escHtml(JSON.stringify(val));
+        } else {
+          val = escHtml(String(val));
+          // Truncate long values
+          if (val.length > 100) {
+            val = val.substring(0, 100) + '...';
+          }
+        }
+        html += '<td style="padding:6px 12px;border-bottom:1px solid var(--border);font-size:12px;font-family:monospace;">' + val + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    html += '</table></div>';
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div style="padding:12px;color:var(--danger);">Error: ' + escHtml(err.message) + '</div>';
+    console.error('Table viewer error:', err);
   }
 }
 
@@ -6264,6 +6565,41 @@ function showCategoryItems(code, name) {
 // ══════════════════════════════════════
 //  API SYNC ON INIT
 // ══════════════════════════════════════
+async function syncFromKeyValueDB() {
+  try {
+    const response = await fetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_all' })
+    });
+    const keyValueData = await response.json();
+
+    // Load all data from key-value store into localStorage
+    let loadedCount = 0;
+    for (const [key, value] of Object.entries(keyValueData)) {
+      if (key.startsWith('sam_')) {
+        try {
+          localStorage.setItem(key, value);
+          loadedCount++;
+        } catch (e) {
+          console.warn(`Failed to load ${key}:`, e);
+        }
+      }
+    }
+
+    // Check if auctions were loaded
+    const auctions = localStorage.getItem('sam_auctions');
+    if (auctions) {
+      const auctionCount = JSON.parse(auctions).length;
+      await debugLog(`✓ Loaded ${auctionCount} auction${auctionCount !== 1 ? 's' : ''} from database (${loadedCount} keys)`);
+    } else {
+      await debugLog(`✓ Synced ${loadedCount} keys from database`);
+    }
+  } catch (err) {
+    console.warn('Failed to load from key-value database:', err);
+  }
+}
+
 async function syncFromAPI() {
   try {
     // Try to fetch auctions from API
@@ -6395,6 +6731,7 @@ async function migrateCurrentAuctionToBackend() {
 (async function init() {
   await window._samServerSync;
   await syncFromAPI(); // Sync data from API if available
+  await syncFromKeyValueDB(); // Fallback: load from key-value database
   migrateToMultiAuction();
   migrateGlobalData();
   updateHomeAuctionPanel();
@@ -6423,7 +6760,7 @@ async function migrateCurrentAuctionToBackend() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 5:59 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 22, 2026 7:37 AM</span></div>
 </div>
 </body>
 </html>
