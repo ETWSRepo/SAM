@@ -95,6 +95,8 @@ if ($action === 'health') {
 }
 
 $allowedActions = [
+    'login',
+    'logout',
     'get_all',
     'get_all_data',
     'set',
@@ -144,6 +146,8 @@ $allowedActions = [
 
 // Actions that don't require authentication (read-only, initial data load)
 $publicActions = [
+    'login',            // Establishes the authenticated session
+    'logout',           // Clears the session
     'health',           // API health check
     'init_tables',      // Database initialization
     'log',              // Debug logging
@@ -254,32 +258,52 @@ function logQuery($action, $query, $status, $details = '') {
 
 logQuery($action, 'START', 'REQUEST', "Action=$action");
 
-if ($action === 'get_all') {
+if ($action === 'login') {
+    // Server-side authentication. Establishes $_SESSION['authenticated'] so that
+    // protected write actions (set, save_*, delete_*) are permitted. The expected
+    // password comes from the stored settings, falling back to the env default.
+    $entered = (string)($input['password'] ?? '');
+
+    $expected = $env['DEFAULT_PASSWORD'] ?? 'ETCCauctionoct2026';
     try {
+        $val = $pdo->query("SELECT `value` FROM sam_store WHERE `key` = 'sam_settings' LIMIT 1")->fetchColumn();
+        if ($val) {
+            $settings = json_decode($val, true);
+            if (!empty($settings['password'])) {
+                $expected = (string)$settings['password'];
+            }
+        }
+    } catch (Exception $e) {
+        // Fall back to env default if settings can't be read
+    }
+
+    if ($entered !== '' && hash_equals($expected, $entered)) {
+        session_regenerate_id(true);
+        $_SESSION['authenticated'] = true;
+        $_SESSION['last_activity'] = time();
+        logQuery($action, 'LOGIN', 'SUCCESS', 'Authenticated');
+        echo json_encode(['success' => true]);
+    } else {
+        logQuery($action, 'LOGIN', 'FAIL', 'Bad password');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Incorrect password']);
+    }
+
+} elseif ($action === 'logout') {
+    $_SESSION = [];
+    session_destroy();
+    echo json_encode(['success' => true]);
+
+} elseif ($action === 'get_all') {
+    try {
+        // Returns a flat key-value map { "sam_items": "...", ... } which the
+        // client's syncFromKeyValueDB() iterates with Object.entries().
+        // Do NOT paginate or wrap this — the client expects the flat shape.
         $query = "SELECT `key`, `value` FROM sam_store";
         $rows = $pdo->query($query)->fetchAll(PDO::FETCH_KEY_PAIR);
 
-        // Phase 3: Support pagination
-        $page = intval($input['page'] ?? 1);
-        $limit = intval($input['limit'] ?? 100);
-
-        // Convert to indexed array for pagination
-        $rowArray = [];
-        foreach ($rows as $k => $v) {
-            $rowArray[] = ['key' => $k, 'value' => $v];
-        }
-
-        $paginated = paginate($rowArray, $page, $limit);
-
-        logQuery($action, $query, 'SUCCESS', "Rows: " . count($rows) . " (Page $page, Limit $limit)");
-        echo json_encode([
-            'data' => $paginated['items'],
-            'page' => $paginated['page'],
-            'limit' => $paginated['limit'],
-            'total' => $paginated['total'],
-            'totalPages' => $paginated['totalPages'],
-            'hasMore' => $paginated['hasMore']
-        ]);
+        logQuery($action, $query, 'SUCCESS', "Rows: " . count($rows));
+        echo json_encode($rows ?: new stdClass());
     } catch (Exception $e) {
         logQuery($action, $query ?? 'N/A', 'ERROR', $e->getMessage());
         echo json_encode(['error' => 'Failed to get data']);

@@ -1551,7 +1551,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 6:22 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 6:36 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1888,7 +1888,7 @@ function secureApiFetch(url, options = {}) {
     headers['X-CSRF-Token'] = SessionManager.getCsrfToken();
   }
 
-  return fetch(url, { ...options, headers });
+  return fetch(url, { ...options, headers, credentials: 'same-origin' });
 }
 
 // ══════════════════════════════════════
@@ -6546,23 +6546,50 @@ function initializePasswordScreen() {
   const settings = DB.getSettings();
   const storedPassword = settings.password;
 
-  const checkPassword = () => {
+  const showError = () => {
+    passwordError.classList.add('show');
+    passwordInput.classList.add('error');
+    passwordInput.value = '';
+    passwordInput.focus();
+    setTimeout(() => {
+      passwordError.classList.remove('show');
+      passwordInput.classList.remove('error');
+    }, 3000);
+  };
+
+  const checkPassword = async () => {
     const enteredPassword = passwordInput.value;
-    if (enteredPassword === storedPassword) {
-      passwordAuthenticated = true;
-      console.log('[Password] ✓ Authenticated');
-      passwordScreen.classList.add('hidden');
-      document.body.style.overflow = 'auto';
-    } else {
+    passwordBtn.disabled = true;
+    try {
+      // Authenticate server-side so the session is established for write actions.
+      const res = await secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'login', password: enteredPassword })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        passwordAuthenticated = true;
+        console.log('[Password] ✓ Authenticated');
+        passwordScreen.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        return;
+      }
       console.log('[Password] ✗ Incorrect password');
-      passwordError.classList.add('show');
-      passwordInput.classList.add('error');
-      passwordInput.value = '';
-      passwordInput.focus();
-      setTimeout(() => {
-        passwordError.classList.remove('show');
-        passwordInput.classList.remove('error');
-      }, 3000);
+      showError();
+    } catch (e) {
+      // Network/server unavailable — fall back to local check so the app
+      // remains usable offline (writes will still require a later login).
+      if (storedPassword && enteredPassword === storedPassword) {
+        passwordAuthenticated = true;
+        console.log('[Password] ✓ Authenticated (local fallback)');
+        passwordScreen.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        return;
+      }
+      console.log('[Password] ✗ Incorrect password (offline)');
+      showError();
+    } finally {
+      passwordBtn.disabled = false;
     }
   };
 
@@ -7983,7 +8010,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 6:22 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 6:36 AM</span></div>
 </div>
 </body>
 </html>

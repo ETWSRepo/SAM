@@ -52,6 +52,9 @@ function checkEmailScanCooldown($minCooldownSeconds = 300) {
  * @param float $reserveAmount Optional reserve amount
  * @return array { valid: bool, message: string }
  */
+// Guarded: validateWinningBid() is also defined in security-helpers.php, which
+// loads first. Only declare here if not already present to avoid a fatal redeclare.
+if (!function_exists('validateWinningBid')) {
 function validateWinningBid($winningBid, $itemValue, $reserveAmount = null) {
     // Ensure values are numeric
     $winningBid = floatval($winningBid);
@@ -77,6 +80,7 @@ function validateWinningBid($winningBid, $itemValue, $reserveAmount = null) {
     }
 
     return ['valid' => true, 'message' => 'Valid bid'];
+}
 }
 
 /**
