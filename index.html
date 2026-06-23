@@ -55,19 +55,70 @@
     #hero h1  { font-size: 1.1rem; font-weight: 600; }
     #hero span { font-size: 0.75rem; color: #86868b; display: block; margin-top: 1px; }
 
-    /* ── Layout ── */
-    #layout { display: flex; flex: 1; overflow: hidden; }
+    /* ── Hamburger ── */
+    #hamburger {
+      background: transparent;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+      padding: 0;
+      flex-shrink: 0;
+      border-radius: 6px;
+      transition: background 0.12s;
+    }
+    #hamburger:hover { background: rgba(255,255,255,0.1); }
+    #hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: #fff;
+      border-radius: 2px;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    body.nav-open #hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    body.nav-open #hamburger span:nth-child(2) { opacity: 0; }
+    body.nav-open #hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-    /* ── Nav ── */
+    /* ── Layout ── */
+    #layout { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+    /* ── Nav (off-canvas drawer) ── */
     #nav {
+      position: fixed;
+      top: var(--hero-height);
+      left: 0;
+      bottom: 0;
       width: var(--nav-width);
       background: var(--nav-bar);
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
       overflow-y: auto;
       padding: 12px 0;
+      transform: translateX(-100%);
+      transition: transform 0.22s ease;
+      z-index: 200;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.25);
     }
+    body.nav-open #nav { transform: translateX(0); }
+
+    /* Backdrop behind the open drawer */
+    #nav-backdrop {
+      position: fixed;
+      inset: var(--hero-height) 0 0 0;
+      background: rgba(0,0,0,0.4);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.22s ease, visibility 0.22s ease;
+      z-index: 150;
+    }
+    body.nav-open #nav-backdrop { opacity: 1; visibility: visible; }
     .nav-section-label {
       font-size: 10px;
       text-transform: uppercase;
@@ -649,6 +700,9 @@
 
 <!-- Hero -->
 <div id="hero">
+  <button id="hamburger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
   <img src="Images/ETCClogoWhiteBackground.png" alt="${getClub().shortName} Logo" id="nav-club-logo" />
   <div>
     <h1>Silent Auction Manager</h1>
@@ -676,6 +730,9 @@
       🏠 Return to Dashboard
     </a>
   </nav>
+
+  <!-- Backdrop for off-canvas nav -->
+  <div id="nav-backdrop"></div>
 
   <!-- Main Content -->
   <main id="main">
@@ -858,7 +915,7 @@
           </div>
         </div>
         <div style="overflow:auto;max-height:230px;">
-          <table class="tablekit" id="items-table" style="table-layout:fixed;width:100%;">
+          <table class="tablekit" id="items-table" style="table-layout:fixed;width:100%;min-width:1490px;">
             <colgroup>
               <col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
               <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
@@ -893,7 +950,7 @@
       <div class="card" id="bs-items-card">
         <div id="bs-toolbar-wrap"></div>
         <div style="overflow-x:auto;max-height:calc(100vh - 278px);overflow-y:auto;">
-          <table class="tablekit" id="bs-items-table" style="table-layout:fixed;width:100%;">
+          <table class="tablekit" id="bs-items-table" style="table-layout:fixed;width:100%;min-width:1300px;">
             <colgroup>
               <col style="width:32px;"><col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
               <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
@@ -1009,7 +1066,7 @@
       <div class="card" id="bidders-card">
         <div id="bidders-toolbar-wrap"></div>
         <div style="overflow-x:auto;max-height:calc(100vh - 388px);overflow-y:auto;">
-          <table class="tablekit" id="bidders-table" style="table-layout:fixed;width:100%;">
+          <table class="tablekit" id="bidders-table" style="table-layout:fixed;width:100%;min-width:1150px;">
             <colgroup>
               <col style="width:100px;"><col style="width:130px;"><col style="width:180px;"><col style="width:180px;">
               <col style="width:240px;"><col style="width:160px;"><col style="width:160px;">
@@ -1038,7 +1095,7 @@
         <div id="winners-toolbar-wrap"></div>
         <div style="padding:4px 16px;min-height:20px;"><span id="winners-save-note" style="font-size:12px;"></span></div>
         <div style="overflow-x:auto;max-height:calc(100vh - 278px);overflow-y:auto;">
-          <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;">
+          <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;min-width:1150px;">
             <colgroup>
               <col style="width:36px;">
               <col style="width:90px;">
@@ -1134,7 +1191,7 @@
       <div class="card" id="print-invoices-card" style="max-width:900px;">
         <div id="print-invoices-toolbar-wrap"></div>
         <div style="overflow-y:auto;max-height:calc(100vh - 278px);">
-          <table class="tablekit" id="print-invoices-table" style="table-layout:fixed;width:100%;">
+          <table class="tablekit" id="print-invoices-table" style="table-layout:fixed;width:100%;min-width:500px;">
             <colgroup>
               <col style="width:32px;">
               <col style="width:80px;">
@@ -1551,7 +1608,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 6:36 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 6:50 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3076,40 +3133,8 @@ function printBiddingSheets() {
     #hero img { height: 40px; width: 40px; }
     #hero h1 { font-size: 1rem; }
 
-    #layout { flex-direction: column; }
-
-    #nav {
-      position: fixed;
-      left: 0;
-      top: var(--hero-height);
-      width: 100%;
-      height: auto;
-      background: var(--nav-bar);
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding: 8px 12px;
-      gap: 4px;
-      max-height: 50px;
-      z-index: 100;
-      scroll-behavior: smooth;
-    }
-
-    .nav-section-label { display: none; }
-
-    .nav-item {
-      padding: 8px 12px;
-      font-size: 11px;
-      min-width: max-content;
-      white-space: nowrap;
-      flex-shrink: 0;
-      border-left: none;
-      border-bottom: 2.5px solid transparent;
-      border-radius: 4px 4px 0 0;
-    }
-    .nav-item.active { border-bottom-color: var(--accent); }
-
-    #main { margin-top: 50px; }
+    /* Nav is an off-canvas drawer at every width; widen it slightly on phones */
+    #nav { width: 80vw; max-width: 300px; }
 
     .page-header { padding: 12px 16px; gap: 10px; }
     .page-header h2 { font-size: 1.1rem; }
@@ -3130,22 +3155,13 @@ function printBiddingSheets() {
     .tk-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .tk-btn { padding: 8px 12px; font-size: 12px; min-height: 40px; flex: 1; }
 
+    /* Wide data tables scroll horizontally rather than clip. The tables carry
+       a min-width so their scroll wrapper (overflow-x:auto) actually engages. */
     .tablekit {
       font-size: 12px;
-      margin: 0 -12px;
-      border-radius: 0;
     }
-    .tablekit thead { position: sticky; top: 0; }
     .tablekit th { padding: 8px 6px; font-size: 11px; }
     .tablekit td { padding: 6px 4px; }
-
-    /* Stack table columns on mobile */
-    @supports (display: grid) {
-      .tablekit { overflow-x: auto; }
-      .tablekit tbody tr { display: flex; flex-wrap: wrap; }
-      .tablekit tbody td { flex: 0 0 100%; padding: 4px 12px; }
-      .tablekit tbody td::before { content: attr(data-label); font-weight: 600; display: block; font-size: 10px; color: var(--text-secondary); }
-    }
 
     #footer {
       position: fixed;
@@ -6413,6 +6429,31 @@ function printItemsNotWonReport() {
 
 navItems.forEach(item => item.addEventListener('click', () => navigate(item.dataset.screen)));
 
+// ══════════════════════════════════════
+//  OFF-CANVAS NAV (hamburger drawer)
+// ══════════════════════════════════════
+(function () {
+  const hamburger = document.getElementById('hamburger');
+  const backdrop  = document.getElementById('nav-backdrop');
+  const navEl     = document.getElementById('nav');
+
+  const closeNav = () => {
+    document.body.classList.remove('nav-open');
+    hamburger?.setAttribute('aria-expanded', 'false');
+  };
+  const toggleNav = () => {
+    const open = document.body.classList.toggle('nav-open');
+    hamburger?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  hamburger?.addEventListener('click', toggleNav);
+  backdrop?.addEventListener('click', closeNav);
+  // Close the drawer whenever any nav entry is chosen
+  navEl?.querySelectorAll('.nav-item, a').forEach(el => el.addEventListener('click', closeNav));
+  // Escape closes the drawer
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeNav(); });
+})();
+
 // User and device tracking
 let currentUser = null;
 let currentDevice = null;
@@ -8010,7 +8051,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 6:36 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 6:50 AM</span></div>
 </div>
 </body>
 </html>
