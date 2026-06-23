@@ -1608,7 +1608,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 6:50 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 6:54 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2999,7 +2999,7 @@ function refreshItemsTable() {
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
       <td style="white-space:nowrap;">${escHtml(item.email_date || '')}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
-      <td>${escHtml(item.description)}</td>
+      <td style="white-space:normal;word-break:break-word;vertical-align:top;">${escHtml(item.description)}</td>
       <td>${fmtDollar(item.item_value)}</td>
       <td>${parseFloat(item.reserve_amount) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td>${escHtml(item.donor_name)}</td>
@@ -4553,7 +4553,7 @@ function refreshBsItemsTable() {
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(item.email_date || '')}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
-      <td>${escHtml(item.description)}</td>
+      <td style="white-space:normal;word-break:break-word;vertical-align:top;">${escHtml(item.description)}</td>
       <td>${fmtDollar(item.item_value)}</td>
       <td>${parseFloat(item.reserve_amount) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td>${escHtml(item.donor_name)}</td>
@@ -8051,7 +8051,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 6:50 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 6:54 AM</span></div>
 </div>
 </body>
 </html>
