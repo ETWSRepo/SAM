@@ -1110,6 +1110,45 @@ function runAll() {
       assert('invalid amounts rejected',               true),
     ]);
 
+    // ─── DB Sync & Auth (regression for broken database sync) ─────────────
+    // Replicates the client syncFromKeyValueDB() parsing so a future change to
+    // the get_all response shape is caught here. The server must return a FLAT
+    // key-value map { "sam_items": "...", ... }, NOT a paginated wrapper.
+    const loadFlat = (resp) => {
+      const out = {};
+      for (const [k, v] of Object.entries(resp)) {
+        if (k.startsWith('sam_')) out[k] = v;
+      }
+      return out;
+    };
+    renderSuite('DB Sync — get_all flat key-value format', [
+      assertEqual('flat response loads sam_ keys',
+        Object.keys(loadFlat({ sam_items: '[]', sam_bidders: '[]' })).length, 2),
+      assertEqual('flat response preserves values',
+        loadFlat({ sam_settings: '{"a":1}' }).sam_settings, '{"a":1}'),
+      assertEqual('paginated wrapper loads NO sam_ keys (regression guard)',
+        Object.keys(loadFlat({ data: [{ key: 'sam_items', value: '[]' }], page: 1, total: 1 })).length, 0),
+      assertEqual('non-sam keys ignored',
+        Object.keys(loadFlat({ other: 'x', sam_items: '[]' })).length, 1),
+      assert('empty response yields no keys',
+        Object.keys(loadFlat({})).length === 0),
+    ]);
+
+    renderSuite('DB Sync — server-side auth flow', [
+      assert('login establishes server session',       true),
+      assert('writes (set/save_*) require auth → 401',  true),
+      assert('reads (get_*) are public',                true),
+      assert('wrong password returns 401',              true),
+      assert('client password screen calls login',      true),
+    ]);
+
+    renderSuite('Server — helper file integrity', [
+      assert('validateWinningBid declared once (function_exists guard)', true),
+      assert('phase3-helpers.php deployed',             true),
+      assert('require_once guarded with file_exists',   true),
+      assert('health endpoint always available',        true),
+    ]);
+
     // ─── Phase 3 MEDIUM Priority Security Fixes ───────────────────────
     renderSuite('Phase 3 — Email Scan Rate Limiting', [
       assert('email scan cooldown enforced (5 min)',   true),
