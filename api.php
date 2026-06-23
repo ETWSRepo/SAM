@@ -142,8 +142,23 @@ $allowedActions = [
     'get_storage_report',
 ];
 
-// Actions that don't require authentication
-$publicActions = ['init_tables', 'log'];
+// Actions that don't require authentication (read-only, initial data load)
+$publicActions = [
+    'health',           // API health check
+    'init_tables',      // Database initialization
+    'log',              // Debug logging
+    'get_all',          // Read all data from localStorage sync
+    'get_all_data',     // Read all data for export
+    'get_items',        // Read items
+    'get_bidders',      // Read bidders
+    'get_winners',      // Read winners
+    'get_payments',     // Read payments
+    'get_settings',     // Read settings
+    'get_auctions',     // Read auctions
+    'get_members',      // Read members
+    'get_registrations',// Read registrations
+    'get_emails',       // Read emails
+];
 
 // Validate action is in whitelist
 if (!in_array($action, $allowedActions, true)) {
