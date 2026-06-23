@@ -1,5 +1,8 @@
 .ftp-credentials
+.env
+.env.local
 node_modules/
 package.json
 package-lock.json
 run-tests.js
+debug_log.txt

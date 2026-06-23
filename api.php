@@ -1,15 +1,146 @@
 <?php
+session_start();
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SECURITY: Load environment variables
+// ═════════════════════════════════════════════════════════════════════════════
+function loadEnvFile($envFile) {
+    if (!file_exists($envFile)) {
+        // Fallback to hardcoded defaults if .env doesn't exist
+        return [
+            'DB_HOST' => 'localhost',
+            'DB_USER' => 'u177039107_sam',
+            'DB_PASS' => 'uemk$td*TjnAD9t4HXeYdsBQfqDDSZ4m',
+            'DB_NAME' => 'u177039107_sam',
+            'ALLOWED_ORIGIN' => 'https://etccapps.com',
+            'API_KEY' => 'sam_prod_2026_F1G4W8ZrfEJ2gTOBRnlLsD3y',
+            'SESSION_SECRET' => 'sam_sess_2026_K9mZxQ2pL8vN4rT6wJ5hG7cD1sE3aBfM',
+        ];
+    }
+
+    $env = [];
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        if (strpos($line, '=') !== false) {
+            [$key, $value] = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+            // Remove quotes if present
+            if (strlen($value) >= 2 && $value[0] === '"' && $value[-1] === '"') {
+                $value = substr($value, 1, -1);
+            }
+            $env[$key] = $value;
+        }
+    }
+
+    return $env;
+}
+
+$envFile = __DIR__ . '/.env';
+$env = loadEnvFile($envFile);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SECURITY: CORS Protection - Only allow requests from allowed origin
+// ═════════════════════════════════════════════════════════════════════════════
+$allowedOrigin = $env['ALLOWED_ORIGIN'] ?? 'https://etccapps.com';
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Allow same-site requests (no origin header) and whitelisted origins
+if (!empty($requestOrigin) && $requestOrigin !== $allowedOrigin) {
+    header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+    http_response_code(403);
+    echo json_encode(['error' => 'CORS error: Origin not allowed']);
+    exit;
+}
+
+header('Access-Control-Allow-Origin: ' . $allowedOrigin);
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
+header('Access-Control-Allow-Credentials: true');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit;
+}
 
-$host = 'localhost';
-$db   = 'u177039107_sam';
-$user = 'u177039107_sam';
-$pass = 'uemk$td*TjnAD9t4HXeYdsBQfqDDSZ4m';
+// ═════════════════════════════════════════════════════════════════════════════
+// SECURITY: Input validation - Whitelist allowed actions
+// ═════════════════════════════════════════════════════════════════════════════
+$input = json_decode(file_get_contents('php://input'), true) ?? [];
+$action = $input['action'] ?? '';
+
+$allowedActions = [
+    'get_all',
+    'get_all_data',
+    'set',
+    'clear_all',
+    'get_auctions',
+    'save_auctions',
+    'delete_auction',
+    'get_items',
+    'save_items',
+    'get_bidders',
+    'save_bidders',
+    'get_winners',
+    'save_winners',
+    'get_payments',
+    'save_payments',
+    'get_settings',
+    'save_settings',
+    'get_members',
+    'save_members',
+    'get_registrations',
+    'save_registrations',
+    'save_workflow_step',
+    'delete_workflow_step',
+    'get_fieldmap',
+    'save_fieldmap',
+    'get_emails',
+    'save_emails',
+    'get_regdb',
+    'get_table_data',
+    'db_stats',
+    'show_tables',
+    'show_keys',
+    'init_tables',
+    'log',
+];
+
+// Actions that don't require authentication
+$publicActions = ['init_tables', 'log'];
+
+// Validate action is in whitelist
+if (!in_array($action, $allowedActions, true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid action']);
+    exit;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SECURITY: Session validation (except for public actions)
+// ═════════════════════════════════════════════════════════════════════════════
+if (!in_array($action, $publicActions, true)) {
+    if (empty($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Database connection
+// ═════════════════════════════════════════════════════════════════════════════
+$host = $env['DB_HOST'];
+$db   = $env['DB_NAME'];
+$user = $env['DB_USER'];
+$pass = $env['DB_PASS'];
 
 // Allowed key suffixes (after sam_ prefix). Supports both static keys (sam_items)
 // and namespaced keys (sam_{auctionId}_items)
@@ -44,8 +175,6 @@ function logQuery($action, $query, $status, $details = '') {
     file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 }
 
-$input  = json_decode(file_get_contents('php://input'), true) ?? [];
-$action = $input['action'] ?? '';
 logQuery($action, 'START', 'REQUEST', "Action=$action");
 
 if ($action === 'get_all') {
@@ -130,12 +259,20 @@ if ($action === 'get_all') {
 } elseif ($action === 'db_stats') {
     // Get database statistics from all SQL tables
     try {
+        // Whitelist allowed tables to prevent arbitrary table access
+        $allowedTables = ['auctions', 'items', 'bidders', 'winners', 'payments', 'settings', 'emails', 'members', 'registrations', 'fieldmap', 'workflow_steps', 'sam_store'];
+
         $query = "SHOW TABLES";
         $tables = $pdo->query($query)->fetchAll(PDO::FETCH_COLUMN);
         $stats = [];
         $totalRows = 0;
 
         foreach ($tables as $table) {
+            // Only count whitelisted tables
+            if (!in_array($table, $allowedTables, true)) {
+                continue;
+            }
+
             $countQuery = "SELECT COUNT(*) FROM `$table`";
             $count = $pdo->query($countQuery)->fetchColumn();
             $stats[$table] = (int)$count;
@@ -156,10 +293,18 @@ if ($action === 'get_all') {
 } elseif ($action === 'show_tables') {
     // Show all tables and their row counts
     try {
+        // Whitelist allowed tables
+        $allowedTables = ['auctions', 'items', 'bidders', 'winners', 'payments', 'settings', 'emails', 'members', 'registrations', 'fieldmap', 'workflow_steps', 'sam_store'];
+
         $query = "SHOW TABLES";
         $tables = $pdo->query($query)->fetchAll(PDO::FETCH_COLUMN);
         $result = [];
         foreach ($tables as $table) {
+            // Only show whitelisted tables
+            if (!in_array($table, $allowedTables, true)) {
+                continue;
+            }
+
             $countQuery = "SELECT COUNT(*) FROM `$table`";
             $count = $pdo->query($countQuery)->fetchColumn();
             $descQuery = "DESCRIBE `$table`";
@@ -309,21 +454,6 @@ if ($action === 'get_all') {
 // ═══════════════════════════════════════════════════════════════════════════
 // TABLE CRUD OPERATIONS
 // ═══════════════════════════════════════════════════════════════════════════
-
-} elseif ($action === 'get_auctions') {
-    try {
-        $query = "SELECT id, name, status, created FROM auctions ORDER BY created DESC";
-        $rows = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
-        logQuery($action, $query, 'SUCCESS', 'Rows: ' . count($rows));
-        echo json_encode($rows);
-    } catch (Exception $e) {
-        logQuery($action, 'SELECT * FROM auctions', 'ERROR', $e->getMessage());
-        // Fallback to key-value store
-        $query = "SELECT `value` FROM sam_store WHERE `key` = 'sam_auctions' LIMIT 1";
-        $val = $pdo->query($query)->fetchColumn();
-        logQuery($action, $query, 'FALLBACK', 'Using key-value store');
-        echo $val ?: '[]';
-    }
 
 } elseif ($action === 'delete_auction') {
     $auctionId = $input['id'] ?? '';
@@ -912,9 +1042,9 @@ if ($action === 'get_all') {
 } elseif ($action === 'get_table_data') {
     $table = $input['table'] ?? '';
     // Whitelist allowed tables
-    $allowedTables = ['sam_store', 'auctions', 'items', 'bidders', 'winners', 'payments', 'settings', 'emails', 'members', 'registrations'];
+    $allowedTables = ['sam_store', 'auctions', 'items', 'bidders', 'winners', 'payments', 'settings', 'emails', 'members', 'registrations', 'fieldmap'];
 
-    if (!in_array($table, $allowedTables)) {
+    if (!in_array($table, $allowedTables, true)) {
         logQuery($action, 'N/A', 'ERROR', "Invalid table: $table");
         echo json_encode(['error' => 'Invalid table']);
         exit;
