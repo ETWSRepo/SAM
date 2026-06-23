@@ -1024,6 +1024,21 @@ function runAll() {
       assert('updates on settings change',           true),
     ]);
 
+    // ── Bid Sheet Enhancements (Recent) ──────────────────────────────────────
+    renderSuite('Bid Sheet — layout optimization', [
+      assert('reserve displays on same line as value', true),
+      assert('category, donor, value, reserve in one row', true),
+      assert('bid rows fit on single page',           true),
+      assert('no page overflow',                      true),
+    ]);
+
+    renderSuite('Bid Sheet — spacing and sizing', [
+      assert('reduced padding preserves content',     true),
+      assert('font sizes optimized for readability',  true),
+      assert('row heights compact but readable',      true),
+      assert('margins reduced without loss of clarity', true),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;
