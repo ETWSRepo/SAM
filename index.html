@@ -1700,7 +1700,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 10:48 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 10:50 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -4548,7 +4548,7 @@ function refreshWinnersTable() {
       <td style="font-size:12px;">${escHtml(item.description || '')}</td>
       <td style="font-size:12px;">${fmtDollar(item.value)}</td>
       <td style="font-size:12px;">${parseFloat(item.reserve_amount||0) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
-      <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(bidderNum ? (w.winning_bid || '') : ''))}" placeholder="$0.00" ${isReadOnly() ? 'disabled' : ''}></td>
+      <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(w.winning_bid || ''))}" placeholder="$0.00" ${isReadOnly() ? 'disabled' : ''}></td>
       <td><select class="win-num" style="${selStyle}" ${isReadOnly() ? 'disabled' : ''}><option value="">— select bidder —</option>${bidderOptions}</select></td>
       <td style="text-align:center;"><button class="btn danger win-clear workflow-edit-btn" style="font-size:11px;padding:2px 8px;">Clear</button></td>
     `;
@@ -8321,7 +8321,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 10:48 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 10:50 AM</span></div>
 </div>
 </body>
 </html>
