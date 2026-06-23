@@ -970,9 +970,11 @@
       <!-- Items table -->
       <div class="card" id="items-card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>Loaded Items</span>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:14px;font-weight:600;">Loaded Items</span>
+            <button class="btn primary workflow-edit-btn" id="btn-load-items" style="font-size:14px;font-weight:600;padding:10px 20px;background:var(--accent);color:#fff;border-color:var(--accent);">Update Items</button>
+          </div>
           <div style="display:flex;gap:8px;">
-            <button class="btn primary workflow-edit-btn" id="btn-load-items" style="font-size:11px; padding:4px 10px;">Update Items</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearTableFilters('#items-table')">Clear Filter</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showCategories()">View Categories</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('items')">View All</button>
@@ -1702,7 +1704,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 2:37 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 2:40 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -8320,7 +8322,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 2:37 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 2:40 PM</span></div>
 </div>
 </body>
 </html>
