@@ -943,20 +943,26 @@
               <button class="btn primary workflow-edit-btn" id="btn-scan" style="font-size:14px;font-weight:600;padding:10px 20px;background:var(--accent);color:#fff;border-color:var(--accent);">Scan Emails</button>
             </div>
             <div style="display:flex;gap:8px;">
-              <button class="btn workflow-edit-btn" style="font-size:11px;padding:3px 10px;" onclick="deleteCheckedEmails()">🗑 Delete Checked</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearTableFilters('#email-table')">Clear Filter</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('emails')">View All</button>
             </div>
           </div>
           <div style="overflow-x:auto;max-height:210px;overflow-y:auto;">
-            <table class="tablekit" id="email-table" data-tk-sort="false">
+            <table class="tablekit" id="email-table" data-tk-sort="false" style="table-layout:fixed;width:100%;min-width:1000px;">
+              <colgroup>
+                <col style="width:110px;">
+                <col style="width:140px;">
+                <col style="width:180px;">
+                <col style="width:200px;">
+                <col style="width:170px;">
+              </colgroup>
               <thead style="position:sticky;top:0;z-index:1;">
                 <tr>
-                  <th style="width:40px;text-align:center;"><input type="checkbox" id="email-check-all" style="cursor:pointer;" onchange="toggleAllEmailCheckboxes(this.checked)"></th>
                   <th>Submission Date</th>
                   <th>From</th>
                   <th>Subject</th>
                   <th>Preview</th>
+                  <th style="text-align:center;">Actions</th>
                 </tr>
               </thead>
               <tbody id="email-tbody"></tbody>
@@ -984,7 +990,7 @@
               <col style="width:80px;"><col style="width:130px;"><col style="width:160px;">
               <col style="width:200px;"><col style="width:80px;"><col style="width:80px;">
               <col style="width:130px;"><col style="width:160px;"><col style="width:120px;">
-              <col style="width:130px;"><col style="width:220px;">
+              <col style="width:130px;"><col style="width:140px;">
             </colgroup>
             <thead>
               <tr>
@@ -998,7 +1004,7 @@
                 <th>Donor Email</th>
                 <th>Donor Phone</th>
                 <th>Date Loaded</th>
-                <th>Preview</th>
+                <th style="width:140px;text-align:center;">Actions</th>
               </tr>
             </thead>
             <tbody id="items-tbody"></tbody>
@@ -1702,7 +1708,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 2:57 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 5:04 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3010,12 +3016,7 @@ function renderEmailTable(emails) {
   const tbody = document.getElementById('email-tbody');
   tbody.innerHTML = '';
 
-  // Archived auctions are read-only — disable the select-all header checkbox
-  // (the row checkboxes below are disabled inline). Keep this in sync on every
-  // render since the header checkbox persists across navigations.
   const ro = isReadOnly();
-  const checkAll = document.getElementById('email-check-all');
-  if (checkAll) { checkAll.disabled = ro; checkAll.style.cursor = ro ? 'not-allowed' : 'pointer'; }
 
   if (!emails.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-secondary);">No emails found.</td></tr>';
@@ -3025,12 +3026,13 @@ function renderEmailTable(emails) {
   emails.forEach((email, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center;width:40px;"><input type="checkbox" class="email-row-checkbox" data-idx="${idx}" style="cursor:${ro ? 'not-allowed' : 'pointer'};" ${ro ? 'disabled' : ''}></td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(email.date)}</td>
       <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.from)}</td>
       <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(email.subject)}</td>
-      <td style="width:60px;text-align:center;">
-        <span onclick="showEmailModal(${idx})" title="View email" style="cursor:pointer;display:inline-flex;align-items:center;color:var(--text-secondary);transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'"><svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" stroke-width="1.4" xmlns="http://www.w3.org/2000/svg"><rect x="0.7" y="0.7" width="12.6" height="9.6" rx="1"/><path d="M0.7 2l6.3 4.5L13.3 2"/></svg></span>
+      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);">${escHtml(email.preview)}</td>
+      <td style="text-align:center;font-size:11px;white-space:nowrap;">
+        <button class="btn" style="padding:3px 10px;margin-right:4px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="showEmailModal(${idx})" title="View email">View</button>
+        <button class="btn danger" style="padding:3px 10px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="deleteEmailByIndex(${idx})" title="Delete email">Delete</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -3038,34 +3040,187 @@ function renderEmailTable(emails) {
 
 }
 
-function toggleAllEmailCheckboxes(checked) {
-  document.querySelectorAll('.email-row-checkbox').forEach(cb => cb.checked = checked);
+function editEmailByIndex(idx) {
+  const email = scannedEmails[idx];
+  if (!email) return;
+  showEmailModal(idx);
 }
 
-// TableKit.initAll() rebuilds every <th>, which wipes the select-all checkbox
-// from the email table's first header cell. Restore it here (called once after
-// TableKit.initAll). The checkbox column needs no sort/filter dropdown, so we
-// clear TableKit's markup for that cell and put the checkbox back.
-function restoreEmailCheckAll() {
-  const table = document.getElementById('email-table');
-  const th = table && table.querySelector('thead th');
-  if (!th || document.getElementById('email-check-all')) return;
-  th.innerHTML = '';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.id = 'email-check-all';
-  cb.style.cursor = 'pointer';
-  cb.addEventListener('change', () => toggleAllEmailCheckboxes(cb.checked));
-  th.appendChild(cb);
-}
-
-function deleteCheckedEmails() {
-  const checked = [...document.querySelectorAll('.email-row-checkbox:checked')].map(cb => parseInt(cb.dataset.idx));
-  if (!checked.length) { alert('No emails selected.'); return; }
-  if (!confirm('Delete ' + checked.length + ' email' + (checked.length !== 1 ? 's' : '') + '?')) return;
-  scannedEmails = scannedEmails.filter((email, idx) => !checked.includes(idx));
+function deleteEmailByIndex(idx) {
+  if (!confirm('Delete this email?')) return;
+  scannedEmails.splice(idx, 1);
   renderEmailTable(scannedEmails);
-  document.getElementById('email-check-all').checked = false;
+  persistItemLoadScreenToDB();
+}
+
+function editItemByNumber(itemNumber) {
+  console.log('[editItemByNumber] Called with itemNumber:', itemNumber);
+
+  const item = Items.getAll().find(i => i.item_number === itemNumber);
+  if (!item) {
+    console.log('[editItemByNumber] Item not found');
+    alert('Item not found');
+    return;
+  }
+
+  // Find the row in the table - prioritize modal if it's open
+  const modal = document.getElementById('view-all-modal');
+  const isModalOpen = modal && modal.style.display === 'flex';
+
+  let row;
+  if (isModalOpen) {
+    console.log('[editItemByNumber] Modal is open, searching modal table first');
+    row = [...document.querySelectorAll('#view-all-table tr')].find(tr =>
+      tr.cells[0]?.textContent.trim() === itemNumber
+    );
+  }
+
+  // Fall back to main table if not found in modal
+  if (!row) {
+    console.log('[editItemByNumber] Not found in modal, searching main table');
+    row = [...document.querySelectorAll('#items-tbody tr')].find(tr =>
+      tr.cells[0]?.textContent.trim() === itemNumber
+    );
+  }
+
+  console.log('[editItemByNumber] Found row:', !!row, 'in', isModalOpen && row?.closest('#view-all-table') ? 'modal' : 'main');
+
+  if (!row) {
+    console.log('[editItemByNumber] Row not found in any table');
+    return;
+  }
+
+  // Store original values for cancel
+  const originalValues = {
+    date: row.cells[1]?.textContent || '',
+    description: row.cells[3]?.textContent || '',
+    value: row.cells[4]?.textContent || '',
+    reserve: row.cells[5]?.textContent || '',
+    donor_name: row.cells[6]?.textContent || '',
+    donor_email: row.cells[7]?.textContent || '',
+    donor_phone: row.cells[8]?.textContent || ''
+  };
+  console.log('[editItemByNumber] Original values:', originalValues);
+
+  // Make item # editable
+  console.log('[editItemByNumber] Converting row cells to editable...');
+  row.cells[0].innerHTML = `<input type="text" value="${escHtml(itemNumber)}" style="width:100%;padding:4px;border:1px solid var(--border);font-weight:600;">`;
+  console.log('[editItemByNumber] cell[0] converted');
+
+  // Make category a dropdown
+  const catOptions = Object.entries({100:'Auto',200:'Corvette',300:'Mens',400:'Womens',500:'Household',600:'Artwork',700:'Baskets',800:'Certs',900:'Misc'})
+    .map(([code, name]) => `<option value="${code}" ${String(item.category_code) === code ? 'selected' : ''}>${code} - ${name}</option>`)
+    .join('');
+  row.cells[2].innerHTML = `<select style="width:100%;padding:4px;border:1px solid var(--border);font-size:11px;">${catOptions}</select>`;
+
+  // Other editable fields
+  row.cells[1].innerHTML = `<input type="text" value="${escHtml(originalValues.date)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[3].innerHTML = `<textarea style="width:100%;padding:4px;border:1px solid var(--border);font-size:11px;">${escHtml(originalValues.description)}</textarea>`;
+  row.cells[4].innerHTML = `<input type="text" value="${escHtml(originalValues.value)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[5].innerHTML = `<input type="text" value="${escHtml(originalValues.reserve)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[6].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_name)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[7].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_email)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[8].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_phone)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+
+  // Replace action buttons with Save/Cancel
+  row.cells[10].innerHTML = `
+    <button class="btn success" style="padding:3px 8px;margin-right:4px;font-size:10px;" onclick="saveItemEdit('${itemNumber}')">Save</button>
+    <button class="btn" style="padding:3px 8px;font-size:10px;" onclick="cancelItemEdit('${itemNumber}')">Cancel</button>
+  `;
+}
+
+function saveItemEdit(itemNumber) {
+  // CRITICAL: Get the items array ONCE and reuse it throughout
+  // If we call Items.getAll() multiple times, we might get stale copies
+  const allItems = Items.getAll();
+  const item = allItems.find(i => i.item_number === itemNumber);
+  if (!item) return;
+
+  // Find the row by looking for the one with the Save button (works in main table AND view-all modal)
+  const row = [...document.querySelectorAll('tr')].find(tr =>
+    tr.cells[10]?.querySelector('button.success')
+  );
+  if (!row) {
+    debugLog(`✗ Could not find row for editing`);
+    return;
+  }
+
+  // Get edited values from inputs
+  const textarea = row.cells[3]?.querySelector('textarea');
+  const newDesc = textarea?.value;
+
+  console.log('[saveItemEdit] Textarea found:', !!textarea);
+  console.log('[saveItemEdit] Raw textarea value:', JSON.stringify(newDesc));
+  console.log('[saveItemEdit] Value length:', newDesc?.length);
+
+  const newValue = row.cells[4]?.querySelector('input')?.value;
+
+  console.log('[saveItemEdit] Before update:', {desc: item.description, value: item.item_value});
+  console.log('[saveItemEdit] Input values from form:', {newDesc, newValue});
+
+  item.item_number = row.cells[0]?.querySelector('input')?.value || item.item_number;
+  item.email_date = row.cells[1]?.querySelector('input')?.value || item.email_date;
+  item.category_code = row.cells[2]?.querySelector('select')?.value || item.category_code;
+
+  // Always update with new value if it exists (not just || logic)
+  if (newDesc !== undefined && newDesc !== null) {
+    item.description = newDesc;
+  }
+  if (newValue !== undefined && newValue !== null) {
+    item.item_value = newValue;
+  }
+
+  item.reserve_amount = row.cells[5]?.querySelector('input')?.value || item.reserve_amount;
+  item.donor_name = row.cells[6]?.querySelector('input')?.value || item.donor_name;
+  item.donor_email = row.cells[7]?.querySelector('input')?.value || item.donor_email;
+  item.donor_phone = row.cells[8]?.querySelector('input')?.value || item.donor_phone;
+
+  console.log('[saveItemEdit] After update:', {desc: item.description, value: item.item_value});
+  console.log('[saveItemEdit] Full item object:', item);
+
+  // Verify the change in the items array (use the same allItems we've been modifying!)
+  const savedItem = allItems.find(i => i.item_number === item.item_number);
+  console.log('[saveItemEdit] Item in Items array after modification:', savedItem);
+
+  debugLog(`✓ Item saved: ${item.item_number}`);
+
+  // Save to database (use the SAME allItems array with our modifications)
+  console.log('[saveItemEdit] Calling DB.saveItems with allItems:', allItems);
+  DB.saveItems(allItems);
+  console.log('[saveItemEdit] DB.saveItems completed');
+
+  // Check if the View All modal is currently open
+  const modal = document.getElementById('view-all-modal');
+  const isInModal = modal && modal.style.display === 'flex';
+  console.log('[saveItemEdit] Modal element:', !!modal);
+  console.log('[saveItemEdit] Modal display:', modal?.style.display);
+  console.log('[saveItemEdit] Is in modal:', isInModal);
+
+  console.log('[saveItemEdit] About to call refreshItemsTable');
+  refreshItemsTable();
+  console.log('[saveItemEdit] refreshItemsTable completed');
+
+  console.log('[saveItemEdit] About to call persistItemLoadScreenToDB');
+  persistItemLoadScreenToDB();
+  console.log('[saveItemEdit] persistItemLoadScreenToDB completed');
+
+  // If editing in modal, refresh the View All to show updated data
+  if (isInModal) {
+    console.log('[saveItemEdit] Refreshing View All modal to show updates');
+    showViewAll('items');
+  }
+}
+
+function cancelItemEdit(itemNumber) {
+  refreshItemsTable();
+}
+
+function deleteItemByNumber(itemNumber) {
+  if (!confirm(`Delete item ${itemNumber}?`)) return;
+  let items = Items.getAll();
+  items = items.filter(i => i.item_number !== itemNumber);
+  DB.saveItems(items);
+  refreshItemsTable();
   persistItemLoadScreenToDB();
 }
 
@@ -3087,9 +3242,7 @@ function refreshItemsTable() {
   items.forEach(item => {
     const catCode  = item.category_code ? 'cat-' + item.category_code : 'cat-900';
     const emailIdx = scannedEmails.findIndex(e => e.id === item.email_message_id);
-    const previewCell = emailIdx >= 0
-      ? `<span onclick="showEmailModal(${emailIdx})" title="View email" style="cursor:pointer;display:inline-flex;align-items:center;color:var(--text-secondary);transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'">${EMAIL_ICON}</span>`
-      : '';
+    const ro = isReadOnly();
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
@@ -3102,7 +3255,11 @@ function refreshItemsTable() {
       <td>${escHtml(item.donor_email)}</td>
       <td>${escHtml(item.donor_phone)}</td>
       <td style="white-space:nowrap;">${escHtml(item.loaded_date)}</td>
-      <td style="text-align:center;">${previewCell}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        ${emailIdx >= 0 ? `<button class="btn" style="padding:3px 10px;margin-right:4px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="showEmailModal(${emailIdx})" title="View email">View</button>` : ''}
+        <button class="btn" style="padding:3px 10px;margin-right:4px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="editItemByNumber('${escHtml(item.item_number)}')" title="Edit item">Edit</button>
+        <button class="btn danger" style="padding:3px 10px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="deleteItemByNumber('${escHtml(item.item_number)}')" title="Delete item">Delete</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -8324,7 +8481,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 2:57 PM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 5:04 PM</span></div>
 </div>
 </body>
 </html>
