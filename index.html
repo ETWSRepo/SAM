@@ -1646,6 +1646,10 @@
             <span style="font-size:12px;color:var(--text-secondary);">Clear the registered members list.</span>
           </div>
           <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn danger" id="btn-clear-auctions">Clear Auctions</button>
+            <span style="font-size:12px;color:var(--text-secondary);">Delete <strong>all</strong> auctions and every auction's items, bidders, winners, pickup &amp; pay, and emails. Members &amp; settings are kept.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
             <button class="btn" onclick="showDatabaseStats()">Database Stats</button>
             <span style="font-size:12px;color:var(--text-secondary);">List all tables with row counts.</span>
           </div>
@@ -1696,7 +1700,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 9:15 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 23, 2026 10:48 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -7217,12 +7221,25 @@ function importRegCSV() {
     const isoTimestamp = new Date().toISOString();
     DB.saveSettings(Object.assign(DB.getSettings(), { regImportDate, regImportTimestamp: isoTimestamp }));
 
-    debugLog(`✓ Imported ${records.length} registrations - Timestamp: ${regImportDate}`);
-
-    const rDateEl = document.getElementById('reg-import-date');
-    if (rDateEl) rDateEl.value = regImportDate;
-    document.getElementById('reg-import-status').textContent = records.length + ' members imported.';
-    document.getElementById('inp-reg-csv').value = '';
+    // Load registrations back from the server to verify persistence
+    (async () => {
+      try {
+        const res = await secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'get_registrations' })
+        });
+        const dbRecs = await res.json().catch(() => []);
+        const count = Array.isArray(dbRecs) ? dbRecs.length : 0;
+        debugLog(`✓ Imported ${records.length} registrations - Verified ${count} in database - Timestamp: ${regImportDate}`);
+        document.getElementById('reg-import-status').textContent = count + ' registrations loaded from database.';
+      } catch (e) {
+        debugLog(`✓ Imported ${records.length} registrations (database verify failed: ${e.message})`);
+        document.getElementById('reg-import-status').textContent = records.length + ' members imported (verify pending).';
+      }
+      const rDateEl = document.getElementById('reg-import-date');
+      if (rDateEl) rDateEl.value = regImportDate;
+      document.getElementById('inp-reg-csv').value = '';
+    })();
   };
   reader.readAsText(file);
 }
@@ -7365,6 +7382,26 @@ document.getElementById('btn-clear-registrations').addEventListener('click', () 
   DB.saveRegDB([]);
   const s = document.getElementById('reg-import-status');
   if (s) s.textContent = 'Registered members cleared.';
+});
+
+document.getElementById('btn-clear-auctions').addEventListener('click', async () => {
+  if (!confirm('Delete ALL auctions and every auction\'s data (items, bidders, winners, pickup & pay, emails)? This cannot be undone.')) return;
+  try {
+    await secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'clear_auctions' })
+    });
+  } catch (e) { console.warn('clear_auctions failed:', e); }
+  // Wipe local cache for auctions + all auction-scoped data, then reload.
+  Object.keys(localStorage).forEach(k => {
+    if (k === 'sam_auctions' || k === 'sam_current_auction' ||
+        /^sam_(items|bidders|winners|payments|emails)$/.test(k) ||
+        /_(items|bidders|winners|payments|emails)$/.test(k)) {
+      try { localStorage.removeItem(k); } catch (e) {}
+    }
+  });
+  alert('All auctions cleared. Reloading…');
+  location.reload();
 });
 
 
@@ -8284,7 +8321,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 9:15 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 23, 2026 10:48 AM</span></div>
 </div>
 </body>
 </html>

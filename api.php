@@ -102,6 +102,7 @@ $allowedActions = [
     'set',
     'clear_all',
     'clear_data',
+    'clear_auctions',
     'get_auctions',
     'save_auctions',
     'delete_auction',
@@ -334,6 +335,29 @@ if ($action === 'login') {
     } catch (Exception $e) {
         logQuery($action, "clear_data $type", 'ERROR', $e->getMessage());
         echo json_encode(['error' => 'Failed to clear data: ' . $e->getMessage()]);
+    }
+
+} elseif ($action === 'clear_auctions') {
+    // Delete every auction AND all auction-scoped data (so nothing is orphaned).
+    // Leaves club-wide data (members, registrations, settings, fieldmap) intact.
+    try {
+        $types = ['items', 'bidders', 'winners', 'payments', 'emails'];
+        foreach ($types as $t) {
+            try { $pdo->exec("DELETE FROM `$t`"); } catch (Exception $inner) {
+                logQuery($action, "DELETE $t", 'WARN', $inner->getMessage());
+            }
+        }
+        $pdo->exec("DELETE FROM auctions");
+        $pdo->prepare("DELETE FROM sam_store WHERE `key` IN ('sam_auctions','sam_current_auction')")->execute();
+        foreach ($types as $t) {
+            $pdo->prepare("DELETE FROM sam_store WHERE `key` = ? OR `key` LIKE ? ESCAPE '\\\\'")
+                ->execute(["sam_$t", "sam\\_%\\_$t"]);
+        }
+        logQuery($action, 'clear_auctions', 'SUCCESS', 'All auctions + scoped data cleared');
+        echo json_encode(['ok' => true]);
+    } catch (Exception $e) {
+        logQuery($action, 'clear_auctions', 'ERROR', $e->getMessage());
+        echo json_encode(['error' => 'Failed to clear auctions: ' . $e->getMessage()]);
     }
 
 } elseif ($action === 'get_all') {
