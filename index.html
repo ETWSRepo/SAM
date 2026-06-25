@@ -1779,7 +1779,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 25, 2026 7:11 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 25, 2026 7:30 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3504,7 +3504,7 @@ function printBiddingSheets() {
   debugLog(`Printing bid sheets for ${checked.length} item${checked.length !== 1 ? 's' : ''}`);
 
   const s = DB.getSettings();
-  const bidCount     = s.bidCount       || 25;
+  const bidCount     = 20; // fixed at 20 rows so each bid sheet fills exactly one page
   const startPct     = (s.startingBidPct || 30) / 100;
   const finalPct     = (s.finalBidPct    || 150) / 100;
 
@@ -3532,7 +3532,7 @@ function printBiddingSheets() {
     const bidRows   = bidAmounts.map((amt, idx) => {
       const bold = (idx + 1) % 2 === 0 ? ' style="font-weight:700;"' : '';
       const disp = '$' + amt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
-      return `<tr><td>${idx + 1}</td><td${bold}>${disp}</td><td></td><td></td><td${bold}>${disp}</td></tr>`;
+      return `<tr><td></td><td></td><td${bold}>${disp}</td></tr>`;
     }).join('');
     return `
     <div class="sheet">
@@ -3554,8 +3554,8 @@ function printBiddingSheets() {
         </tr>
       </table>
       <table class="bid-table">
-        <thead><tr><th>#</th><th>Bid Amount</th><th>Bidder #</th><th>Bidder Initials</th><th>Bid Amount</th></tr></thead>
-        <tbody>${bidRows}<tr><td></td><td></td><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr></tbody>
+        <thead><tr><th>Bidder #</th><th>Bidder Initials</th><th>Bid Amount</th></tr></thead>
+        <tbody>${bidRows}</tbody>
       </table>
     </div>
     <div class="label-page">
@@ -3583,12 +3583,14 @@ function printBiddingSheets() {
   .sheet-info td { padding: 2px 4px; border: 1px solid #d2d2d7; vertical-align: top; }
   .sheet-info td.label { font-weight: 600; width: 75px; background: #f5f5f7; }
   .sheet-desc { word-wrap: break-word; white-space: normal; overflow-wrap: break-word; line-height: 1.2; max-width: 600px; }
+  /* 20 fixed bid rows at 0.30in each fill one page without spilling over. */
   .bid-table { width: 100%; border-collapse: collapse; font-size: 9px; }
-  .bid-table th { background: #dbeafe; font-weight: 600; padding: 1px 4px; border: 1px solid #d2d2d7; text-align: left; font-size: 8px; }
-  .bid-table td { padding: 1px 4px; border: 1px solid #d2d2d7; height: 22px; line-height: 22px; vertical-align: middle; }
-  .bid-table td:first-child { text-align: center; width: 22px; color: #6e6e73; font-size: 9px; }
-  .bid-table th:nth-child(2), .bid-table td:nth-child(2),
-  .bid-table th:nth-child(5), .bid-table td:nth-child(5) { width: 60px; }
+  .bid-table th { background: #dbeafe; font-weight: 600; padding: 1px 4px; border: 1px solid #000; text-align: left; font-size: 8px; }
+  .bid-table td { padding: 1px 4px; border: 1px solid #000; height: 0.30in; vertical-align: middle; }
+  /* Bidder # and Bidder Initials share equal width; Bid Amount is fixed. */
+  .bid-table th:nth-child(1), .bid-table td:nth-child(1),
+  .bid-table th:nth-child(2), .bid-table td:nth-child(2) { width: 45%; }
+  .bid-table th:nth-child(3), .bid-table td:nth-child(3) { width: 90px; }
   .label-page { width: 7.5in; margin: 0 auto; page-break-before: always; page-break-after: always; page-break-inside: avoid; height: 10in; position: relative; }
   .label-page:last-child { page-break-after: auto; }
   .label-content { position: absolute; top: 66.6%; left: 0; right: 0; text-align: center; padding: 0 0.5in; }
@@ -8840,7 +8842,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 25, 2026 7:11 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 25, 2026 7:30 AM</span></div>
 </div>
 </body>
 </html>

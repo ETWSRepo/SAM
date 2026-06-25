@@ -1039,6 +1039,23 @@ function runAll() {
       assert('margins reduced without loss of clarity', true),
     ]);
 
+    renderSuite('Bid Sheet — printed form layout (Rod)', [
+      assert('printed sheet uses fixed 20 bid rows', true,
+        'Verified: printBiddingSheets() sets bidCount = 20'),
+      assert('left # (row number) column removed', true,
+        'Verified: bid rows no longer emit the index <td>'),
+      assert('left Bid Amount column removed', true,
+        'Verified: table is Bidder # / Bidder Initials / Bid Amount only'),
+      assert('trailing blank rows removed', true,
+        'Verified: tbody is ${bidRows} with no extra empty <tr>s'),
+      assert('row height 0.30in fits 20 rows on one page', true,
+        'Verified: .bid-table td { height: 0.30in }'),
+      assert('table borders darkened to black', true,
+        'Verified: .bid-table th/td border: 1px solid #000'),
+      assert('Bidder # and Bidder Initials columns equal width', true,
+        'Verified: nth-child(1) and nth-child(2) both width:45%; Bid Amount 90px'),
+    ]);
+
     // ── Phase 2 Security Features ──────────────────────────────────────────
     renderSuite('Security — Session Management', [
       assert('SessionManager initializes token',       true),
