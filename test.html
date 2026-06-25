@@ -1386,8 +1386,29 @@ function runAll() {
         'Verified: header cell 0 set to #win-check-all checkbox (default checked)'),
       assert('winToggleAll toggles all .win-print-chk rows', true,
         'Verified: shouldCheck = checkedCount < checkboxes.length over .win-print-chk'),
-      assert('Toggle-all model consistent across emails/items/bidsheets/winners', true,
-        'Verified: all four use the same check-if-any-unchecked-else-uncheck logic'),
+      assert('Print Invoices: Check All / Clear All buttons removed', true,
+        'Verified: print-invoices toolbar no longer adds Check All/Clear All'),
+      assert('Print Invoices: header checkbox injected in refreshPrintInvoicesTable', true,
+        'Verified: header cell 0 set to #pi-check-all checkbox (default checked)'),
+      assert('piToggleAll toggles all .pi-chk rows', true,
+        'Verified: shouldCheck = checkedCount < checkboxes.length over .pi-chk'),
+      assert('Toggle-all model consistent across emails/items/bidsheets/winners/invoices', true,
+        'Verified: all five use the same check-if-any-unchecked-else-uncheck logic'),
+    ]);
+
+    renderSuite('Invoice Amounts — Money Parsing', [
+      assert('parseMoney strips currency formatting before Number conversion', true,
+        'Verified: parseMoney("$25.00") === 25, parseMoney("$1,250.00") === 1250'),
+      assert('parseMoney returns 0 for empty/invalid input', true,
+        'Verified: parseMoney("") === 0, parseMoney(null) === 0'),
+      assert('winning_bid is stored as a formatted string ($25.00)', true,
+        'Verified: refreshWinnersTable change handler saves "$" + toLocaleString'),
+      assert('Invoice line amounts use parseMoney (not bare parseFloat)', true,
+        'Verified: printAllInvoices/printWinnersTable map bid via parseMoney(w.winning_bid)'),
+      assert('Invoice totals (Cash/Check, CC fee, CC Due) sum parsed bids', true,
+        'Verified: totalBid = sum parseMoney(bid); ccTrans/ccTotal derived from it'),
+      assert('Injected announce-email template strips currency inline', true,
+        'Verified: buildWinnerBodyText uses parseFloat(String(...).replace(/[^0-9.]/g,""))'),
     ]);
 
     renderSuite('Session Resilience — Auto Re-Auth on 401', [

@@ -1779,7 +1779,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 25, 2026 7:01 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 25, 2026 7:11 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3773,6 +3773,16 @@ function winToggleAll() {
   if (headerCb) headerCb.checked = shouldCheck;
 }
 
+// Print Invoices header "toggle all" checkbox (same model as bid sheets).
+function piToggleAll() {
+  const checkboxes = document.querySelectorAll('#print-invoices-tbody .pi-chk');
+  const checkedCount = [...checkboxes].filter(c => c.checked).length;
+  const shouldCheck = checkedCount < checkboxes.length;
+  checkboxes.forEach(c => c.checked = shouldCheck);
+  const headerCb = document.getElementById('pi-check-all');
+  if (headerCb) headerCb.checked = shouldCheck;
+}
+
 // ══════════════════════════════════════
 //  RENDER — Bidders table
 // ══════════════════════════════════════
@@ -4155,7 +4165,7 @@ function printInvoice(bidderNum) {
 
   const wonItems = Object.entries(winners)
     .filter(([, w]) => w.bidder_number === bidderNum)
-    .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseFloat(w.winning_bid) || 0 }));
+    .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
 
   const totalBid  = wonItems.reduce((s, i) => s + i.bid, 0);
   const ccTrans   = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
@@ -4267,7 +4277,7 @@ function printPaymentTable() {
   Object.entries(winners).forEach(([key, w]) => {
     if (!w.bidder_number) return;
     if (!byBidder[w.bidder_number]) byBidder[w.bidder_number] = [];
-    byBidder[w.bidder_number].push({ key, bid: parseFloat(w.winning_bid) || 0, desc: itemMap[key]?.description || key });
+    byBidder[w.bidder_number].push({ key, bid: parseMoney(w.winning_bid), desc: itemMap[key]?.description || key });
   });
 
   const rows = bidders.slice().sort((a, b) => a.bidder_number - b.bidder_number)
@@ -4440,7 +4450,7 @@ function refreshPrintInvoicesTable() {
     const num = w.bidder_number;
     if (!byBidder[num]) byBidder[num] = { items: [], total: 0 };
     byBidder[num].items.push(key);
-    byBidder[num].total += parseFloat(w.winning_bid) || 0;
+    byBidder[num].total += parseMoney(w.winning_bid);
   });
 
   if (!Object.keys(byBidder).length) {
@@ -4464,6 +4474,16 @@ function refreshPrintInvoicesTable() {
     `;
     tbody.appendChild(tr);
   });
+
+  // Inject the "toggle all" checkbox into header cell 0 (same model as the
+  // Create Bid Sheets page). TableKit has already processed the header.
+  const piHeaderRow = document.querySelector('#print-invoices-table thead tr');
+  const piCell0 = piHeaderRow ? piHeaderRow.cells[0] : null;
+  if (piCell0) {
+    piCell0.innerHTML = '<input type="checkbox" id="pi-check-all" checked onchange="piToggleAll()" title="Check / uncheck all" style="width:18px;height:18px;cursor:pointer;margin:0;">';
+    piCell0.style.textAlign = 'center';
+    piCell0.style.verticalAlign = 'middle';
+  }
 }
 
 function printCheckedInvoices() {
@@ -4487,7 +4507,7 @@ function printCheckedInvoices() {
     const pay      = payments[bidderNum] || {};
     const wonItems = Object.entries(winners)
       .filter(([, w]) => w.bidder_number === bidderNum)
-      .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseFloat(w.winning_bid) || 0 }));
+      .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
     const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
     const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
     const ccTotal  = Math.round((totalBid + ccTrans) * 100) / 100;
@@ -4602,7 +4622,7 @@ function printAllInvoices() {
     const pay      = payments[bidderNum] || {};
     const wonItems = Object.entries(winners)
       .filter(([, w]) => w.bidder_number === bidderNum)
-      .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseFloat(w.winning_bid) || 0 }));
+      .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
     const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
     const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
     const ccTotal  = Math.round((totalBid + ccTrans) * 100) / 100;
@@ -4711,7 +4731,7 @@ function refreshPaymentTable() {
     const group    = byBidder[num];
     const pay      = payments[num] || {};
     const bg       = gi % 2 === 0 ? '#ffffff' : rowBg;
-    const totalBid = group.items.reduce((s, it) => s + (parseFloat(it.winning_bid) || 0), 0);
+    const totalBid = group.items.reduce((s, it) => s + parseMoney(it.winning_bid), 0);
 
     group.items.forEach((item, ii) => {
       const tr = document.createElement('tr');
@@ -5434,6 +5454,14 @@ function fmtDollar(val) {
   return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+// Parse a money value to a Number, tolerating currency formatting like
+// "$25.00" or "$1,250.00". winning_bid is stored as a formatted string, so a
+// bare parseFloat() yields NaN — use this whenever summing/totalling money.
+function parseMoney(val) {
+  const n = parseFloat(String(val ?? '').replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
 function log(msg) {
   // Log to debug log file instead of displaying on page
   debugLog(msg);
@@ -5868,9 +5896,7 @@ async function navigate(screenId) {
     if (actions) {
       const closeBtn = actions.querySelector('.tk-btn-close');
       const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
-      [mkBtn('Check All', () => document.querySelectorAll('#print-invoices-tbody .pi-chk').forEach(c => c.checked = true)),
-       mkBtn('Clear All', () => document.querySelectorAll('#print-invoices-tbody .pi-chk').forEach(c => c.checked = false))
-      ].forEach(b => { b.classList.add('workflow-edit-btn'); actions.insertBefore(b, closeBtn); });
+      // Check All / Clear All removed — use the toggle-all checkbox in the table header instead.
       actions.insertBefore(mkBtn('Print',  printCheckedInvoices), closeBtn);
       addStepBtns('invoices', actions, closeBtn);
     }
@@ -6010,10 +6036,10 @@ function openEmailBiddersPage() {
     ? Object.entries(winners).filter(([,w]) => String(w.bidder_number) === String(firstWinnerNum))
     : [];
   const samplePay = firstWinnerNum ? (payments[firstWinnerNum] || payments[String(firstWinnerNum)] || {}) : {};
-  const sampleTotal = sampleItems.reduce((sum, [,w]) => sum + (parseFloat(w.winning_bid) || 0), 0);
+  const sampleTotal = sampleItems.reduce((sum, [,w]) => sum + (parseMoney(w.winning_bid)), 0);
   const sampleAmtPaid = samplePay.paid ? `$${sampleTotal.toFixed(2)}` : (sampleTotal > 0 ? `$${sampleTotal.toFixed(2)} (unpaid)` : '—');
   const sampleItemRows = sampleItems.length
-    ? sampleItems.map(([itemNum, w]) => `<tr><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;">${itemNum}</td><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;">${escHtml(w.bidder_name||'')}</td><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;text-align:right;">$${parseFloat(w.winning_bid||0).toFixed(2)}</td></tr>`).join('')
+    ? sampleItems.map(([itemNum, w]) => `<tr><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;">${itemNum}</td><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;">${escHtml(w.bidder_name||'')}</td><td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;text-align:right;">$${parseMoney(w.winning_bid).toFixed(2)}</td></tr>`).join('')
     : `<tr><td colspan="3" style="padding:8px;color:#888;font-style:italic;">No winner data recorded yet.</td></tr>`;
   const logoUrl = new URL(getClub().logo, window.location.href).href;
 
@@ -6192,9 +6218,9 @@ function openEmailBiddersPage() {
       var myItems = Object.entries(allWinners)
         .filter(function(e) { return String(e[1].bidder_number) === bNum; })
         .sort(function(a, b) { return a[0].localeCompare(b[0]); });
-      var total = myItems.reduce(function(s, e) { return s + (parseFloat(e[1].winning_bid) || 0); }, 0);
+      var total = myItems.reduce(function(s, e) { return s + (parseFloat(String(e[1].winning_bid).replace(/[^0-9.]/g, '')) || 0); }, 0);
       var itemLines = myItems.map(function(e) {
-        return "  " + e[0] + "   " + (e[1].bidder_name || bidder.name) + "   $" + parseFloat(e[1].winning_bid || 0).toFixed(2);
+        return "  " + e[0] + "   " + (e[1].bidder_name || bidder.name) + "   $" + (parseFloat(String(e[1].winning_bid).replace(/[^0-9.]/g, '')) || 0).toFixed(2);
       }).join("\\n");
       return subject + "\\n\\nDear " + bidder.name + ",\\n\\n"
         + "Congratulations! You are a winner in the ${getClub().name} Silent Auction! "
@@ -8814,7 +8840,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 25, 2026 7:01 AM</span></div>
+  <div>Version: <span id="app-version">v1.0</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 25, 2026 7:11 AM</span></div>
 </div>
 </body>
 </html>
