@@ -1776,7 +1776,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 25, 2026 8:18 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 26, 2026 8:33 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3523,6 +3523,12 @@ function printBiddingSheets() {
       const disp = '$' + amt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
       return `<tr><td></td><td></td><td${bold}>${disp}</td></tr>`;
     }).join('');
+    // Truncate the description so each page's content genuinely fits one page
+    // (reliable across print engines, unlike CSS clamping/overflow). The bid
+    // sheet gets a short copy; the text page gets a longer one.
+    const dDesc     = item.description || '';
+    const descSheet = dDesc.length > 280 ? dDesc.slice(0, 280).trim() + '…' : dDesc;
+    const descLabel = dDesc.length > 700 ? dDesc.slice(0, 700).trim() + '…' : dDesc;
     return `
     <div class="sheet">
       <div class="sheet-header">
@@ -3530,14 +3536,14 @@ function printBiddingSheets() {
         <div class="sheet-item-num">Item # ${escHtml(String(item.item_number))}</div>
       </div>
       <table class="sheet-info">
-        <tr><td class="label">Description</td><td class="sheet-desc" style="font-weight:700;font-size:13px;">${escHtml(item.description || '')}</td></tr>
+        <tr><td class="label">Description</td><td class="sheet-desc" style="font-weight:700;font-size:13px;"><div class="desc-clamp">${escHtml(descSheet)}</div></td></tr>
         <tr>
           <td colspan="2" style="padding:0;border:none;">
             <div style="display:grid;grid-template-columns:2fr 1.5fr 0.8fr ${parseFloat(item.reserve_amount || 0) > 0 ? '0.8fr' : ''};gap:0;height:100%;">
-              <div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Category</span><div style="font-size:10px;">${escHtml(item.category_name || '')}</div></div>
-              <div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Donor</span><div style="font-size:10px;">${escHtml(item.donor_name || '')}</div></div>
-              <div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Value</span><div style="font-size:10px;">${fmtDollar(item.item_value || item.value)}</div></div>
-              ${parseFloat(item.reserve_amount || 0) > 0 ? `<div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Reserve</span><div style="font-size:10px;">${fmtDollar(item.reserve_amount)}</div></div>` : ''}
+              <div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Category: </span><span style="font-size:10px;">${escHtml(item.category_name || '')}</span></div>
+              <div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Donor: </span><span style="font-size:10px;">${escHtml(item.donor_name || '')}</span></div>
+              <div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Value: </span><span style="font-size:10px;">${fmtDollar(item.item_value || item.value)}</span></div>
+              ${parseFloat(item.reserve_amount || 0) > 0 ? `<div style="border:1px solid #d2d2d7;padding:3px 5px;"><span style="font-weight:600;font-size:9px;">Reserve: </span><span style="font-size:10px;">${fmtDollar(item.reserve_amount)}</span></div>` : ''}
             </div>
           </td>
         </tr>
@@ -3550,7 +3556,7 @@ function printBiddingSheets() {
     <div class="label-page">
       <div class="label-content">
         <div class="label-item-num">Item # ${escHtml(String(item.item_number))}</div>
-        <div class="label-desc">${escHtml(item.description || '')}</div>
+        <div class="label-desc">${escHtml(descLabel)}</div>
       </div>
     </div>
   `;
@@ -3563,6 +3569,8 @@ function printBiddingSheets() {
 <style>
   * { box-sizing: border-box; }
   body { font-family: system-ui, sans-serif; margin: 0; color: #111; }
+  /* Description text is truncated in JS so the content fits one page; a simple
+     page break (no fixed height) then starts the text page. */
   .sheet { width: 7.5in; margin: 0 auto; padding: 0.12in 0.25in; page-break-after: always; page-break-inside: avoid; }
   .sheet:last-child { page-break-after: auto; }
   .sheet-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1d1d1f; padding-bottom: 2px; margin-bottom: 2px; }
@@ -3572,6 +3580,9 @@ function printBiddingSheets() {
   .sheet-info td { padding: 2px 4px; border: 1px solid #d2d2d7; vertical-align: top; }
   .sheet-info td.label { font-weight: 600; width: 75px; background: #f5f5f7; }
   .sheet-desc { word-wrap: break-word; white-space: normal; overflow-wrap: break-word; line-height: 1.2; max-width: 600px; }
+  /* Clamp the bid-sheet description to 4 lines so it can never push the 20-row
+     table off the page. The full description still prints on the label page. */
+  .sheet-desc .desc-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
   /* 20 fixed bid rows at 0.30in each fill one page without spilling over. */
   .bid-table { width: 100%; border-collapse: collapse; font-size: 9px; }
   .bid-table th { background: #dbeafe; font-weight: 600; padding: 1px 4px; border: 1px solid #000; text-align: left; font-size: 8px; }
@@ -3580,13 +3591,16 @@ function printBiddingSheets() {
   .bid-table th:nth-child(1), .bid-table td:nth-child(1),
   .bid-table th:nth-child(2), .bid-table td:nth-child(2) { width: 45%; }
   .bid-table th:nth-child(3), .bid-table td:nth-child(3) { width: 90px; }
-  .label-page { width: 7.5in; margin: 0 auto; page-break-before: always; page-break-after: always; page-break-inside: avoid; height: 10in; position: relative; }
+  /* Label/description page: top-aligned block. Description text is truncated in
+     JS so it fits one page; page-break-inside:avoid keeps it together, no fixed
+     height (fixed heights were causing each block to span two pages). */
+  .label-page { width: 7.5in; margin: 0 auto; page-break-after: always; page-break-inside: avoid; text-align: center; box-sizing: border-box; padding: 0.4in 0.5in 0; }
   .label-page:last-child { page-break-after: auto; }
-  .label-content { position: absolute; top: 66.6%; left: 0; right: 0; text-align: center; padding: 0 0.5in; }
-  .label-item-num { font-size: 35pt; font-weight: 800; color: #0071e3; line-height: 1.2; }
-  .label-desc { font-size: 35pt; font-weight: 600; color: #1d1d1f; line-height: 1.2; margin-top: 8px; }
+  .label-content { width: 100%; }
+  .label-item-num { font-size: 30pt; font-weight: 800; color: #0071e3; line-height: 1.2; }
+  .label-desc { font-size: 20pt; font-weight: 600; color: #1d1d1f; line-height: 1.25; margin-top: 24px; }
   @page { size: letter portrait; margin: 0.3in; }
-  @media print { body { margin: 0; } .sheet { width: 100%; padding: 0; } .label-page { width: 100%; height: 100vh; } }
+  @media print { body { margin: 0; } .sheet { width: 100%; padding: 0; } .label-page { width: 100%; } }
 
   /* ── MOBILE RESPONSIVENESS ── */
   @media (max-width: 768px) {
@@ -8845,7 +8859,7 @@ const DuplicateEmailChecker = {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.2</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 25, 2026 8:18 AM</span></div>
+  <div>Version: <span id="app-version">v1.3</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 26, 2026 8:33 PM</span></div>
 </div>
 </body>
 </html>

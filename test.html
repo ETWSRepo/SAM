@@ -1083,6 +1083,23 @@ function runAll() {
       assert('margins reduced without loss of clarity', true),
     ]);
 
+    renderSuite('Bid Sheet — exactly two pages per item', [
+      assert('description truncated in JS so content actually fits a page', true,
+        'Verified: descSheet = slice(0,280), descLabel = slice(0,700) with … suffix'),
+      assert('bid sheet description capped at 280 chars (~4 lines)', true,
+        'Verified: printBiddingSheets() uses descSheet on the bid sheet'),
+      assert('text page description capped at 700 chars (fits one page)', true,
+        'Verified: printBiddingSheets() uses descLabel on the label page'),
+      assert('no fixed page heights (those caused blank/extra pages)', true,
+        'Verified: .sheet/.label-page have no height/overflow; rely on page breaks'),
+      assert('page-break-after on sheet, label is :last-child (no page 3)', true,
+        'Verified: .sheet page-break-after:always; .label-page:last-child page-break-after:auto'),
+      assert('page-break-inside:avoid keeps each block on one page', true,
+        'Verified: both .sheet and .label-page set page-break-inside: avoid'),
+      assert('category, donor, value shown inline (label: value)', true,
+        'Verified: each cell is <span>Label: </span><span>value</span> on one line'),
+    ]);
+
     renderSuite('Bid Sheet — printed form layout (Rod)', [
       assert('printed sheet uses fixed 20 bid rows', true,
         'Verified: printBiddingSheets() sets bidCount = 20'),
