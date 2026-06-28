@@ -1787,7 +1787,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 28, 2026 8:13 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 28, 2026 8:21 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -1826,11 +1826,12 @@
         <h2>Change Log</h2>
       </div>
       <div class="card" style="margin-bottom:16px;">
-        <div id="changelog-meta" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+        <div id="changelog-meta" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
           <div class="stat-box"><div class="stat-label">Repository</div><div class="stat-value" id="cl-repo">—</div></div>
           <div class="stat-box"><div class="stat-label">FTP Deployment Path</div><div class="stat-value" id="cl-ftp">—</div></div>
           <div class="stat-box"><div class="stat-label">Files in Repo</div><div class="stat-value" id="cl-files">—</div></div>
           <div class="stat-box"><div class="stat-label">Files Deployed</div><div class="stat-value" id="cl-files-deployed">—</div></div>
+          <div class="stat-box"><div class="stat-label">Lines of Code</div><div class="stat-value" id="cl-loc">—</div></div>
           <div class="stat-box"><div class="stat-label">Total Changes</div><div class="stat-value" id="cl-changes">—</div></div>
         </div>
       </div>
@@ -8929,19 +8930,33 @@ async function loadChangelog() {
     const commits = await commitsRes.json();
 
     const DEPLOY_EXCLUDE = ['.git','.ftp-credentials','deploy.ps1','CLAUDE.md','README.md','node_modules','run-tests.js','package.json','package-lock.json','bump-version.ps1'];
-    let fileCount = '—', deployedCount = '—';
+    const TEXT_EXTS = ['html','js','css','md','ps1','txt','json','htaccess','sh','ts','jsx','tsx'];
+    let fileCount = '—', deployedCount = '—', loc = '—';
     if (treeRes.ok) {
       const tree  = await treeRes.json();
       const blobs = (tree.tree || []).filter(n => n.type === 'blob');
-      fileCount    = blobs.length;
+      fileCount     = blobs.length;
       deployedCount = blobs.filter(n => {
         const parts = n.path.split('/');
         return !parts.some(p => DEPLOY_EXCLUDE.includes(p));
       }).length;
+
+      const textBlobs = blobs.filter(n => {
+        const ext = n.path.split('.').pop().toLowerCase();
+        return TEXT_EXTS.includes(ext);
+      });
+      document.getElementById('cl-loc').textContent = 'counting…';
+      const blobResults = await Promise.all(
+        textBlobs.map(n => fetch(`${BASE}/git/blobs/${n.sha}`, { headers:{ Accept:'application/vnd.github.raw+json' } })
+          .then(r => r.ok ? r.text() : '')
+          .catch(() => ''))
+      );
+      loc = blobResults.reduce((sum, txt) => sum + (txt.match(/\n/g) || []).length + (txt ? 1 : 0), 0).toLocaleString();
     }
 
     document.getElementById('cl-files').textContent          = fileCount;
     document.getElementById('cl-files-deployed').textContent = deployedCount;
+    document.getElementById('cl-loc').textContent            = loc;
     document.getElementById('cl-changes').textContent        = commits.length + (commits.length === 100 ? '+' : '');
 
     const tbody = document.getElementById('changelog-tbody');
@@ -8978,7 +8993,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
   <div>Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a></div>
-  <div>Version: <span id="app-version">v1.5</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 28, 2026 8:13 AM</span></div>
+  <div>Version: <span id="app-version">v1.6</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 28, 2026 8:21 AM</span></div>
 </div>
 </body>
 </html>
