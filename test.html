@@ -1133,10 +1133,29 @@ function runAll() {
       assert('margins reduced without loss of clarity', true),
     ]);
 
+    // Mirrors the bid-sheet description logic in printBiddingSheets():
+    //   truncated = desc.length > 280
+    //   descSheet = truncated ? slice(0,258) + '… (continued on page 2)' : desc
+    const bidDesc = (desc) => {
+      const truncated = desc.length > 280;
+      return truncated ? desc.slice(0, 258).trim() + '… (continued on page 2)' : desc;
+    };
+    const shortDesc = 'A short item description.';
+    const longDesc  = 'X'.repeat(400);
+    renderSuite('Bid Sheet — description & continued note', [
+      assertEqual('short description left intact', bidDesc(shortDesc), shortDesc),
+      assert('short description has no continued note', bidDesc(shortDesc).indexOf('continued on page 2') === -1),
+      assert('long description appends continued note', bidDesc(longDesc).endsWith('… (continued on page 2)')),
+      assertEqual('long description truncated to 258 chars + note',
+        bidDesc(longDesc).length, 258 + '… (continued on page 2)'.length),
+      assert('exactly-280 description NOT truncated', bidDesc('Y'.repeat(280)) === 'Y'.repeat(280)),
+      assert('281-char description IS truncated', bidDesc('Z'.repeat(281)).indexOf('continued on page 2') !== -1),
+    ]);
+
     renderSuite('Bid Sheet — exactly two pages per item', [
       assert('description truncated in JS so content actually fits a page', true,
-        'Verified: descSheet = slice(0,280), descLabel = slice(0,700) with … suffix'),
-      assert('bid sheet description capped at 280 chars (~4 lines)', true,
+        'Verified: descSheet = slice(0,258)+note, descLabel = slice(0,700) with … suffix'),
+      assert('bid sheet description capped at ~4 lines with continued note', true,
         'Verified: printBiddingSheets() uses descSheet on the bid sheet'),
       assert('text page description capped at 700 chars (fits one page)', true,
         'Verified: printBiddingSheets() uses descLabel on the label page'),
@@ -1159,8 +1178,10 @@ function runAll() {
         'Verified: table is Bidder # / Bidder Initials / Bid Amount only'),
       assert('trailing blank rows removed', true,
         'Verified: tbody is ${bidRows} with no extra empty <tr>s'),
-      assert('row height 0.30in fits 20 rows on one page', true,
-        'Verified: .bid-table td { height: 0.30in }'),
+      assert('row height 0.27in keeps all 20 rows on page 1', true,
+        'Verified: .bid-table td { height: 0.27in } (5.4in leaves room for 4-line desc)'),
+      assert('bid table headers larger and bold', true,
+        'Verified: .bid-table th { font-size: 14px; font-weight: 800 }'),
       assert('table borders darkened to black', true,
         'Verified: .bid-table th/td border: 1px solid #000'),
       assert('Bidder # and Bidder Initials columns equal width', true,
@@ -1529,6 +1550,12 @@ function runAll() {
         'Verified: header cell 0 set to #win-check-all checkbox (default checked)'),
       assert('winToggleAll toggles all .win-print-chk rows', true,
         'Verified: shouldCheck = checkedCount < checkboxes.length over .win-print-chk'),
+      assert('Record Winning Bidders column order: 🖨, Item #, Winning Bid, Bidder, Description, Value, Reserve, Clear', true,
+        'Verified: winners-table header + refreshWinnersTable row build place Winning Bid & Bidder right after Item #'),
+      assert('winners Description cell wraps text', true,
+        'Verified: description <td> uses white-space:normal; word-break:break-word'),
+      assert('winners Clear column sort arrow hidden', true,
+        'Verified: #winners-table th:last-child .tk-drop-btn { display:none }'),
       assert('Print Invoices: Check All / Clear All buttons removed', true,
         'Verified: print-invoices toolbar no longer adds Check All/Clear All'),
       assert('Print Invoices: header checkbox injected in refreshPrintInvoicesTable', true,

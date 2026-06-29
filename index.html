@@ -346,6 +346,8 @@
       font-size: 12px !important;
       height: 22px;
     }
+    /* Hide sort/filter dropdown arrow on Clear button column only */
+    #winners-table thead tr th:last-child .tk-drop-btn { display: none !important; }
     /* Suppress TableKit duplicate sort arrow on label */
     .tk-th-label::after { display: none !important; }
     .pa-card { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px; cursor:pointer; transition:box-shadow .15s,border-color .15s; }
@@ -1297,26 +1299,26 @@
         <div id="winners-toolbar-wrap"></div>
         <div style="padding:4px 16px;min-height:20px;"><span id="winners-save-note" style="font-size:12px;"></span></div>
         <div style="overflow-x:auto;max-height:calc(100vh - 278px);overflow-y:auto;">
-          <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;min-width:1150px;">
+          <table class="tablekit" id="winners-table" style="table-layout:fixed;width:100%;min-width:900px;">
             <colgroup>
               <col style="width:36px;">
-              <col style="width:90px;">
-              <col style="width:280px;">
-              <col style="width:90px;">
-              <col style="width:90px;">
+              <col style="width:70px;">
+              <col style="width:70px;">
               <col style="width:110px;">
-              <col style="width:280px;">
-              <col style="width:80px;">
+              <col style="width:350px;">
+              <col style="width:70px;">
+              <col style="width:70px;">
+              <col style="width:70px;">
             </colgroup>
             <thead>
               <tr>
                 <th style="text-align:center;" title="Print invoice">🖨</th>
                 <th>Item #</th>
+                <th>Winning Bid</th>
+                <th>Bidder</th>
                 <th>Description</th>
                 <th>Value</th>
                 <th>Reserve</th>
-                <th>Winning Bid</th>
-                <th>Bidder</th>
                 <th></th>
               </tr>
             </thead>
@@ -1837,7 +1839,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 5:13 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 5:43 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3731,7 +3733,12 @@ function printBiddingSheets() {
     // (reliable across print engines, unlike CSS clamping/overflow). The bid
     // sheet gets a short copy; the text page gets a longer one.
     const dDesc     = item.description || '';
-    const descSheet = dDesc.length > 280 ? dDesc.slice(0, 280).trim() + '…' : dDesc;
+    const truncated = dDesc.length > 280;
+    // Fill the 4 allocated lines, reserving room for the inline note (same font
+    // and size as the description) when the text is too long for the bid sheet.
+    const descSheet = truncated
+      ? dDesc.slice(0, 258).trim() + '… (continued on page 2)'
+      : dDesc;
     const descLabel = dDesc.length > 700 ? dDesc.slice(0, 700).trim() + '…' : dDesc;
     return `
     <div class="sheet">
@@ -3787,10 +3794,11 @@ function printBiddingSheets() {
   /* Clamp the bid-sheet description to 4 lines so it can never push the 20-row
      table off the page. The full description still prints on the label page. */
   .sheet-desc .desc-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
-  /* 20 fixed bid rows at 0.30in each fill one page without spilling over. */
+  /* 20 fixed bid rows at 0.27in each (5.4in) leave headroom so the full 4-line
+     description + header still fit, keeping all 20 rows on the first page. */
   .bid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .bid-table th { background: #dbeafe; font-weight: 600; padding: 1px 4px; border: 1px solid #000; text-align: left; font-size: 11px; }
-  .bid-table td { padding: 1px 4px; border: 1px solid #000; height: 0.30in; vertical-align: middle; }
+  .bid-table th { background: #dbeafe; font-weight: 800; padding: 1px 4px; border: 1px solid #000; text-align: left; font-size: 14px; }
+  .bid-table td { padding: 1px 4px; border: 1px solid #000; height: 0.27in; vertical-align: middle; }
   /* Bidder Initials and Bidder # share equal width; Bid Amount is fixed. */
   .bid-table th:nth-child(1), .bid-table td:nth-child(1),
   .bid-table th:nth-child(2), .bid-table td:nth-child(2) { width: 45%; }
@@ -5197,11 +5205,11 @@ function refreshWinnersTable() {
     tr.innerHTML = `
       <td style="text-align:center;"><input type="checkbox" class="win-print-chk" checked style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent);" ${isReadOnly() ? 'disabled' : ''}></td>
       <td style="font-weight:600;font-size:13px;">${escHtml(key)}</td>
-      <td style="font-size:12px;">${escHtml(item.description || '')}</td>
-      <td style="font-size:12px;">${fmtDollar(item.item_value)}</td>
-      <td style="font-size:12px;">${parseFloat(item.reserve_amount||0) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td><input class="win-bid" style="${inpStyle}text-align:right;" value="${escHtml(String(w.winning_bid || ''))}" placeholder="$0.00" ${isReadOnly() ? 'disabled' : ''}></td>
       <td><select class="win-num" style="${selStyle}" ${isReadOnly() ? 'disabled' : ''}><option value="">— select bidder —</option>${bidderOptions}</select></td>
+      <td style="font-size:12px;white-space:normal;word-break:break-word;overflow-wrap:break-word;">${escHtml(item.description || '')}</td>
+      <td style="font-size:12px;">${fmtDollar(item.item_value)}</td>
+      <td style="font-size:12px;">${parseFloat(item.reserve_amount||0) > 0 ? fmtDollar(item.reserve_amount) : ''}</td>
       <td style="text-align:center;"><button class="btn danger win-clear workflow-edit-btn" style="font-size:11px;padding:2px 8px;">Clear</button></td>
     `;
     // Set selected option after insertion
@@ -9171,7 +9179,7 @@ async function loadChangelog() {
 </script>
 
 <div id="app-footer">
-  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.9</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 5:13 PM</span>
+  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.10</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 5:43 PM</span>
 </div>
 
 </body>
