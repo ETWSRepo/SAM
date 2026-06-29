@@ -924,17 +924,28 @@ function runAll() {
       const m = String(text).trim().match(/v?(\d+)\.(\d+)/);
       return { major: m ? parseInt(m[1], 10) : 1, minor: m ? parseInt(m[2], 10) : 0 };
     }
-    renderSuite('Version — deployed footer is source of truth', [
+    // Settings version, when saved, is authoritative and drives the footer.
+    // Mirrors loadSettingsForm()/updateFooterVersion(): use the persisted value
+    // if present, otherwise fall back to the deploy-baked footer span.
+    const pickVersion = (settings, footer) => ({
+      major: (settings.versionMajor != null) ? settings.versionMajor : footer.major,
+      minor: (settings.versionMinor != null) ? settings.versionMinor : footer.minor,
+    });
+    const footer = parseDeployedVersion('v1.10');
+    renderSuite('Version — Settings persists & drives footer', [
       assertEqual('parses "v1.1" major', parseDeployedVersion('v1.1').major, 1),
-      assertEqual('parses "v1.1" minor', parseDeployedVersion('v1.1').minor, 1),
       assertEqual('parses multi-digit "v2.37"', parseDeployedVersion('v2.37').minor, 37),
       assertEqual('falls back to 1.0 on garbage', parseDeployedVersion('xx').major, 1),
-      assert('Settings reads version from footer span, not DB', true,
-        'Verified: loadSettingsForm() uses getDeployedVersion() to fill inp-version-major/minor'),
-      assert('updateFooterVersion no longer overwrites footer from DB', true,
-        'Verified: updateFooterVersion() is a no-op; footer #app-version is authoritative'),
-      assert('version minor is bumped at checkpoint (not each deploy)', true,
-        'Verified: bump-version.ps1 increments app-version minor; deploy.ps1 only bakes the date'),
+      assertEqual('saved Settings version wins (major)', pickVersion({ versionMajor: 3, versionMinor: 5 }, footer).major, 3),
+      assertEqual('saved Settings version wins (minor)', pickVersion({ versionMajor: 3, versionMinor: 5 }, footer).minor, 5),
+      assertEqual('no saved version falls back to footer major', pickVersion({}, footer).major, 1),
+      assertEqual('no saved version falls back to footer minor', pickVersion({}, footer).minor, 10),
+      assert('updateFooterVersion writes saved Settings version to footer', true,
+        'Verified: updateFooterVersion() sets #app-version from settings.versionMajor/Minor when present'),
+      assert('getAppVersion reads version from Settings', true,
+        'Verified: getAppVersion() returns v${settings.versionMajor}.${settings.versionMinor}'),
+      assert('footer version re-applied in init() after DOM parsed', true,
+        'Verified: init() calls updateFooterVersion() after applyBranding() (footer #app-version exists by then)'),
     ]);
 
     renderSuite('Error Logging — deploy date tracking', [

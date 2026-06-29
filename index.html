@@ -1839,7 +1839,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 5:43 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 5:57 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -5409,11 +5409,11 @@ function loadSettingsForm() {
   renderFieldMapTable();
   refreshDeleteAuctionDropdown();
   updateFavicon(s.clubFavicon);
-  // Version reflects the actual deployed build (baked into the footer span),
-  // not a stored Settings value, so it can't drift out of sync.
+  // Prefer the persisted Settings version; fall back to the deployed footer
+  // build when no version has been saved yet.
   const dv = getDeployedVersion();
-  document.getElementById('inp-version-major').value = dv.major;
-  document.getElementById('inp-version-minor').value = dv.minor;
+  document.getElementById('inp-version-major').value = (s.versionMajor != null) ? s.versionMajor : dv.major;
+  document.getElementById('inp-version-minor').value = (s.versionMinor != null) ? s.versionMinor : dv.minor;
   // Deploy date comes from the footer span baked in at deploy time, not Settings
   const footerDate = document.getElementById('app-deploy-date')?.textContent?.trim();
   document.getElementById('inp-deploy-date').value = (footerDate && footerDate !== 'Never') ? footerDate : (s.deployDate || '');
@@ -5437,9 +5437,16 @@ function getDeployedVersion() {
   return { major: m ? parseInt(m[1], 10) : 1, minor: m ? parseInt(m[2], 10) : 0 };
 }
 
-// Version is baked into the footer at deploy time; nothing to overwrite here.
-// Kept as a no-op so existing call sites remain valid.
-function updateFooterVersion() { /* footer #app-version is authoritative */ }
+// When a version has been saved in Settings, it drives the footer #app-version
+// span. Otherwise the deploy-time baked value (set by deploy.ps1) is left as-is.
+function updateFooterVersion() {
+  const s  = DB.getSettings();
+  const el = document.getElementById('app-version');
+  if (!el) return;
+  if (s.versionMajor != null || s.versionMinor != null) {
+    el.textContent = 'v' + (s.versionMajor || 1) + '.' + (s.versionMinor || 0);
+  }
+}
 
 // Deploy date is baked into the footer span by deploy.ps1; do not overwrite it
 // from Settings (which may be blank/stale after server sync).
@@ -9059,6 +9066,10 @@ const DuplicateEmailChecker = {
   TableKit.initAll();
   fixAllStickyHeaders();
   applyBranding();
+  // Footer #app-version is created after the inline script, so the early
+  // top-level updateFooterVersion() call ran before it existed. Re-apply here
+  // (DOM is fully parsed by now) so a saved Settings version shows in the footer.
+  updateFooterVersion();
 
   const settings = DB.getSettings();
   if (!settings.gmailClientId) {
@@ -9179,7 +9190,7 @@ async function loadChangelog() {
 </script>
 
 <div id="app-footer">
-  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.10</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 5:43 PM</span>
+  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.11</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 5:57 PM</span>
 </div>
 
 </body>
