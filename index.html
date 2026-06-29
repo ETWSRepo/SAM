@@ -1026,6 +1026,7 @@
             </div>
             <div style="display:flex;gap:8px;">
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearTableFilters('#email-table')">Clear Filter</button>
+              <button class="btn danger" style="font-size:11px;padding:3px 10px;" onclick="deleteAllEmails()">Delete All</button>
               <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('emails')">View All</button>
             </div>
           </div>
@@ -1062,22 +1063,26 @@
           </div>
           <div style="display:flex;gap:8px;">
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearTableFilters('#items-table')">Clear Filter</button>
+            <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="openAddItemModal()">+ Add Item</button>
+            <button class="btn danger" style="font-size:11px;padding:3px 10px;" onclick="deleteAllItems()">Delete All</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showCategories()">View Categories</button>
             <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="showViewAll('items')">View All</button>
           </div>
         </div>
         <div style="overflow:auto;max-height:258px;">
-          <table class="tablekit" id="items-table" style="table-layout:fixed;width:100%;min-width:1490px;">
+          <table class="tablekit" id="items-table" style="table-layout:fixed;width:100%;min-width:1690px;">
             <colgroup>
-              <col style="width:70px;"><col style="width:150px;"><col style="width:140px;">
-              <col style="width:260px;"><col style="width:90px;"><col style="width:90px;">
-              <col style="width:140px;"><col style="width:190px;"><col style="width:130px;">
-              <col style="width:150px;"><col style="width:150px;">
+              <col style="width:70px;"><col style="width:150px;"><col style="width:150px;">
+              <col style="width:80px;"><col style="width:140px;"><col style="width:360px;">
+              <col style="width:90px;"><col style="width:90px;"><col style="width:140px;">
+              <col style="width:190px;"><col style="width:130px;"><col style="width:200px;">
             </colgroup>
             <thead>
               <tr>
                 <th>Item #</th>
                 <th>Submission Date</th>
+                <th>Date Loaded</th>
+                <th>Source</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th>Value</th>
@@ -1085,14 +1090,59 @@
                 <th>Donor Name</th>
                 <th>Donor Email</th>
                 <th>Donor Phone</th>
-                <th>Date Loaded</th>
-                <th style="width:140px;text-align:center;">Actions</th>
+                <th style="width:200px;text-align:center;">Actions</th>
               </tr>
             </thead>
             <tbody id="items-tbody"></tbody>
           </table>
         </div>
       </div>
+
+    <!-- Add Item Modal -->
+    <div id="add-item-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:var(--bg);border-radius:12px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+        <h3 style="margin:0 0 16px;font-size:16px;">Add Item</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Category</label>
+            <select id="add-item-category" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);"></select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Submission Date</label>
+            <input id="add-item-date" type="date" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Description *</label>
+            <input id="add-item-description" type="text" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Item Value *</label>
+            <input id="add-item-value" type="text" placeholder="$0.00" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Reserve Amount</label>
+            <input id="add-item-reserve" type="text" placeholder="$0.00" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Donor Name *</label>
+            <input id="add-item-donor" type="text" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Donor Email *</label>
+            <input id="add-item-email" type="email" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Donor Phone</label>
+            <input id="add-item-phone" type="tel" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button class="btn" onclick="closeAddItemModal()">Cancel</button>
+          <button class="btn primary workflow-edit-btn" onclick="saveAddItemModal()">Save</button>
+        </div>
+      </div>
+    </div>
+
     </section>
 
     <!-- ══ Step 2: Bid Sheets ══ -->
@@ -1181,7 +1231,7 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
             <div>
               <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Bidder #</label>
-              <input id="edit-bidder-num" type="text" readonly style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-section);color:var(--text-secondary);">
+              <input id="edit-bidder-num" type="text" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);">
             </div>
             <div>
               <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">Bidder Type</label>
@@ -1787,7 +1837,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 3:43 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 5:13 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -3117,6 +3167,7 @@ function processEmails(emails) {
         email_date:       email.date,
         email_preview:    email.preview || '',
         loaded_date:      new Date().toLocaleString(),
+        source:           'Email',
       }, fields);
 
       // Trim all string values
@@ -3318,6 +3369,111 @@ function deleteCheckedViewAllItems() {
   showViewAll('items');
 }
 
+function deleteAllEmails() {
+  if (scannedEmails.length === 0) { alert('No emails to delete.'); return; }
+  if (!confirm(`Delete all ${scannedEmails.length} email(s)? This cannot be undone.`)) return;
+
+  scannedEmails = [];
+  DB.saveEmails(scannedEmails);
+  renderEmailTable(scannedEmails);
+  persistItemLoadScreenToDB();
+  const mt = document.getElementById('m-total');
+  if (mt) mt.textContent = scannedEmails.length;
+}
+
+function deleteAllItems() {
+  const items = Items.getAll();
+  if (items.length === 0) { alert('No items to delete.'); return; }
+  if (!confirm(`Delete all ${items.length} item(s)? This cannot be undone.`)) return;
+
+  Items.clear();
+  refreshItemsTable();
+  persistItemLoadScreenToDB();
+  refreshMetrics();
+}
+
+function openAddItemModal() {
+  const modal = document.getElementById('add-item-modal');
+  if (!modal) return;
+
+  const categorySelect = document.getElementById('add-item-category');
+  if (categorySelect) {
+    categorySelect.innerHTML = Object.entries(CATEGORIES).map(([code, name]) =>
+      `<option value="${code}">${code} — ${name}</option>`
+    ).join('');
+  }
+  document.getElementById('add-item-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('add-item-description').value = '';
+  document.getElementById('add-item-value').value = '';
+  document.getElementById('add-item-reserve').value = '';
+  document.getElementById('add-item-donor').value = '';
+  document.getElementById('add-item-email').value = '';
+  document.getElementById('add-item-phone').value = '';
+
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
+  modal.style.setProperty('opacity', '1', 'important');
+
+  setTimeout(() => {
+    document.getElementById('add-item-description').focus();
+  }, 50);
+}
+
+function closeAddItemModal() {
+  document.getElementById('add-item-modal').style.display = 'none';
+}
+
+function saveAddItemModal() {
+  const desc = document.getElementById('add-item-description').value.trim();
+  const value = document.getElementById('add-item-value').value.trim();
+  const donor = document.getElementById('add-item-donor').value.trim();
+  const email = document.getElementById('add-item-email').value.trim();
+
+  if (!desc || !value || !donor || !email) {
+    alert('Required fields: Description, Value, Donor Name, Email');
+    return;
+  }
+
+  const categoryCode = document.getElementById('add-item-category').value;
+  const categoryName = CATEGORIES[categoryCode];
+  const itemNum = Items.nextItemNumber(categoryCode);
+
+  const submission = document.getElementById('add-item-date').value;
+  const reserve = document.getElementById('add-item-reserve').value.trim() || '0';
+  const phone = document.getElementById('add-item-phone').value.trim() || '';
+
+  const newItem = {
+    item_number: itemNum,
+    category_code: categoryCode,
+    category_name: categoryName,
+    description: desc,
+    item_value: value,
+    reserve_amount: reserve,
+    donor_name: donor,
+    donor_email: email,
+    donor_phone: phone,
+    email_date: submission ? (() => {
+      const [y, m, d] = submission.split('-').map(Number);
+      const now = new Date();
+      return new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds()).toLocaleString();
+    })() : '',
+    loaded_date: '',
+    email_message_id: '',
+    source: 'Added'
+  };
+
+  Items.add(newItem);
+
+  closeAddItemModal();
+  refreshItemsTable();
+  refreshMetrics();
+
+  // Scroll the loaded items table to the newly added (last) row
+  const tbody = document.getElementById('items-tbody');
+  const lastRow = tbody && tbody.lastElementChild;
+  if (lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function editItemByNumber(itemNumber) {
   console.log('[editItemByNumber] Called with itemNumber:', itemNumber);
 
@@ -3363,12 +3519,12 @@ function editItemByNumber(itemNumber) {
   // Store original values for cancel
   const originalValues = {
     date: row.cells[1 + off]?.textContent || '',
-    description: row.cells[3 + off]?.textContent || '',
-    value: row.cells[4 + off]?.textContent || '',
-    reserve: row.cells[5 + off]?.textContent || '',
-    donor_name: row.cells[6 + off]?.textContent || '',
-    donor_email: row.cells[7 + off]?.textContent || '',
-    donor_phone: row.cells[8 + off]?.textContent || ''
+    description: row.cells[5 + off]?.textContent || '',
+    value: row.cells[6 + off]?.textContent || '',
+    reserve: row.cells[7 + off]?.textContent || '',
+    donor_name: row.cells[8 + off]?.textContent || '',
+    donor_email: row.cells[9 + off]?.textContent || '',
+    donor_phone: row.cells[10 + off]?.textContent || ''
   };
   console.log('[editItemByNumber] Original values:', originalValues);
 
@@ -3381,19 +3537,19 @@ function editItemByNumber(itemNumber) {
   const catOptions = Object.entries({100:'Auto',200:'Corvette',300:'Mens',400:'Womens',500:'Household',600:'Artwork',700:'Baskets',800:'Certs',900:'Misc'})
     .map(([code, name]) => `<option value="${code}" ${String(item.category_code) === code ? 'selected' : ''}>${code} - ${name}</option>`)
     .join('');
-  row.cells[2 + off].innerHTML = `<select style="width:100%;padding:4px;border:1px solid var(--border);font-size:11px;">${catOptions}</select>`;
+  row.cells[4 + off].innerHTML = `<select style="width:100%;padding:4px;border:1px solid var(--border);font-size:11px;">${catOptions}</select>`;
 
   // Other editable fields
   row.cells[1 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.date)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
-  row.cells[3 + off].innerHTML = `<textarea style="width:100%;padding:4px;border:1px solid var(--border);font-size:11px;">${escHtml(originalValues.description)}</textarea>`;
-  row.cells[4 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.value)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
-  row.cells[5 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.reserve)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
-  row.cells[6 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_name)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
-  row.cells[7 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_email)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
-  row.cells[8 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_phone)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[5 + off].innerHTML = `<textarea style="width:100%;padding:4px;border:1px solid var(--border);font-size:11px;">${escHtml(originalValues.description)}</textarea>`;
+  row.cells[6 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.value)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[7 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.reserve)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[8 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_name)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[9 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_email)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
+  row.cells[10 + off].innerHTML = `<input type="text" value="${escHtml(originalValues.donor_phone)}" style="width:100%;padding:4px;border:1px solid var(--border);">`;
 
-  // Replace action buttons with Save/Cancel (actions cell is index 10 + offset)
-  row.cells[10 + off].innerHTML = `
+  // Replace action buttons with Save/Cancel (actions cell is index 11 + offset)
+  row.cells[11 + off].innerHTML = `
     <button class="btn success" style="padding:3px 8px;margin-right:4px;font-size:10px;" onclick="saveItemEdit('${itemNumber}')">Save</button>
     <button class="btn" style="padding:3px 8px;font-size:10px;" onclick="cancelItemEdit('${itemNumber}')">Cancel</button>
   `;
@@ -3419,21 +3575,21 @@ function saveItemEdit(itemNumber) {
   const off = row.querySelector('.item-view-all-checkbox') ? 1 : 0;
 
   // Get edited values from inputs
-  const textarea = row.cells[3 + off]?.querySelector('textarea');
+  const textarea = row.cells[5 + off]?.querySelector('textarea');
   const newDesc = textarea?.value;
 
   console.log('[saveItemEdit] Textarea found:', !!textarea);
   console.log('[saveItemEdit] Raw textarea value:', JSON.stringify(newDesc));
   console.log('[saveItemEdit] Value length:', newDesc?.length);
 
-  const newValue = row.cells[4 + off]?.querySelector('input')?.value;
+  const newValue = row.cells[6 + off]?.querySelector('input')?.value;
 
   console.log('[saveItemEdit] Before update:', {desc: item.description, value: item.item_value});
   console.log('[saveItemEdit] Input values from form:', {newDesc, newValue});
 
   item.item_number = row.cells[0 + off]?.querySelector('input')?.value || item.item_number;
   item.email_date = row.cells[1 + off]?.querySelector('input')?.value || item.email_date;
-  item.category_code = row.cells[2 + off]?.querySelector('select')?.value || item.category_code;
+  item.category_code = row.cells[4 + off]?.querySelector('select')?.value || item.category_code;
 
   // Always update with new value if it exists (not just || logic)
   if (newDesc !== undefined && newDesc !== null) {
@@ -3443,10 +3599,11 @@ function saveItemEdit(itemNumber) {
     item.item_value = newValue;
   }
 
-  item.reserve_amount = row.cells[5 + off]?.querySelector('input')?.value || item.reserve_amount;
-  item.donor_name = row.cells[6 + off]?.querySelector('input')?.value || item.donor_name;
-  item.donor_email = row.cells[7 + off]?.querySelector('input')?.value || item.donor_email;
-  item.donor_phone = row.cells[8 + off]?.querySelector('input')?.value || item.donor_phone;
+  item.reserve_amount = row.cells[7 + off]?.querySelector('input')?.value || item.reserve_amount;
+  item.donor_name = row.cells[8 + off]?.querySelector('input')?.value || item.donor_name;
+  item.donor_email = row.cells[9 + off]?.querySelector('input')?.value || item.donor_email;
+  item.donor_phone = row.cells[10 + off]?.querySelector('input')?.value || item.donor_phone;
+  item.source = 'Edited';
 
   console.log('[saveItemEdit] After update:', {desc: item.description, value: item.item_value});
   console.log('[saveItemEdit] Full item object:', item);
@@ -3506,7 +3663,7 @@ function refreshItemsTable() {
   tbody.innerHTML = '';
 
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--text-secondary);">No items loaded yet.</td></tr>';
     return;
   }
 
@@ -3520,6 +3677,8 @@ function refreshItemsTable() {
     tr.innerHTML = `
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
       <td style="white-space:nowrap;">${escHtml(item.email_date || '')}</td>
+      <td style="white-space:nowrap;">${escHtml(item.loaded_date)}</td>
+      <td>${escHtml(item.source || (item.email_message_id ? 'Email' : 'Added'))}</td>
       <td><span class="badge ${catCode}" style="white-space:nowrap;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
       <td style="white-space:normal;word-break:break-word;vertical-align:top;">${escHtml(item.description)}</td>
       <td>${fmtDollar(item.item_value)}</td>
@@ -3527,7 +3686,6 @@ function refreshItemsTable() {
       <td>${escHtml(item.donor_name)}</td>
       <td>${escHtml(item.donor_email)}</td>
       <td>${escHtml(item.donor_phone)}</td>
-      <td style="white-space:nowrap;">${escHtml(item.loaded_date)}</td>
       <td style="text-align:center;white-space:nowrap;">
         ${emailIdx >= 0 ? `<button class="btn" style="padding:3px 10px;margin-right:4px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="showEmailModal(${emailIdx})" title="View email">View</button>` : ''}
         <button class="btn" style="padding:3px 10px;margin-right:4px;font-size:11px;" ${ro ? 'disabled' : ''} onclick="editItemByNumber('${escHtml(item.item_number)}')" title="Edit item">Edit</button>
@@ -3899,13 +4057,14 @@ function updateBidderCountMetric() {
 function openBidderEditModal(num) {
   const b = Bidders.getAll().find(x => String(x.bidder_number) === String(num));
   if (!b) return;
+  const modal = document.getElementById('bidder-edit-modal');
+  modal.dataset.originalBidderNum = b.bidder_number;
   document.getElementById('edit-bidder-num').value   = b.bidder_number;
   document.getElementById('edit-bidder-type').value  = b.bidder_type || 'walk-in';
   document.getElementById('edit-bidder-last').value  = b.last_name   || '';
   document.getElementById('edit-bidder-first').value = b.first_name  || '';
   document.getElementById('edit-bidder-email').value = b.email       || '';
   document.getElementById('edit-bidder-phone').value = b.phone       || '';
-  const modal = document.getElementById('bidder-edit-modal');
   modal.style.display = 'flex';
   const phoneEl = document.getElementById('edit-bidder-phone');
   phoneEl.onblur = () => { phoneEl.value = fmtPhone(phoneEl.value); };
@@ -4055,9 +4214,11 @@ function addCheckedToWalkins() {
 }
 
 function saveBidderEdit() {
-  const num     = parseInt(document.getElementById('edit-bidder-num').value, 10);
+  const modal = document.getElementById('bidder-edit-modal');
+  const originalNum = parseInt(modal.dataset.originalBidderNum, 10);
+  const newNum = parseInt(document.getElementById('edit-bidder-num').value, 10);
   const bidders = Bidders.getAll();
-  const idx     = bidders.findIndex(b => b.bidder_number === num);
+  const idx = bidders.findIndex(b => b.bidder_number === originalNum);
   if (idx === -1) return;
   const lastEl  = document.getElementById('edit-bidder-last');
   const firstEl = document.getElementById('edit-bidder-first');
@@ -4071,6 +4232,22 @@ function saveBidderEdit() {
   if (!first) { missing.push('First Name'); firstEl.style.borderColor = 'var(--danger)'; }
   if (!email) { missing.push('Email');      emailEl.style.borderColor = 'var(--danger)'; }
   if (missing.length) { alert(`Required: ${missing.join(', ')}`); return; }
+  if (newNum !== originalNum) {
+    const exists = bidders.some(b => b.bidder_number === newNum);
+    if (exists) { alert('Bidder # already exists'); return; }
+    const winners = DB.getWinners();
+    const payments = DB.getPayments();
+    Object.entries(winners).forEach(([itemKey, w]) => {
+      if (w.bidder_number === originalNum) w.bidder_number = newNum;
+    });
+    if (payments[originalNum]) {
+      payments[newNum] = payments[originalNum];
+      delete payments[originalNum];
+    }
+    DB.saveWinners(winners);
+    DB.savePayments(payments);
+  }
+  bidders[idx].bidder_number = newNum;
   bidders[idx].bidder_type = document.getElementById('edit-bidder-type').value;
   bidders[idx].last_name  = last;
   bidders[idx].first_name = first;
@@ -8994,7 +9171,8 @@ async function loadChangelog() {
 </script>
 
 <div id="app-footer">
-  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.8</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 3:43 PM</span>
+  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.9</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 5:13 PM</span>
 </div>
+
 </body>
 </html>

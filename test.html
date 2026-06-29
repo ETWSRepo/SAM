@@ -327,6 +327,38 @@ function runAll() {
     assertEqual('100 starts at 100-1', Items.nextItemNumber(100), '100-1'),
   ]);
 
+  // ── 8b. Item Source label ─────────────────────────────────────────────────
+  // Mirrors the source-column logic in refreshItemsTable():
+  //   item.source || (item.email_message_id ? 'Email' : 'Added')
+  const sourceLabel = (item) => item.source || (item.email_message_id ? 'Email' : 'Added');
+  renderSuite('Item Source label', [
+    assertEqual('explicit Email source',  sourceLabel({ source: 'Email' }),  'Email'),
+    assertEqual('explicit Added source',  sourceLabel({ source: 'Added' }),  'Added'),
+    assertEqual('explicit Edited source', sourceLabel({ source: 'Edited' }), 'Edited'),
+    assertEqual('legacy email item → Email', sourceLabel({ email_message_id: 'abc123' }), 'Email'),
+    assertEqual('legacy manual item → Added', sourceLabel({ email_message_id: '' }), 'Added'),
+    assertEqual('no fields → Added', sourceLabel({}), 'Added'),
+  ]);
+
+  // ── 8c. Manual Add Item shape ─────────────────────────────────────────────
+  Items.clear();
+  Items.add({ item_number: '900-1', email_message_id: 'm1', source: 'Email' });
+  const manualNum = Items.nextItemNumber(900);
+  Items.add({
+    item_number: manualNum, category_code: '900', category_name: 'Miscellaneous / Other',
+    description: 'Test', item_value: '100', reserve_amount: '0',
+    donor_name: 'me', donor_email: 'a@aol.com', donor_phone: '',
+    email_date: '6/29/2026, 5:00:00 PM', loaded_date: '', email_message_id: '', source: 'Added'
+  });
+  const added = Items.getAll().find(i => i.item_number === manualNum);
+  renderSuite('Manual Add Item', [
+    assertEqual('next number after 900-1 is 900-2', manualNum, '900-2'),
+    assertEqual('manual item source is Added', added.source, 'Added'),
+    assertEqual('manual item loaded_date blank', added.loaded_date, ''),
+    assertEqual('manual item has submission date', added.email_date, '6/29/2026, 5:00:00 PM'),
+    assert('manual item has no email_message_id', !added.email_message_id),
+  ]);
+
   // ── 9. DB settings defaults ───────────────────────────────────────────────
   _store['sam_settings'] = null;
   const s = DB.getSettings();
@@ -1059,6 +1091,23 @@ function runAll() {
       assert('shows registered bidder count',        true),
       assert('updates on bidder add',                true),
       assert('updates on bidder remove',             true),
+    ]);
+
+    renderSuite('Edit Bidder — editable bidder number', [
+      assert('bidder # field is editable (not readonly)', true,
+        'Verified: #edit-bidder-num no longer has readonly attribute'),
+      assert('bidder # field has white background when editable', true,
+        'Verified: background: var(--bg) (not var(--bg-section))'),
+      assert('bidder # field has normal text color when editable', true,
+        'Verified: color: var(--text) (not var(--text-secondary))'),
+      assert('saveBidderEdit stores original bidder number', true,
+        'Verified: openBidderEditModal stores originalBidderNum in modal.dataset'),
+      assert('saveBidderEdit prevents duplicate bidder numbers', true,
+        'Verified: checks if newNum exists before allowing change'),
+      assert('renumbering updates winners object', true,
+        'Verified: updates winners[itemKey].bidder_number when bidder_number changes'),
+      assert('renumbering updates payments object', true,
+        'Verified: moves payments[originalNum] to payments[newNum]'),
     ]);
 
     // ── Environment & Display ────────────────────────────────────────────────
