@@ -1980,20 +1980,9 @@
             </div>
             <button class="btn primary" onclick="changeSettingsPassword()" style="font-size:12px;white-space:nowrap;">Change Password</button>
           </div>
-          <div style="display:flex;gap:12px;align-items:flex-end;">
-            <div style="width:80px;">
-              <label for="inp-version-major" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Major</label>
-              <input type="number" id="inp-version-major" min="0" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
-            </div>
-            <div style="width:80px;">
-              <label for="inp-version-minor" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Minor</label>
-              <input type="number" id="inp-version-minor" min="0" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
-            </div>
-          </div>
-          <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 7:03 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 7:16 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2032,8 +2021,7 @@
         <h2>Change Log</h2>
       </div>
       <div class="card" style="margin-bottom:16px;">
-        <div id="changelog-meta" style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;">
-          <div class="stat-box"><div class="stat-label">Current Version</div><div class="stat-value" id="cl-version">—</div></div>
+        <div id="changelog-meta" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
           <div class="stat-box"><div class="stat-label">Repository</div><div class="stat-value" id="cl-repo">—</div></div>
           <div class="stat-box"><div class="stat-label">FTP Deployment Path</div><div class="stat-value" id="cl-ftp">—</div></div>
           <div class="stat-box"><div class="stat-label">Files in Repo</div><div class="stat-value" id="cl-files">—</div></div>
@@ -3272,16 +3260,14 @@ async function sendEmailsViaGmail(emails) {
       } else {
         const err = await resp.json().catch(() => ({}));
         const msg = err.error?.message || ('HTTP ' + resp.status);
-        const version = getAppVersion();
         const deployDate = getDeployDate();
-        await debugLog(`✗ Gmail send failed for ${em.to}: ${msg} [${version}] [${deployDate}]`, 'ERROR');
+        await debugLog(`✗ Gmail send failed for ${em.to}: ${msg} [${deployDate}]`, 'ERROR');
         console.error('Gmail send failed for', em.to, ':', msg);
         failed.push(em.to + ' (' + msg + ')');
       }
     } catch (e) {
-      const version = getAppVersion();
       const deployDate = getDeployDate();
-      await debugLog(`✗ Gmail send error for ${em.to}: ${e.message} [${version}] [${deployDate}]`, 'ERROR');
+      await debugLog(`✗ Gmail send error for ${em.to}: ${e.message} [${deployDate}]`, 'ERROR');
       console.error('Gmail send error for', em.to, ':', e);
       failed.push(em.to + ' (' + e.message + ')');
     }
@@ -3377,9 +3363,8 @@ async function doScanInbox() {
 
   } catch (err) {
     const errMsg = err.result?.error?.message || err.message || err;
-    const version = getAppVersion();
     const deployDate = getDeployDate();
-    await debugLog(`✗ Scan error: ${errMsg} [${version}] [${deployDate}]`, 'ERROR');
+    await debugLog(`✗ Scan error: ${errMsg} [${deployDate}]`, 'ERROR');
     log('❌ Scan error: ' + errMsg);
     const _b1 = document.getElementById('btn-scan'); if (_b1) _b1.disabled = false;
     document.getElementById('scan-note').textContent = 'Scan failed.';
@@ -4618,9 +4603,8 @@ function addRegisteredMembers() {
     alert(added + ' registered member' + (added !== 1 ? 's' : '') + ' added.');
   } catch(err) {
     const errMsg = err.message || err;
-    const version = getAppVersion();
     const deployDate = getDeployDate();
-    debugLog(`✗ Error adding registered members: ${errMsg} [${version}] [${deployDate}]`, 'ERROR');
+    debugLog(`✗ Error adding registered members: ${errMsg} [${deployDate}]`, 'ERROR');
     console.error('addRegisteredMembers error:', err);
     alert('Error adding registered members: ' + errMsg);
   }
@@ -5701,43 +5685,10 @@ function loadSettingsForm() {
   renderFieldMapTable();
   refreshDeleteAuctionDropdown();
   updateFavicon(s.clubFavicon);
-  // Prefer the persisted Settings version; fall back to the deployed footer
-  // build when no version has been saved yet.
-  const dv = getDeployedVersion();
-  document.getElementById('inp-version-major').value = (s.versionMajor != null) ? s.versionMajor : dv.major;
-  document.getElementById('inp-version-minor').value = (s.versionMinor != null) ? s.versionMinor : dv.minor;
   // Deploy date comes from the footer span baked in at deploy time, not Settings
   const footerDate = document.getElementById('app-deploy-date')?.textContent?.trim();
   document.getElementById('inp-deploy-date').value = (footerDate && footerDate !== 'Never') ? footerDate : (s.deployDate || '');
-  updateVersionDisplay();
-  updateFooterVersion();
   document.getElementById('inp-settings-password').value = '';
-}
-
-function updateVersionDisplay() {
-  const major = document.getElementById('inp-version-major').value || '1';
-  const minor = document.getElementById('inp-version-minor').value || '0';
-  document.getElementById('version-display').textContent = 'Current Version: v' + major + '.' + minor;
-}
-
-// The footer #app-version span is baked at deploy time by deploy.ps1 (and the
-// minor is auto-incremented on each deploy), so it is the authoritative
-// deployed version. Parse it for use elsewhere (e.g. the Settings panel).
-function getDeployedVersion() {
-  const el = document.getElementById('app-version');
-  const m = el ? el.textContent.trim().match(/v?(\d+)\.(\d+)/) : null;
-  return { major: m ? parseInt(m[1], 10) : 1, minor: m ? parseInt(m[2], 10) : 0 };
-}
-
-// When a version has been saved in Settings, it drives the footer #app-version
-// span. Otherwise the deploy-time baked value (set by deploy.ps1) is left as-is.
-function updateFooterVersion() {
-  const s  = DB.getSettings();
-  const el = document.getElementById('app-version');
-  if (!el) return;
-  if (s.versionMajor != null || s.versionMinor != null) {
-    el.textContent = 'v' + (s.versionMajor || 1) + '.' + (s.versionMinor || 0);
-  }
 }
 
 // Deploy date is baked into the footer span by deploy.ps1; do not overwrite it
@@ -5957,15 +5908,11 @@ function saveSettings() {
     donorNotBidFooterLeft:   document.getElementById('inp-donor-notbid-footer-left').value,
     donorNotBidFooterCenter: document.getElementById('inp-donor-notbid-footer-center').value,
     donorNotBidFooterRight:  document.getElementById('inp-donor-notbid-footer-right').value,
-    versionMajor:   parseInt(document.getElementById('inp-version-major').value, 10) || 1,
-    versionMinor:   parseInt(document.getElementById('inp-version-minor').value, 10) || 0,
     deployDate:     document.getElementById('inp-deploy-date').value.trim(),
   };
   DB.saveSettings(settings);
   applyBranding(settings);
   updateFavicon(settings.clubFavicon);
-  updateVersionDisplay();
-  updateFooterVersion();
 
   // Re-init OAuth client with new client ID
   if (clientId) reinitTokenClient();
@@ -6049,8 +5996,6 @@ function syncDeployDate() {
   if (inp && footerDate && footerDate !== 'Never') inp.value = footerDate;
 }
 
-// Update footer version from Settings
-updateFooterVersion();
 syncDeployDate();
 
 function refreshHomeMetrics() {
@@ -7719,13 +7664,6 @@ async function setUserFromGmail() {
   }
 }
 
-function getAppVersion() {
-  const settings = DB.getSettings();
-  const major = settings.versionMajor || 1;
-  const minor = settings.versionMinor || 0;
-  return `v${major}.${minor}`;
-}
-
 function getDeployDate() {
   const deployEl = document.getElementById('app-deploy-date');
   if (deployEl) return deployEl.textContent.trim();
@@ -7760,18 +7698,16 @@ async function debugLog(message, level = 'INFO') {
 
 // Global error handler for uncaught errors
 window.addEventListener('error', (event) => {
-  const version = getAppVersion();
   const deployDate = getDeployDate();
-  const message = `✗ Error: ${event.message} at ${event.filename}:${event.lineno} [${version}] [${deployDate}]`;
+  const message = `✗ Error: ${event.message} at ${event.filename}:${event.lineno} [${deployDate}]`;
   debugLog(message, 'ERROR');
   console.error(message, event.error);
 });
 
 // Global promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
-  const version = getAppVersion();
   const deployDate = getDeployDate();
-  const message = `✗ Unhandled Promise Rejection: ${event.reason} [${version}] [${deployDate}]`;
+  const message = `✗ Unhandled Promise Rejection: ${event.reason} [${deployDate}]`;
   debugLog(message, 'ERROR');
   console.error(message, event.reason);
 });
@@ -9485,10 +9421,6 @@ const DuplicateEmailChecker = {
   TableKit.initAll();
   fixAllStickyHeaders();
   applyBranding();
-  // Footer #app-version is created after the inline script, so the early
-  // top-level updateFooterVersion() call ran before it existed. Re-apply here
-  // (DOM is fully parsed by now) so a saved Settings version shows in the footer.
-  updateFooterVersion();
 
   const settings = DB.getSettings();
   if (!settings.gmailClientId) {
@@ -9534,7 +9466,6 @@ async function loadChangelog() {
   const FTP   = 'ftp.etccapps.com → /apps/sam/';
   const BASE  = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
-  document.getElementById('cl-version').textContent = getAppVersion();
   document.getElementById('cl-repo').textContent    = `${OWNER}/${REPO}`;
   document.getElementById('cl-ftp').textContent     = FTP;
 
@@ -9612,7 +9543,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v1.14</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 7:03 AM</span></div>
+  <div>Version: <span id="app-version">v2.1</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 7:16 AM</span></div>
 </div>
 
 </body>
