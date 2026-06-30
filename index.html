@@ -1370,10 +1370,26 @@
         <div id="payment-toolbar-wrap"></div>
         <div style="height:12px;"></div>
         <div style="overflow-x:auto;max-height:600px;overflow-y:auto;">
-          <table class="tablekit" id="payment-table" data-tk-sort="false" style="width:100%;border-collapse:collapse;font-size:13px;">
+          <table class="tablekit" id="payment-table" data-tk-sort="false" style="width:100%;min-width:1200px;border-collapse:collapse;font-size:13px;table-layout:fixed;">
+            <colgroup>
+              <col style="width:55px;">   <!-- Bidder # -->
+              <col style="width:95px;">   <!-- Last Name -->
+              <col style="width:95px;">   <!-- First Name -->
+              <col style="width:50px;">   <!-- # Items -->
+              <col style="width:80px;">   <!-- Winning Bid -->
+              <col style="width:460px;">  <!-- Item # — Description -->
+              <col style="width:75px;">   <!-- Cash/Check -->
+              <col style="width:75px;">   <!-- Check # -->
+              <col style="width:70px;">   <!-- CC Trans. -->
+              <col style="width:75px;">   <!-- CC Total -->
+              <col style="width:42px;">   <!-- Paid -->
+              <col style="width:100px;">  <!-- Pay Method -->
+              <col style="width:75px;">   <!-- Other Amt -->
+              <col style="width:115px;">  <!-- Other Reason -->
+            </colgroup>
             <thead>
               <tr style="background:#f0f4ff;position:sticky;top:0;z-index:2;">
-                <td colspan="15" style="padding:3px 8px;font-size:11px;color:var(--text-secondary);font-style:italic;">Click <strong>Bidder #</strong> or <strong>Last Name</strong> column header to sort</td>
+                <td colspan="14" style="padding:3px 8px;font-size:11px;color:var(--text-secondary);font-style:italic;">Click <strong>Bidder #</strong> or <strong>Last Name</strong> column header to sort</td>
               </tr>
               <tr style="background:#dbeafe;position:sticky;top:24px;z-index:1;">
                 <th id="pay-th-bidder" style="padding:6px 8px;text-align:left;font-weight:700;width:55px;cursor:pointer;user-select:none;" onclick="paySort('bidder_number')">Bidder # <span id="pay-sort-bidder"></span></th>
@@ -1381,7 +1397,7 @@
                 <th style="padding:6px 8px;text-align:left;font-weight:700;width:80px;">First Name</th>
                 <th style="padding:6px 8px;text-align:center;font-weight:700;width:42px;"># Items</th>
                 <th style="padding:6px 8px;text-align:right;font-weight:700;width:72px;">Winning Bid</th>
-                <th style="padding:6px 8px;text-align:left;font-weight:700;width:140px;">Item # — Description</th>
+                <th style="padding:6px 8px;text-align:left;font-weight:700;width:2100px;">Item # — Description</th>
                 <th style="padding:6px 8px;text-align:right;font-weight:700;width:68px;">Cash/Check</th>
                 <th style="padding:6px 8px;text-align:left;font-weight:700;width:75px;">Check #</th>
                 <th style="padding:6px 8px;text-align:right;font-weight:700;width:68px;">CC Trans.</th>
@@ -1390,7 +1406,6 @@
                 <th style="padding:6px 8px;text-align:left;font-weight:700;width:95px;">Pay Method</th>
                 <th style="padding:6px 8px;text-align:right;font-weight:700;width:75px;">Other Amt</th>
                 <th style="padding:6px 8px;text-align:left;font-weight:700;width:115px;">Other Reason</th>
-                <th style="padding:6px 8px;text-align:center;font-weight:700;width:80px;">Invoice</th>
               </tr>
             </thead>
             <tbody id="payment-tbody"></tbody>
@@ -1476,6 +1491,11 @@
               <div class="pa-card-icon">✉</div>
               <div class="pa-card-title">Thank You Email</div>
               <div class="pa-card-desc">Send thank you emails to selected bidders</div>
+            </div>
+            <div onclick="openWinningBidderPickupModal()" class="pa-card">
+              <div class="pa-card-icon">📦</div>
+              <div class="pa-card-title">Winning Bidder Pickup</div>
+              <div class="pa-card-desc">Send pickup instructions to winners</div>
             </div>
           </div>
         </div>
@@ -1982,7 +2002,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 7:16 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 8:24 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2170,7 +2190,7 @@
     <div style="padding:20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;">
       <h3 style="margin:0;color:#333;font-size:16px;">Email Preview</h3>
       <div style="display:flex;gap:8px;">
-        <button onclick="window.print()" style="padding:8px 16px;background:#0071e3;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">🖨 Print</button>
+        <button onclick="sendThankYouEmails()" style="padding:8px 16px;background:#0071e3;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">✉ Email</button>
         <button onclick="closeThankYouEmailPreview()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#333;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
       </div>
     </div>
@@ -2185,6 +2205,68 @@
     <!-- Preview Footer -->
     <div style="padding:20px;border-top:1px solid #ddd;display:flex;justify-content:flex-end;">
       <button onclick="closeThankYouEmailPreview()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Winning Bidder Pickup Modal -->
+<div id="winbidder-pickup-modal" style="display:none;position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:10px;width:95vw;height:95vh;max-width:1000px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <!-- Header -->
+    <div style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;color:var(--text);font-size:16px;">Winning Bidder Pickup - Select Bidders</h3>
+      <button onclick="closeWinningBidderPickupModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+
+    <!-- Bidders Table -->
+    <div style="flex:1;overflow-y:auto;padding:20px;">
+      <table id="winbidder-pickup-table" class="tablekit" style="width:100%;border-collapse:collapse;">
+        <thead style="position:sticky;top:0;background:#dbeafe;">
+          <tr>
+            <th style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);">
+              <input type="checkbox" id="winbidder-pickup-select-all" onchange="toggleAllWinningBidderPickup()" style="cursor:pointer;width:16px;height:16px;" title="Select All" />
+            </th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Bidder #</th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Name</th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Email</th>
+          </tr>
+        </thead>
+        <tbody id="winbidder-pickup-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer with Buttons -->
+    <div style="padding:20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeWinningBidderPickupModal()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
+      <button onclick="previewWinningBidderPickupEmail()" style="padding:10px 20px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">Preview</button>
+    </div>
+  </div>
+</div>
+
+<!-- Winning Bidder Pickup Preview Modal -->
+<div id="winbidder-pickup-preview-modal" style="display:none;position:fixed;inset:0;z-index:1950;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:10px;width:95vw;height:95vh;max-width:900px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <!-- Preview Header -->
+    <div style="padding:20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;color:#333;font-size:16px;">Email Preview</h3>
+      <div style="display:flex;gap:8px;">
+        <button onclick="sendWinningBidderPickupEmails()" style="padding:8px 16px;background:#0071e3;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">✉ Email</button>
+        <button onclick="closeWinningBidderPickupPreview()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#333;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+    </div>
+
+    <!-- Preview Content -->
+    <div style="flex:1;overflow-y:auto;padding:40px;background:#f5f5f5;">
+      <div id="winbidder-pickup-preview-content" style="background:#fff;padding:40px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;">
+        <!-- Email preview content populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Preview Footer -->
+    <div style="padding:20px;border-top:1px solid #ddd;display:flex;justify-content:flex-end;">
+      <button onclick="closeWinningBidderPickupPreview()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
     </div>
   </div>
 </div>
@@ -3224,7 +3306,15 @@ function onTokenReceived(resp) {
   gapi.client.setToken({ access_token: accessToken });
   setGmailStatus(true);
   setUserFromGmail(); // Capture user email for debug logging
-  doScanInbox();
+
+  // Check if email send was pending auth
+  if (window._pendingEmailSend) {
+    const pendingFn = window._pendingEmailSend;
+    window._pendingEmailSend = null;
+    pendingFn(); // Execute the pending function
+  } else {
+    doScanInbox();
+  }
 }
 
 function buildMimeMessage(to, subject, bodyText) {
@@ -5227,7 +5317,7 @@ function refreshPaymentTable() {
           <td style="padding:5px 8px;" rowspan="${group.items.length}">${escHtml(bidder.first_name || '')}</td>
           <td style="text-align:center;padding:5px 8px;font-weight:600;" rowspan="${group.items.length}">${group.items.length}</td>
           <td style="padding:5px 8px;text-align:right;">${fmtDollar(item.winning_bid)}</td>
-          <td style="padding:5px 8px;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
+          <td style="padding:5px 8px;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
           <td style="padding:5px 8px;text-align:right;font-weight:600;" rowspan="${group.items.length}">${fmtDollar(totalBid)}</td>
           <td style="padding:5px 8px;" rowspan="${group.items.length}">
             <input type="text" class="pay-checknum" data-num="${num}" value="${escHtml(pay.checknum || '')}" placeholder="—" style="width:60px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px;" ${ro}>
@@ -5256,7 +5346,7 @@ function refreshPaymentTable() {
       } else {
         tr.innerHTML = `
           <td style="padding:5px 8px;text-align:right;">${fmtDollar(item.winning_bid)}</td>
-          <td style="padding:5px 8px;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
+          <td style="padding:5px 8px;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${escHtml(item.itemKey)} — ${escHtml(item.desc)}</td>
         `;
       }
       tbody.appendChild(tr);
@@ -6833,7 +6923,7 @@ function openThankYouEmailModal() {
 
     return `
     <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
-      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="thankyou-bidder-cb" data-idx="${idx}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="thankyou-bidder-cb" data-idx="${idx}" data-bidder-number="${b.bidder_number}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(String(b.bidder_number))}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(b.email || '')}</td>
@@ -6876,8 +6966,8 @@ function previewThankYouEmail() {
   }
 
   const settings = DB.getSettings();
-  const selectedBidder = checkboxes[0]; // Get first selected bidder for preview
-  const bidderName = selectedBidder.dataset.name;
+  const winners = DB.getWinners();
+  const items = Items.getAll();
   const previewContent = document.getElementById('thankyou-email-preview-content');
   const previewModal = document.getElementById('thankyou-email-preview-modal');
 
@@ -6886,22 +6976,101 @@ function previewThankYouEmail() {
     return;
   }
 
-  // Format footer with 3 columns
-  const footerLeft = settings.thankYouFooterLeft || '';
-  const footerCenter = settings.thankYouFooterCenter || '';
-  const footerRight = settings.thankYouFooterRight || '';
+  // Build preview emails for each checked bidder
+  let previewHtml = '';
 
-  const previewHtml = `
-    <p style="margin:0 0 16px;">Dear ${bidderName},</p>
-    <p style="margin:0 0 16px;">${settings.thankYouBody || ''}</p>
-    <div style="margin:24px 0;padding-top:16px;border-top:1px solid #ddd;">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center;font-size:12px;line-height:1.5;">
-        <div style="text-align:left;"><div>${footerLeft}</div></div>
-        <div style="text-align:center;"><div>${footerCenter}</div></div>
-        <div style="text-align:right;"><div>${footerRight}</div></div>
+  checkboxes.forEach((checkbox, idx) => {
+    const bidderName = checkbox.dataset.name;
+    const bidderEmail = checkbox.dataset.email;
+    const bidderNum = parseInt(checkbox.dataset.bidderNumber, 10);
+
+    // Check if bidder is a winner by matching bidder_number
+    const isWinner = Object.values(winners).some(w => w.bidder_number === bidderNum);
+
+    let subject, body, footerLeft, footerCenter, footerRight;
+
+    if (isWinner) {
+      subject = settings.winBidderSubject || '';
+      body = settings.winBidderBody || '';
+      footerLeft = settings.winBidderFooterLeft || '';
+      footerCenter = settings.winBidderFooterCenter || '';
+      footerRight = settings.winBidderFooterRight || '';
+    } else {
+      subject = settings.thankYouSubject || '';
+      body = settings.thankYouBody || '';
+      footerLeft = settings.thankYouFooterLeft || '';
+      footerCenter = settings.thankYouFooterCenter || '';
+      footerRight = settings.thankYouFooterRight || '';
+    }
+
+    // Build items won list for winners
+    let itemsHtml = '';
+    if (isWinner) {
+      const winnerItems = Object.entries(winners)
+        .filter(([itemNum, w]) => w.bidder_number === bidderNum)
+        .map(([itemNum, w]) => {
+          const item = items.find(i => i.item_number === itemNum);
+          return { itemNum, bid: w.winning_bid, item };
+        });
+
+      if (winnerItems.length > 0) {
+        itemsHtml = `
+          <div style="margin:16px 0;padding:12px;background:#f0f7ff;border-left:3px solid var(--accent);border-radius:4px;">
+            <div style="font-weight:600;font-size:12px;margin-bottom:8px;">Items Won:</div>
+            <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        `;
+        winnerItems.forEach(w => {
+          itemsHtml += `
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px;text-align:left;"><strong>${w.itemNum}</strong></td>
+                <td style="padding:6px;text-align:left;">${w.item ? escHtml(w.item.description) : '(item not found)'}</td>
+                <td style="padding:6px;text-align:right;"><strong>${w.bid}</strong></td>
+              </tr>
+          `;
+        });
+        itemsHtml += `
+            </table>
+          </div>
+        `;
+      }
+    }
+
+    // Add email card
+    if (idx > 0) previewHtml += '<div style="margin-top:48px;padding-top:32px;border-top:2px solid var(--border);"></div>';
+
+    const clubLogo = getClub().logo;
+    const logoUrl = new URL(clubLogo, window.location.href).href;
+
+    previewHtml += `
+      <div style="margin-bottom:32px;">
+        <div style="background:#ffffff;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Email Header with Logo -->
+          <div style="background:var(--bg-section);padding:24px;text-align:center;border-bottom:1px solid var(--border);">
+            <img src="${logoUrl}" alt="Logo" style="max-height:60px;max-width:200px;margin-bottom:12px;"/>
+          </div>
+          <!-- Email Metadata -->
+          <div style="padding:16px 24px;background:#fafafa;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-secondary);">
+            <div><strong>To:</strong> ${bidderEmail}</div>
+            <div style="margin-top:4px;"><strong>Subject:</strong> ${subject}</div>
+          </div>
+          <!-- Email Body -->
+          <div style="padding:24px;">
+            <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">Dear ${bidderName},</p>
+            <p style="margin:0 0 20px;font-size:13px;line-height:1.8;white-space:pre-wrap;">${body}</p>
+            ${itemsHtml}
+            <!-- Footer -->
+            <div style="margin:24px 0 0;padding-top:16px;border-top:1px solid var(--border);">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:12px;line-height:1.6;color:var(--text-secondary);width:100%;">
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerLeft}</div></div>
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerCenter}</div></div>
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerRight}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  });
 
   previewContent.innerHTML = previewHtml;
   previewModal.style.display = 'flex';
@@ -6910,6 +7079,408 @@ function previewThankYouEmail() {
 function closeThankYouEmailPreview() {
   const modal = document.getElementById('thankyou-email-preview-modal');
   if (modal) modal.style.display = 'none';
+}
+
+async function sendThankYouEmails() {
+  const checkboxes = document.querySelectorAll('.thankyou-bidder-cb:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one bidder.');
+    return;
+  }
+
+  // Ensure user is authenticated; request access if needed
+  if (!accessToken) {
+    const settings = DB.getSettings();
+    const clientId = settings.gmailClientId;
+
+    if (!tokenClient) {
+      reinitTokenClient();
+    }
+    if (!tokenClient || !clientId) {
+      alert('Gmail authentication not configured. Check settings.');
+      return;
+    }
+
+    // Store function to call after auth succeeds
+    window._pendingEmailSend = sendThankYouEmails;
+    console.log('Opening authentication popup...');
+    const hint = settings.inboxEmail || '';
+    tokenClient.requestAccessToken({ prompt: 'consent', login_hint: hint });
+    return; // Wait for auth callback
+  }
+
+  const settings = DB.getSettings();
+  const winners = DB.getWinners();
+  const items = Items.getAll();
+  const inboxEmail = settings.inboxEmail || 'auction@example.com';
+
+  let sent = 0, failed = 0;
+  const errors = [];
+
+  for (const checkbox of checkboxes) {
+    try {
+      const bidderName = checkbox.dataset.name;
+      const bidderEmail = checkbox.dataset.email;
+      const bidderNum = parseInt(checkbox.dataset.bidderNumber, 10);
+      const isWinner = Object.values(winners).some(w => w.bidder_number === bidderNum);
+
+      let subject, body, footerLeft, footerCenter, footerRight;
+      if (isWinner) {
+        subject = settings.winBidderSubject || '';
+        body = settings.winBidderBody || '';
+        footerLeft = settings.winBidderFooterLeft || '';
+        footerCenter = settings.winBidderFooterCenter || '';
+        footerRight = settings.winBidderFooterRight || '';
+      } else {
+        subject = settings.thankYouSubject || '';
+        body = settings.thankYouBody || '';
+        footerLeft = settings.thankYouFooterLeft || '';
+        footerCenter = settings.thankYouFooterCenter || '';
+        footerRight = settings.thankYouFooterRight || '';
+      }
+
+      // Build HTML email
+      const clubLogo = getClub().logo;
+      const logoUrl = new URL(clubLogo, window.location.href).href;
+      let itemsHtml = '';
+      if (isWinner) {
+        const winnerItems = Object.entries(winners)
+          .filter(([itemNum, w]) => w.bidder_number === bidderNum)
+          .map(([itemNum, w]) => {
+            const item = items.find(i => i.item_number === itemNum);
+            return { itemNum, description: item ? item.description : '(item not found)', bid: w.winning_bid };
+          });
+        if (winnerItems.length > 0) {
+          itemsHtml = '<div style="margin:16px 0;"><strong>Items Won:</strong><br/>' +
+            winnerItems.map(w => `${w.itemNum}: ${w.description} - ${w.bid}`).join('<br/>') +
+            '</div>';
+        }
+      }
+
+      const htmlBody = `
+<html><head></head><body style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#333;">
+<div style="text-align:center;margin-bottom:20px;"><img src="${logoUrl}" style="max-height:50px;max-width:150px;" alt="Logo" /></div>
+<p>Dear ${bidderName},</p>
+<p>${body}</p>
+${itemsHtml}
+<p style="margin-top:20px;border-top:1px solid #ddd;padding-top:12px;">
+${footerLeft}${footerCenter ? '<br/>' + footerCenter : ''}${footerRight ? '<br/>' + footerRight : ''}
+</p>
+</body></html>`;
+
+      // Send via Gmail API
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please refresh and try again.');
+      }
+      const message = btoa(
+        `From: ${inboxEmail}\r\nTo: ${bidderEmail}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset="UTF-8"\r\n\r\n${htmlBody}`
+      ).replace(/\+/g, '-').replace(/\//g, '_');
+
+      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ raw: message })
+      });
+
+      if (response.ok) {
+        sent++;
+      } else {
+        failed++;
+        errors.push(`${bidderName}: HTTP ${response.status}`);
+      }
+    } catch (e) {
+      failed++;
+      errors.push(`${checkbox.dataset.name}: ${e.message}`);
+    }
+  }
+
+  closeThankYouEmailPreview();
+  const msg = `Sent: ${sent}, Failed: ${failed}`;
+  if (errors.length > 0) {
+    alert(msg + '\n\nErrors:\n' + errors.slice(0, 5).join('\n') + (errors.length > 5 ? '\n...' : ''));
+  } else {
+    alert(msg);
+  }
+}
+
+function openWinningBidderPickupModal() {
+  const bidders = Bidders.getAll();
+  if (!bidders.length) {
+    alert('No bidders registered yet.');
+    return;
+  }
+
+  const tbody = document.getElementById('winbidder-pickup-body');
+  const modal = document.getElementById('winbidder-pickup-modal');
+
+  if (!tbody || !modal) {
+    alert('Winning Bidder Pickup modal not found. Please refresh the page.');
+    return;
+  }
+
+  const winners = DB.getWinners();
+  const payments = DB.getPayments();
+  const winnerBidderNums = new Set(Object.values(winners).map(w => String(w.bidder_number)).filter(b => b !== 'undefined'));
+
+  // Filter to bidders who won at least 1 item and haven't paid
+  const filteredBidders = bidders.filter(b => {
+    const bidderNum = String(b.bidder_number);
+    const isWinner = winnerBidderNums.has(bidderNum);
+    const hasPaid = payments[bidderNum] && payments[bidderNum].paid === true;
+    return isWinner && !hasPaid;
+  });
+
+  if (filteredBidders.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-secondary);">No winners pending pickup.</td></tr>';
+    modal.style.display = 'flex';
+    return;
+  }
+
+  tbody.innerHTML = filteredBidders.map((b, idx) => {
+    return `
+    <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="winbidder-pickup-cb" data-idx="${idx}" data-bidder-number="${b.bidder_number}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml(String(b.bidder_number))}</td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml(b.email || '')}</td>
+    </tr>
+  `;
+  }).join('');
+
+  const headerRow = document.querySelector('#winbidder-pickup-table thead tr');
+  const cell0 = headerRow ? headerRow.cells[0] : null;
+  if (cell0) {
+    cell0.innerHTML = '<input type="checkbox" id="winbidder-pickup-select-all" onchange="toggleAllWinningBidderPickup()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
+    cell0.style.textAlign = 'center';
+    cell0.style.verticalAlign = 'middle';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeWinningBidderPickupModal() {
+  const modal = document.getElementById('winbidder-pickup-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function toggleAllWinningBidderPickup() {
+  const allCheckbox = document.getElementById('winbidder-pickup-select-all');
+  if (!allCheckbox) return;
+  const checkboxes = document.querySelectorAll('.winbidder-pickup-cb');
+  checkboxes.forEach(cb => cb.checked = allCheckbox.checked);
+}
+
+function previewWinningBidderPickupEmail() {
+  const checkboxes = document.querySelectorAll('.winbidder-pickup-cb:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one bidder.');
+    return;
+  }
+
+  const settings = DB.getSettings();
+  const winners = DB.getWinners();
+  const items = Items.getAll();
+  const previewContent = document.getElementById('winbidder-pickup-preview-content');
+  const previewModal = document.getElementById('winbidder-pickup-preview-modal');
+
+  if (!previewContent || !previewModal) {
+    alert('Email preview modal not found. Please refresh the page.');
+    return;
+  }
+
+  let previewHtml = '';
+
+  checkboxes.forEach((checkbox, idx) => {
+    const bidderName = checkbox.dataset.name;
+    const bidderEmail = checkbox.dataset.email;
+    const bidderNum = parseInt(checkbox.dataset.bidderNumber, 10);
+    const isWinner = Object.values(winners).some(w => w.bidder_number === bidderNum);
+
+    const subject = settings.winPickupSubject || '';
+    const body = settings.winPickupBody || '';
+    const footerLeft = settings.winPickupFooterLeft || '';
+    const footerCenter = settings.winPickupFooterCenter || '';
+    const footerRight = settings.winPickupFooterRight || '';
+
+    const clubLogo = getClub().logo;
+    const logoUrl = new URL(clubLogo, window.location.href).href;
+    let itemsHtml = '';
+    if (isWinner) {
+      const winnerItems = Object.entries(winners)
+        .filter(([itemNum, w]) => w.bidder_number === bidderNum)
+        .map(([itemNum, w]) => {
+          const item = items.find(i => i.item_number === itemNum);
+          return { itemNum, description: item ? item.description : '(item not found)', bid: w.winning_bid };
+        });
+
+      if (winnerItems.length > 0) {
+        itemsHtml = '<div style="margin:16px 0;"><strong>Items to Pickup:</strong><br/>' +
+          winnerItems.map(w => `${w.itemNum}: ${w.description}`).join('<br/>') +
+          '</div>';
+      }
+    }
+
+    if (idx > 0) previewHtml += '<div style="margin-top:48px;padding-top:32px;border-top:2px solid var(--border);"></div>';
+
+    previewHtml += `
+      <div style="margin-bottom:32px;">
+        <div style="background:#ffffff;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Email Header with Logo -->
+          <div style="background:var(--bg-section);padding:24px;text-align:center;border-bottom:1px solid var(--border);">
+            <img src="${logoUrl}" alt="Logo" style="max-height:60px;max-width:200px;margin-bottom:12px;"/>
+          </div>
+          <!-- Email Metadata -->
+          <div style="padding:16px 24px;background:#fafafa;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-secondary);">
+            <div><strong>To:</strong> ${bidderEmail}</div>
+            <div style="margin-top:4px;"><strong>Subject:</strong> ${subject}</div>
+          </div>
+          <!-- Email Body -->
+          <div style="padding:24px;">
+            <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">Dear ${bidderName},</p>
+            <p style="margin:0 0 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;">${body}</p>
+            ${itemsHtml}
+            <!-- Footer -->
+            <div style="margin:24px 0 0;padding-top:16px;border-top:1px solid var(--border);">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:12px;line-height:1.6;color:var(--text-secondary);width:100%;">
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerLeft}</div></div>
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerCenter}</div></div>
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerRight}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  previewContent.innerHTML = previewHtml;
+  previewModal.style.display = 'flex';
+}
+
+function closeWinningBidderPickupPreview() {
+  const modal = document.getElementById('winbidder-pickup-preview-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function sendWinningBidderPickupEmails() {
+  const checkboxes = document.querySelectorAll('.winbidder-pickup-cb:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one bidder.');
+    return;
+  }
+
+  // Ensure user is authenticated; request access if needed
+  if (!accessToken) {
+    const settings = DB.getSettings();
+    const clientId = settings.gmailClientId;
+
+    if (!tokenClient) {
+      reinitTokenClient();
+    }
+    if (!tokenClient || !clientId) {
+      alert('Gmail authentication not configured. Check settings.');
+      return;
+    }
+
+    window._pendingEmailSend = sendWinningBidderPickupEmails;
+    console.log('Opening authentication popup...');
+    const hint = settings.inboxEmail || '';
+    tokenClient.requestAccessToken({ prompt: 'consent', login_hint: hint });
+    return;
+  }
+
+  const settings = DB.getSettings();
+  const winners = DB.getWinners();
+  const items = Items.getAll();
+  const inboxEmail = settings.inboxEmail || 'auction@example.com';
+
+  let sent = 0, failed = 0;
+  const errors = [];
+
+  for (const checkbox of checkboxes) {
+    try {
+      const bidderName = checkbox.dataset.name;
+      const bidderEmail = checkbox.dataset.email;
+      const bidderNum = parseInt(checkbox.dataset.bidderNumber, 10);
+      const isWinner = Object.values(winners).some(w => w.bidder_number === bidderNum);
+
+      if (!isWinner) {
+        failed++;
+        errors.push(`${bidderName}: Not a winner`);
+        continue;
+      }
+
+      const subject = settings.winPickupSubject || '';
+      const body = settings.winPickupBody || '';
+      const footerLeft = settings.winPickupFooterLeft || '';
+      const footerCenter = settings.winPickupFooterCenter || '';
+      const footerRight = settings.winPickupFooterRight || '';
+
+      const clubLogo = getClub().logo;
+      const logoUrl = new URL(clubLogo, window.location.href).href;
+      let itemsHtml = '';
+      const winnerItems = Object.entries(winners)
+        .filter(([itemNum, w]) => w.bidder_number === bidderNum)
+        .map(([itemNum, w]) => {
+          const item = items.find(i => i.item_number === itemNum);
+          return { itemNum, description: item ? item.description : '(item not found)' };
+        });
+
+      if (winnerItems.length > 0) {
+        itemsHtml = '<div style="margin:16px 0;"><strong>Items to Pickup:</strong><br/>' +
+          winnerItems.map(w => `${w.itemNum}: ${w.description}`).join('<br/>') +
+          '</div>';
+      }
+
+      const htmlBody = `
+<html><head></head><body style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#333;">
+<div style="text-align:center;margin-bottom:20px;"><img src="${logoUrl}" style="max-height:50px;max-width:150px;" alt="Logo" /></div>
+<p>Dear ${bidderName},</p>
+<p>${body}</p>
+${itemsHtml}
+<p style="margin-top:20px;border-top:1px solid #ddd;padding-top:12px;">
+${footerLeft}${footerCenter ? '<br/>' + footerCenter : ''}${footerRight ? '<br/>' + footerRight : ''}
+</p>
+</body></html>`;
+
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please refresh and try again.');
+      }
+      const message = btoa(
+        `From: ${inboxEmail}\r\nTo: ${bidderEmail}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset="UTF-8"\r\n\r\n${htmlBody}`
+      ).replace(/\+/g, '-').replace(/\//g, '_');
+
+      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ raw: message })
+      });
+
+      if (response.ok) {
+        sent++;
+      } else {
+        failed++;
+        errors.push(`${bidderName}: HTTP ${response.status}`);
+      }
+    } catch (e) {
+      failed++;
+      errors.push(`${checkbox.dataset.name}: ${e.message}`);
+    }
+  }
+
+  closeWinningBidderPickupPreview();
+  const msg = `Sent: ${sent}, Failed: ${failed}`;
+  if (errors.length > 0) {
+    alert(msg + '\n\nErrors:\n' + errors.slice(0, 5).join('\n') + (errors.length > 5 ? '\n...' : ''));
+  } else {
+    alert(msg);
+  }
 }
 
 function printAuctionSummary() {
@@ -9543,7 +10114,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v2.1</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 7:16 AM</span></div>
+  <div>Version: <span id="app-version">v2.1</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 8:24 AM</span></div>
 </div>
 
 </body>

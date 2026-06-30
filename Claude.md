@@ -1,6 +1,6 @@
 ﻿# Project: Silent Auction Manager (SAM)
 
-This project uses standard prompts stored in "Z:\Backup\Websites\Web Utilities\StandardPrompts.md"
+This project uses standard prompts stored in "Z:\Backup\Websites\Claude\StandardPrompts.md"
 
 Always read the instructions in "Z:\Backup\Websites\Web Utilities\components\table\readme.md"
 Always read the instructions in "Z:\Backup\Websites\Web Utilities\components\toolbar\readme.md"

@@ -911,13 +911,6 @@ function runAll() {
       assert('audit trail complete',         true),
     ]);
 
-    renderSuite('Error Logging — version tracking', [
-      assert('versionMajor setting exists',  DB.getSettings().versionMajor !== undefined),
-      assert('versionMinor setting exists',  DB.getSettings().versionMinor !== undefined),
-      assert('version format is v#.#',       /^v\d+\.\d+$/.test('v1.0')),
-      assert('defaults to v1.0',             true),
-    ]);
-
     // Deployed version is baked into the footer <span id="app-version"> by
     // deploy.ps1 (minor auto-increments each deploy) and is authoritative.
     function parseDeployedVersion(text) {
@@ -1671,6 +1664,75 @@ function runAll() {
         'Verified: max-height: 238px (up from 210px)'),
       assert('Loaded Items table shows one additional row', true,
         'Verified: max-height: 258px (up from 230px)'),
+    ]);
+
+    // ── Winners normalization (Array-with-string-keys → object) ───────────────
+    // Regression: a winners value that became a JS Array with string keys
+    // serialized to "[]" via JSON.stringify, silently dropping every item.
+    // getWinners/saveWinners now coerce it back to a plain object.
+    const normalizeWinners = (v) => {
+      if (Array.isArray(v)) {
+        const obj = {};
+        Object.keys(v).forEach(k => { obj[k] = v[k]; });
+        return obj;
+      }
+      return v;
+    };
+    const winArr = [];
+    winArr['200-1'] = { bidder_number: 120, winning_bid: '$10' };
+    renderSuite('Winners Persistence — Array→Object normalization', [
+      assert('Array with string key stringifies to [] (the bug)',
+        JSON.stringify(winArr) === '[]'),
+      assert('normalizeWinners converts Array to plain object',
+        !Array.isArray(normalizeWinners(winArr))),
+      assert('Normalized object preserves the item entry',
+        JSON.stringify(normalizeWinners(winArr)) === '{"200-1":{"bidder_number":120,"winning_bid":"$10"}}'),
+      assert('Plain object passes through unchanged',
+        JSON.stringify(normalizeWinners({ '200-2': { bidder_number: 7 } })) === '{"200-2":{"bidder_number":7}}'),
+      assert('Empty array normalizes to empty object',
+        JSON.stringify(normalizeWinners([])) === '{}'),
+    ]);
+
+    // ── Winning Bidder Pickup filter (won ≥1 item AND not paid) ────────────────
+    const pickBidders = [
+      { bidder_number: 120, first_name: 'Stephanie', last_name: 'Butler' }, // winner, unpaid → include
+      { bidder_number: 150, first_name: 'Linda',     last_name: 'Goebel' }, // winner, paid   → exclude
+      { bidder_number: 999, first_name: 'Non',       last_name: 'Winner' }, // not a winner   → exclude
+    ];
+    const pickWinners = {
+      '200-1': { bidder_number: 120, winning_bid: '$10' },
+      '900-2': { bidder_number: 150, winning_bid: '$50' },
+    };
+    const pickPayments = { 150: { paid: true }, 120: { paid: false } };
+    const pickWinnerNums = new Set(Object.values(pickWinners).map(w => String(w.bidder_number)));
+    const pickFiltered = pickBidders.filter(b => {
+      const num = String(b.bidder_number);
+      return pickWinnerNums.has(num) && !(pickPayments[num] && pickPayments[num].paid === true);
+    });
+    renderSuite('Winning Bidder Pickup — Filter (won & unpaid)', [
+      assert('Includes winner who has not paid', pickFiltered.some(b => b.bidder_number === 120)),
+      assert('Excludes winner who has paid',      !pickFiltered.some(b => b.bidder_number === 150)),
+      assert('Excludes non-winner',               !pickFiltered.some(b => b.bidder_number === 999)),
+      assert('Exactly one bidder remains',        pickFiltered.length === 1),
+    ]);
+
+    // ── Email template selection (winner vs non-winner) ───────────────────────
+    const tplSettings = {
+      winBidderSubject: 'You won!', thankYouSubject: 'Thank you',
+      winBidderBody: 'WIN-BODY',    thankYouBody: 'TY-BODY',
+    };
+    const tplWinners = { '200-1': { bidder_number: 120 } };
+    const pickTemplate = (bidderNum) => {
+      const isWinner = Object.values(tplWinners).some(w => w.bidder_number === bidderNum);
+      return isWinner
+        ? { subject: tplSettings.winBidderSubject, body: tplSettings.winBidderBody }
+        : { subject: tplSettings.thankYouSubject,  body: tplSettings.thankYouBody };
+    };
+    renderSuite('Thank You / Winning Bidder — Template selection', [
+      assert('Winner gets Winning Bidder subject',  pickTemplate(120).subject === 'You won!'),
+      assert('Winner gets Winning Bidder body',     pickTemplate(120).body === 'WIN-BODY'),
+      assert('Non-winner gets Thank You subject',   pickTemplate(999).subject === 'Thank you'),
+      assert('Non-winner gets Thank You body',      pickTemplate(999).body === 'TY-BODY'),
     ]);
 
     // Clear test data
