@@ -1735,6 +1735,41 @@ function runAll() {
       assert('Non-winner gets Thank You body',      pickTemplate(999).body === 'TY-BODY'),
     ]);
 
+    // ── Email body formatting (strip mailto:, linkify addresses) ──────────────
+    const formatEmailBody = (text) => {
+      if (!text) return '';
+      return String(text).replace(
+        /(?:mailto:)?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+        '<a href="mailto:$1" style="color:#0071e3;">$1</a>'
+      );
+    };
+    renderSuite('Email Body — mailto formatting', [
+      assert('Strips literal "mailto:" from visible text',
+        !/(^|[^"])mailto:/.test(formatEmailBody('contact mailto:rod@x.com today'))),
+      assert('Keeps mailto: inside the href',
+        formatEmailBody('rod@x.com').includes('href="mailto:rod@x.com"')),
+      assert('Bare address becomes a clean link',
+        formatEmailBody('email rod@x.com').includes('>rod@x.com</a>')),
+      assert('Both forms render identical links',
+        formatEmailBody('mailto:rod@x.com') === formatEmailBody('rod@x.com')),
+      assert('Text without an address is unchanged',
+        formatEmailBody('No address here.') === 'No address here.'),
+      assert('Empty body returns empty string', formatEmailBody('') === ''),
+    ]);
+
+    // ── Pickup invoice totals (Cash/Check vs Credit Card due) ─────────────────
+    const invItems   = [{ bid: 60 }, { bid: 60 }];
+    const invSqPct   = 2.6 / 100;
+    const invSqFee   = 0.10;
+    const invTotal   = invItems.reduce((s, i) => s + i.bid, 0);
+    const invCcTrans = Math.round((invTotal * invSqPct + invSqFee) * 100) / 100;
+    const invCcTotal = Math.round((invTotal + invCcTrans) * 100) / 100;
+    renderSuite('Pickup Invoice — Totals', [
+      assert('Cash/Check Due sums winning bids',  invTotal === 120),
+      assert('CC transaction fee = total*pct+fee', invCcTrans === 3.22),
+      assert('Credit Card Due = total + fee',      invCcTotal === 123.22),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;
