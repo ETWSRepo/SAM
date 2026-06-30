@@ -548,18 +548,25 @@
       background: #1d1d1f;
       color: #888;
       font-size: 10px;
-      text-align: center;
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
       align-items: center;
-      justify-content: center;
       border-top: 1px solid #333;
       z-index: 50;
       line-height: 1;
-      white-space: nowrap;
+      padding: 0 12px;
+      gap: 12px;
+    }
+    #app-footer > div {
       overflow: hidden;
       text-overflow: ellipsis;
-      padding: 0 12px;
+      white-space: nowrap;
+      padding: 0 8px;
+      min-width: 0;
     }
+    #app-footer div:nth-child(1) { text-align: left; border-right: 1px solid #444; }
+    #app-footer div:nth-child(2) { text-align: center; border-right: 1px solid #444; }
+    #app-footer div:nth-child(3) { text-align: right; }
     #app-footer a { color: #aaa; text-decoration: none; }
     #app-footer a:hover { color: #fff; }
 
@@ -873,6 +880,9 @@
     </div>
     <div class="nav-item" data-screen="settings">
       ✦ Settings
+    </div>
+    <div class="nav-item" data-screen="config">
+      ⚙ Configuration
     </div>
     <hr class="nav-divider" />
     <div class="nav-item" id="nav-manual">
@@ -1472,23 +1482,8 @@
       </div>
     </section>
 
-    <section class="screen" id="screen-settings">
-      <div class="page-header"><h2>Settings</h2><p>Configure Gmail access and email field extraction mapping.</p></div>
-
-      <!-- Security -->
-      <div class="card" style="margin-bottom:20px;">
-        <div class="card-header">Security</div>
-        <div style="padding:16px;">
-          <div class="form-row">
-            <label for="inp-app-password">App Access Password</label>
-            <input type="password" id="inp-app-password" style="width:250px;" placeholder="Enter new password" />
-            <span class="form-hint">Password required to access the Silent Auction Manager (default: ETCCauctionoct2026)</span>
-          </div>
-          <div style="margin-top:12px;">
-            <button class="btn primary" onclick="changeAppPassword()" style="font-size:12px;white-space:nowrap;">Update Password</button>
-          </div>
-        </div>
-      </div>
+    <section class="screen" id="screen-config">
+      <div class="page-header"><h2>Configuration</h2><p>Club branding, auction location, and the Thank You email.</p></div>
 
       <!-- Club Branding -->
       <div class="card" style="margin-bottom:20px;">
@@ -1532,6 +1527,60 @@
           </div>
           <div style="margin-top:12px;">
             <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thank You Email -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Thank You Email</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-thankyou-subject">Subject</label>
+            <input type="text" id="inp-thankyou-subject" style="width:400px;" placeholder="e.g. Thank you for supporting our Silent Auction" />
+          </div>
+          <div class="form-row">
+            <label for="inp-thankyou-body">Body</label>
+            <textarea id="inp-thankyou-body" style="width:560px;height:160px;font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" placeholder="Message body for the thank you email."></textarea>
+          </div>
+          <div class="form-row">
+            <label>Footer (3 Columns)</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+              <div>
+                <label for="inp-thankyou-footer-left" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Left</label>
+                <textarea id="inp-thankyou-footer-left" style="width:100%;height:80px;font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" placeholder="Left column"></textarea>
+              </div>
+              <div>
+                <label for="inp-thankyou-footer-center" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Center</label>
+                <textarea id="inp-thankyou-footer-center" style="width:100%;height:80px;font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" placeholder="Center column"></textarea>
+              </div>
+              <div>
+                <label for="inp-thankyou-footer-right" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Right</label>
+                <textarea id="inp-thankyou-footer-right" style="width:100%;height:80px;font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" placeholder="Right column"></textarea>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-settings">
+      <div class="page-header"><h2>Settings</h2><p>Configure Gmail access and email field extraction mapping.</p></div>
+
+      <!-- Security -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">Security</div>
+        <div style="padding:16px;">
+          <div class="form-row">
+            <label for="inp-app-password">App Access Password</label>
+            <input type="password" id="inp-app-password" style="width:250px;" placeholder="Enter new password" />
+            <span class="form-hint">Password required to access the Silent Auction Manager (default: ETCCauctionoct2026)</span>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn primary" onclick="changeAppPassword()" style="font-size:12px;white-space:nowrap;">Update Password</button>
           </div>
         </div>
       </div>
@@ -1839,7 +1888,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 29, 2026 5:57 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 5:44 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2163,6 +2212,12 @@ const DEFAULT_SETTINGS = {
   // When enabled, visitors see a maintenance screen first; staff bypass it with
   // the settings password (default Gladiator#1).
   maintenanceMode:    false,
+  // Thank You email content (configured under Configuration → Thank You Email).
+  thankYouSubject:    'Thank you for supporting our Silent Auction',
+  thankYouBody:       'Thank you for your participation in our Silent Auction! Your support means a great deal to our club and to the charitable organizations we proudly serve.',
+  thankYouFooterLeft:   'Warm regards,',
+  thankYouFooterCenter: '',
+  thankYouFooterRight:  '',
 };
 
 // ══════════════════════════════════════
@@ -5406,6 +5461,11 @@ function loadSettingsForm() {
   document.getElementById('inp-club-short-name').value  = s.clubShortName || '';
   document.getElementById('inp-club-logo').value        = s.clubLogo      || '';
   document.getElementById('inp-club-favicon').value     = s.clubFavicon  || '';
+  document.getElementById('inp-thankyou-subject').value = s.thankYouSubject ?? '';
+  document.getElementById('inp-thankyou-body').value    = s.thankYouBody    ?? '';
+  document.getElementById('inp-thankyou-footer-left').value   = s.thankYouFooterLeft   ?? '';
+  document.getElementById('inp-thankyou-footer-center').value = s.thankYouFooterCenter ?? '';
+  document.getElementById('inp-thankyou-footer-right').value  = s.thankYouFooterRight  ?? '';
   renderFieldMapTable();
   refreshDeleteAuctionDropdown();
   updateFavicon(s.clubFavicon);
@@ -5645,6 +5705,11 @@ function saveSettings() {
     clubShortName:  document.getElementById('inp-club-short-name').value.trim(),
     clubLogo:       document.getElementById('inp-club-logo').value.trim(),
     clubFavicon:    document.getElementById('inp-club-favicon').value.trim(),
+    thankYouSubject: document.getElementById('inp-thankyou-subject').value.trim(),
+    thankYouBody:    document.getElementById('inp-thankyou-body').value,
+    thankYouFooterLeft:   document.getElementById('inp-thankyou-footer-left').value,
+    thankYouFooterCenter: document.getElementById('inp-thankyou-footer-center').value,
+    thankYouFooterRight:  document.getElementById('inp-thankyou-footer-right').value,
     versionMajor:   parseInt(document.getElementById('inp-version-major').value, 10) || 1,
     versionMinor:   parseInt(document.getElementById('inp-version-minor').value, 10) || 0,
     deployDate:     document.getElementById('inp-deploy-date').value.trim(),
@@ -5952,6 +6017,7 @@ async function navigate(screenId) {
     'payment-pickup': 'Step 6 — Pay & Pickup',
     'post-auction': 'Step 7 — Post Auction',
     'settings': 'Settings',
+    'config': 'Configuration',
     'changelog': 'Change Log'
   };
 
@@ -6046,6 +6112,7 @@ async function navigate(screenId) {
   }
   if (screenId === 'changelog')      loadChangelog();
   if (screenId === 'settings')       loadSettingsForm();
+  if (screenId === 'config')         loadSettingsForm();
   if (screenId === 'bidding-sheets') {
     PageToolbar.init({ title: '', tableSelector: '#bs-items-table' });
     const tb   = document.getElementById('page-toolbar');
@@ -9190,7 +9257,9 @@ async function loadChangelog() {
 </script>
 
 <div id="app-footer">
-  &copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN &nbsp;&middot;&nbsp; <a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a> &nbsp;&middot;&nbsp; Website by East Tennessee Web Services &nbsp;&middot;&nbsp; <a href="mailto:easttnwebservices@yahoo.com">easttnwebservices@yahoo.com</a> &nbsp;&middot;&nbsp; Version: <span id="app-version">v1.11</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 29, 2026 5:57 PM</span>
+  <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
+  <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
+  <div>Version: <span id="app-version">v1.12</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 5:44 AM</span></div>
 </div>
 
 </body>
