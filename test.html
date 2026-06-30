@@ -1770,6 +1770,38 @@ function runAll() {
       assert('Credit Card Due = total + fee',      invCcTotal === 123.22),
     ]);
 
+    // ── Item Donation Pickup — unsold items grouped by donor ──────────────────
+    const getUnsoldItemsByDonor = (items, winners) => {
+      const donorMap = {};
+      items.forEach(item => {
+        const w = winners[String(item.item_number)];
+        const sold = w && w.bidder_number != null && String(w.bidder_number) !== '';
+        if (sold) return;
+        const email = (item.donor_email || '').trim();
+        const name  = (item.donor_name  || '').trim();
+        const key   = (email || name).toLowerCase();
+        if (!key) return;
+        if (!donorMap[key]) donorMap[key] = { key, name, email, items: [] };
+        donorMap[key].items.push({ itemNum: item.item_number, description: item.description });
+      });
+      return Object.values(donorMap);
+    };
+    const donItems = [
+      { item_number: '100-1', description: 'Tires',  donor_name: 'Pat Lee',  donor_email: 'pat@x.com' },  // unsold
+      { item_number: '200-1', description: 'Brochure',donor_name: 'Pat Lee',  donor_email: 'pat@x.com' },  // unsold, same donor
+      { item_number: '300-1', description: 'Watch',   donor_name: 'Sam Roe',  donor_email: 'sam@x.com' },  // SOLD → exclude
+      { item_number: '400-1', description: 'Scarf',   donor_name: '',         donor_email: '' },           // no donor → skip
+    ];
+    const donWinners = { '300-1': { bidder_number: 120, winning_bid: '$10' } };
+    const donResult = getUnsoldItemsByDonor(donItems, donWinners);
+    const patDonor = donResult.find(d => d.key === 'pat@x.com');
+    renderSuite('Item Donation Pickup — Unsold by donor', [
+      assert('Groups both unsold items under one donor', !!patDonor && patDonor.items.length === 2),
+      assert('Excludes the sold item (300-1)', !donResult.some(d => d.items.some(i => i.itemNum === '300-1'))),
+      assert('Skips item with no donor info (400-1)', !donResult.some(d => d.items.some(i => i.itemNum === '400-1'))),
+      assert('Exactly one donor remains', donResult.length === 1),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;

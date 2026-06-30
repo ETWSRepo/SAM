@@ -1497,6 +1497,11 @@
               <div class="pa-card-title">Winning Bidder Pickup</div>
               <div class="pa-card-desc">Send pickup instructions to winners</div>
             </div>
+            <div onclick="openItemDonationPickupModal()" class="pa-card">
+              <div class="pa-card-icon">🎁</div>
+              <div class="pa-card-title">Item Donation Pickup</div>
+              <div class="pa-card-desc">Tell donors of unsold items to pick them up</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2002,7 +2007,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 11:32 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 11:53 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2271,6 +2276,68 @@
   </div>
 </div>
 
+<!-- Item Donation Pickup Modal -->
+<div id="item-donation-pickup-modal" style="display:none;position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:10px;width:95vw;height:95vh;max-width:1000px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <!-- Header -->
+    <div style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;color:var(--text);font-size:16px;">Item Donation Pickup - Select Donors</h3>
+      <button onclick="closeItemDonationPickupModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+
+    <!-- Donors Table -->
+    <div style="flex:1;overflow-y:auto;padding:20px;">
+      <table id="item-donation-pickup-table" class="tablekit" style="width:100%;border-collapse:collapse;">
+        <thead style="position:sticky;top:0;background:#dbeafe;">
+          <tr>
+            <th style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);">
+              <input type="checkbox" id="item-donation-pickup-select-all" onchange="toggleAllItemDonationPickup()" style="cursor:pointer;width:16px;height:16px;" title="Select All" />
+            </th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Donor</th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Email</th>
+            <th style="padding:10px;text-align:center;border:1px solid var(--border);width:120px;">Unsold Items</th>
+          </tr>
+        </thead>
+        <tbody id="item-donation-pickup-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer with Buttons -->
+    <div style="padding:20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeItemDonationPickupModal()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
+      <button onclick="previewItemDonationPickupEmail()" style="padding:10px 20px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">Preview</button>
+    </div>
+  </div>
+</div>
+
+<!-- Item Donation Pickup Preview Modal -->
+<div id="item-donation-pickup-preview-modal" style="display:none;position:fixed;inset:0;z-index:1950;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:10px;width:95vw;height:95vh;max-width:900px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <!-- Preview Header -->
+    <div style="padding:20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;color:#333;font-size:16px;">Email Preview</h3>
+      <div style="display:flex;gap:8px;">
+        <button onclick="sendItemDonationPickupEmails()" style="padding:8px 16px;background:#0071e3;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">✉ Email</button>
+        <button onclick="closeItemDonationPickupPreview()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#333;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+    </div>
+
+    <!-- Preview Content -->
+    <div style="flex:1;overflow-y:auto;padding:40px;background:#f5f5f5;">
+      <div id="item-donation-pickup-preview-content" style="background:#fff;padding:40px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;">
+        <!-- Email preview content populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Preview Footer -->
+    <div style="padding:20px;border-top:1px solid #ddd;display:flex;justify-content:flex-end;">
+      <button onclick="closeItemDonationPickupPreview()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- User Manual -->
 <div id="manual-overlay">
   <div id="manual-dialog">
@@ -2282,56 +2349,78 @@
       </div>
     </header>
     <div id="manual-body">
-      <p>SAM manages the full silent auction lifecycle for the East Tennessee Corvette Club — from item intake through payment and pickup. Follow the eight steps in order for each auction event.</p>
+      <p>SAM manages the full silent auction lifecycle for the East Tennessee Corvette Club — from item intake through payment, pickup, and post-auction follow-up. Work through the seven numbered steps in order for each auction event. <strong>Print Invoices</strong>, <strong>Configuration</strong>, and <strong>Settings</strong> are supporting tools available any time from the left navigation.</p>
 
       <h3>Step 1 — Load Item Emails</h3>
-      <p>Connects to <strong>etccwebsite.auction@gmail.com</strong> via Gmail (OAuth sign-in required) and scans the inbox for donation submission emails. Click <strong>Scan Inbox</strong> to authenticate and fetch emails, then <strong>Load Items</strong> to import new ones into the database. Duplicate emails are automatically skipped. Each item is assigned a unique number based on its category (e.g. 200-3 for the third Corvette item).</p>
+      <p>Connects to <strong>etccwebsite.auction@gmail.com</strong> via Gmail (OAuth sign-in required) and scans the inbox for donation submission emails. Click <strong>Scan Inbox</strong> to authenticate and fetch emails, then <strong>Load Items</strong> to import new ones into the database. Duplicate emails are automatically skipped. Each item is assigned a unique number based on its category (e.g. 200-3 for the third Corvette item). Use <strong>Add Item</strong> to enter a donation manually. The <strong>Source</strong> column shows whether each item came from Email, was manually Added, or was Edited.</p>
 
       <h3>Step 2 — Create Bid Sheets</h3>
-      <p>Generates a printable bid sheet for each item. Each sheet shows the item number, description, donor, value, starting bid, and a numbered table of bid rows with increment amounts. Starting bid and bid count are configurable in Settings. Select individual items or use Check All, then click Print.</p>
+      <p>Generates a printable bid sheet for each item. Each sheet shows the item number, description, donor, value, starting bid, and a numbered table of bid rows with increment amounts. Starting bid percentage and bid count are configurable in Settings. Select individual items or use the header Select-All checkbox, then click Print.</p>
 
       <h3>Step 3 — Register Bidders</h3>
       <p>Add auction attendees as bidders and assign bidder numbers. Import members from a Club Express export file or a registration CSV. Walk-in bidder numbers start at the configured Walk-in Start value (default 1000). Each bidder record stores name, email, and phone.</p>
 
       <h3>Step 4 — Record Winning Bidders</h3>
-      <p>After the auction closes, enter the winning bidder number and winning bid amount for each item. The table lists all items; type the bidder number and bid amount into each row and click Save. Only rows with both a bidder number and a bid amount are saved as winners.</p>
+      <p>After the auction closes, enter the winning bidder number and winning bid amount for each item. Type the bidder number and bid amount into each row — entries are saved immediately as you complete each field. Only rows with both a bidder number and a bid amount are recorded as winners.</p>
 
-      <h3>Step 5 — Print Invoices</h3>
-      <p>Generates printed invoices for winning bidders. Select individual bidders using the checkboxes or use Check All, then click Print All. Each invoice lists the bidder's winning items, amounts, total, and payment options including a credit card surcharge calculation based on the Square fee settings.</p>
+      <h3>Step 5 — Announce Winners</h3>
+      <p>Displays a table of all bidders who won one or more items. Use this screen to publicly announce winners at the event.</p>
 
-      <h3>Step 6 — Announce Winners</h3>
-      <p>Displays a table of all bidders who won one or more items. Use this screen to publicly announce winners at the event. The <strong>Email Bidders</strong> button opens the Email Bidders screen where you can send personalized winner notification emails.</p>
+      <h3>Step 6 — Pay &amp; Pickup</h3>
+      <p>Records payment method and item pickup status for each winning bidder. Supports Cash, Check, Credit Card, and Other. Credit card totals automatically include the Square transaction fee (configurable in Settings). Mark each bidder as paid as they are processed.</p>
 
-      <h3>Step 7 — Pay &amp; Pickup</h3>
-      <p>Records payment method and item pickup status for each winning bidder. Supports Cash, Check, Credit Card, and Other. Credit card totals automatically include the Square transaction fee (configurable in Settings). Mark each bidder as paid and items as picked up as they are processed.</p>
-
-      <h3>Step 8 — Post Auction</h3>
-      <p>Reporting and email tools for after the auction closes:</p>
+      <h3>Step 7 — Post Auction</h3>
+      <p>Reporting and email tools for after the auction closes.</p>
+      <p><strong>Reports</strong> (each opens a printable view):</p>
       <ul>
-        <li><strong>Auction Summary</strong> — full list of bidders, items, winners, and total income</li>
-        <li><strong>Winning Bidder Report</strong> — each winner's items and amount due</li>
-        <li><strong>Donor Report</strong> — items donated and revenue per donor</li>
+        <li><strong>Auction Summary</strong> — bidders, items, winners, and total income</li>
+        <li><strong>Winning Bidder</strong> — each winner's items and amount due</li>
+        <li><strong>Donor Report</strong> — items donated and income per donor</li>
         <li><strong>Club Financial Summary</strong> — income broken down by payment method</li>
-        <li><strong>Email Bidders</strong> — send personalized winner emails or non-winner thank-you emails via Gmail API</li>
+        <li><strong>Items Not Paid</strong> — won items without payment received</li>
+        <li><strong>Items Not Won</strong> — items with no winning bid, with donor info</li>
+      </ul>
+      <p><strong>Email</strong> tools (see Email Tools below):</p>
+      <ul>
+        <li><strong>Thank You Email</strong> — send thank-you / winner emails to selected bidders</li>
+        <li><strong>Winning Bidder Pickup</strong> — send pickup instructions and an invoice to winners</li>
+        <li><strong>Item Donation Pickup</strong> — tell donors of unsold items to pick them up</li>
       </ul>
 
-      <h3>Email Bidders</h3>
-      <p>Opens a full-screen panel listing all bidders with their winner/non-winner status. Select the recipients using the checkboxes, then:</p>
+      <h3>Print Invoices</h3>
+      <p>A standalone tool for generating printed invoices for winning bidders. Select bidders using the checkboxes (or the header Select-All), then click Print. Each invoice lists the bidder's winning items, amounts, total, and payment options including the credit card surcharge based on the Square fee settings.</p>
+
+      <h3>Email Tools</h3>
+      <p>Each email tool on the Post Auction screen opens a <strong>Select</strong> modal listing the relevant recipients with checkboxes. Choose recipients, click <strong>Preview</strong> to review a branded email for each one, then click <strong>Email</strong> to send via the Gmail API. If you are not already signed in to Gmail, a sign-in window opens automatically. Emails are sent as branded HTML with the club logo and a three-column footer; email addresses in the body become clickable links.</p>
       <ul>
-        <li><strong>Send Winning Emails</strong> — sends a personalized email to each selected winner via the Gmail API. Each email lists only that winner's items and total. Gmail sign-in (Step 1) must be completed first.</li>
-        <li><strong>Send NonWinners Emails</strong> — sends a single thank-you email to all selected non-winners as BCC.</li>
+        <li><strong>Thank You Email</strong> — lists every bidder. Winners receive the <em>Winning Bidder</em> template with the items they won and amounts; non-winners receive the <em>Thank You</em> template.</li>
+        <li><strong>Winning Bidder Pickup</strong> — lists winners who have not yet paid. Each email embeds the full <em>Silent Auction Invoice</em> (items, Cash/Check Due, and Credit Card Due including the Square surcharge).</li>
+        <li><strong>Item Donation Pickup</strong> — lists donors whose items received no winning bid, grouped by donor. Each email uses the <em>Donor Item Not Bid On</em> template and lists that donor's unsold items to pick up. Donors with no email on file are skipped.</li>
+      </ul>
+      <p>The wording for all of these (subject, body, and footer) is set on the <strong>Configuration</strong> screen.</p>
+
+      <h3>Configuration</h3>
+      <p>Password-protected screen for club identity and email wording:</p>
+      <ul>
+        <li><strong>Club Branding</strong> — club name, short name, logo, and favicon (applied throughout the app and in emails)</li>
+        <li><strong>Auction Location</strong> — venue name and address</li>
+        <li><strong>Email Templates</strong> — Subject, Body, and a three-column Footer for each of: Thank You, Winning Bidder, Winning Bidder Pickup, and Donor Item Not Bid On. Type a bare email address in the body and it becomes a clickable link automatically.</li>
       </ul>
 
       <h3>Settings</h3>
+      <p>Password-protected. Key options:</p>
       <ul>
-        <li><strong>Gmail OAuth Client ID</strong> — required for scanning the inbox and sending winner emails. Enter your Google Cloud OAuth 2.0 client ID.</li>
+        <li><strong>Gmail OAuth Client ID</strong> and <strong>Inbox Email</strong> — required for scanning the inbox and sending emails</li>
         <li><strong>Starting Bid %</strong> — starting bid as a percentage of item value (default 30%)</li>
         <li><strong>Final Bid %</strong> — highest bid row as a percentage of item value (default 150%)</li>
         <li><strong>Bid Count</strong> — number of bid rows on each bid sheet (default 25)</li>
         <li><strong>Walk-in Start</strong> — first bidder number assigned to walk-in registrations (default 1000)</li>
         <li><strong>Square Fee %</strong> and <strong>Square Flat Fee</strong> — credit card surcharge rates used on invoices and Pay &amp; Pickup</li>
-        <li><strong>Email Field Mapping</strong> — maps labels in donation emails to database fields. Adjust if your email format changes.</li>
-        <li><strong>Data Backup</strong> — Export a full JSON backup of all auction data, or Import a previously saved backup to restore data.</li>
+        <li><strong>Email Field Mapping</strong> — maps labels in donation emails to database fields; adjust if your email format changes</li>
+        <li><strong>Settings Password</strong> — controls access to Settings, Configuration, and Delete Auction</li>
+        <li><strong>Maintenance Mode</strong> — shows visitors a maintenance screen; staff bypass it with the settings password</li>
+        <li><strong>Data Backup</strong> — export a full JSON backup of all auction data, or import a previously saved backup</li>
+        <li><strong>Developer Tools</strong> — run the regression test suite</li>
       </ul>
 
       <h3>Data &amp; Sync</h3>
@@ -7523,6 +7612,282 @@ ${footerLeft}${footerCenter ? '<br/>' + footerCenter : ''}${footerRight ? '<br/>
   }
 }
 
+// ══════════════════════════════════════
+//  ITEM DONATION PICKUP (donors of unsold items)
+// ══════════════════════════════════════
+// Groups items that received no winning bid by their donor, so each donor can
+// be told to pick up their unsold donation(s). An item is "unsold" when it has
+// no winner entry with a bidder_number.
+function getUnsoldItemsByDonor() {
+  const items   = Items.getAll();
+  const winners = DB.getWinners();
+  const donorMap = {};
+  items.forEach(item => {
+    const w = winners[String(item.item_number)];
+    const sold = w && w.bidder_number != null && String(w.bidder_number) !== '';
+    if (sold) return;
+    const email = (item.donor_email || '').trim();
+    const name  = (item.donor_name  || '').trim();
+    const key   = (email || name).toLowerCase();
+    if (!key) return; // no donor info → can't contact
+    if (!donorMap[key]) donorMap[key] = { key, name, email, items: [] };
+    donorMap[key].items.push({ itemNum: item.item_number, description: item.description });
+  });
+  return Object.values(donorMap);
+}
+
+// Inline-styled HTML table of a donor's unsold items for the pickup email.
+function buildDonationItemsHtml(itemsList) {
+  if (!itemsList || !itemsList.length) return '';
+  const rows = itemsList.map(i => `
+    <tr>
+      <td style="padding:6px 10px;border:1px solid #000;">${escHtml(i.itemNum)}</td>
+      <td style="padding:6px 10px;border:1px solid #000;">${escHtml(i.description || '')}</td>
+    </tr>`).join('');
+  return `
+    <div style="margin:20px 0;">
+      <div style="font-weight:700;font-size:15px;margin-bottom:8px;">Items to Pick Up</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;font-size:13px;">
+        <thead>
+          <tr style="background:#dbeafe;">
+            <th style="padding:8px 10px;text-align:left;border:1px solid #000;width:90px;">Item #</th>
+            <th style="padding:8px 10px;text-align:left;border:1px solid #000;">Description</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function openItemDonationPickupModal() {
+  const donors = getUnsoldItemsByDonor();
+  const tbody = document.getElementById('item-donation-pickup-body');
+  const modal = document.getElementById('item-donation-pickup-modal');
+
+  if (!tbody || !modal) {
+    alert('Item Donation Pickup modal not found. Please refresh the page.');
+    return;
+  }
+
+  if (donors.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-secondary);">No unsold donated items.</td></tr>';
+    modal.style.display = 'flex';
+    return;
+  }
+
+  tbody.innerHTML = donors.map((d, idx) => `
+    <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="item-donation-pickup-cb" data-idx="${idx}" data-key="${escHtml(d.key)}" data-email="${escHtml(d.email)}" data-name="${escHtml(d.name)}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml(d.name || '(no name)')}</td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml(d.email || '(no email)')}</td>
+      <td style="padding:10px;border:1px solid var(--border);text-align:center;">${d.items.length}</td>
+    </tr>
+  `).join('');
+
+  const headerRow = document.querySelector('#item-donation-pickup-table thead tr');
+  const cell0 = headerRow ? headerRow.cells[0] : null;
+  if (cell0) {
+    cell0.innerHTML = '<input type="checkbox" id="item-donation-pickup-select-all" onchange="toggleAllItemDonationPickup()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
+    cell0.style.textAlign = 'center';
+    cell0.style.verticalAlign = 'middle';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeItemDonationPickupModal() {
+  const modal = document.getElementById('item-donation-pickup-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function toggleAllItemDonationPickup() {
+  const allCheckbox = document.getElementById('item-donation-pickup-select-all');
+  if (!allCheckbox) return;
+  document.querySelectorAll('.item-donation-pickup-cb').forEach(cb => cb.checked = allCheckbox.checked);
+}
+
+function previewItemDonationPickupEmail() {
+  const checkboxes = document.querySelectorAll('.item-donation-pickup-cb:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one donor.');
+    return;
+  }
+
+  const settings = DB.getSettings();
+  const donorsByKey = {};
+  getUnsoldItemsByDonor().forEach(d => { donorsByKey[d.key] = d; });
+  const previewContent = document.getElementById('item-donation-pickup-preview-content');
+  const previewModal = document.getElementById('item-donation-pickup-preview-modal');
+
+  if (!previewContent || !previewModal) {
+    alert('Email preview modal not found. Please refresh the page.');
+    return;
+  }
+
+  let previewHtml = '';
+
+  checkboxes.forEach((checkbox, idx) => {
+    const donorName = checkbox.dataset.name || 'Donor';
+    const donorEmail = checkbox.dataset.email;
+    const donor = donorsByKey[checkbox.dataset.key] || { items: [] };
+
+    const subject = settings.donorNotBidSubject || '';
+    const body = settings.donorNotBidBody || '';
+    const footerLeft = settings.donorNotBidFooterLeft || '';
+    const footerCenter = settings.donorNotBidFooterCenter || '';
+    const footerRight = settings.donorNotBidFooterRight || '';
+
+    const clubLogo = getClub().logo;
+    const logoUrl = new URL(clubLogo, window.location.href).href;
+    const itemsHtml = buildDonationItemsHtml(donor.items);
+
+    if (idx > 0) previewHtml += '<div style="margin-top:48px;padding-top:32px;border-top:2px solid var(--border);"></div>';
+
+    previewHtml += `
+      <div style="margin-bottom:32px;">
+        <div style="background:#ffffff;border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Email Header with Logo -->
+          <div style="background:var(--bg-section);padding:24px;text-align:center;border-bottom:1px solid var(--border);">
+            <img src="${logoUrl}" alt="Logo" style="max-height:60px;max-width:200px;margin-bottom:12px;"/>
+          </div>
+          <!-- Email Metadata -->
+          <div style="padding:16px 24px;background:#fafafa;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-secondary);">
+            <div><strong>To:</strong> ${donorEmail || '(no email)'}</div>
+            <div style="margin-top:4px;"><strong>Subject:</strong> ${subject}</div>
+          </div>
+          <!-- Email Body -->
+          <div style="padding:24px;">
+            <p style="margin:0 0 16px;font-size:14px;line-height:1.6;">Dear ${donorName},</p>
+            <p style="margin:0 0 16px;font-size:13px;line-height:1.8;white-space:pre-wrap;">${formatEmailBody(body)}</p>
+            ${itemsHtml}
+            <!-- Footer -->
+            <div style="margin:24px 0 0;padding-top:16px;border-top:1px solid var(--border);">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:12px;line-height:1.6;color:var(--text-secondary);width:100%;">
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerLeft}</div></div>
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerCenter}</div></div>
+                <div style="text-align:left;min-width:0;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;"><div>${footerRight}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  previewContent.innerHTML = previewHtml;
+  previewModal.style.display = 'flex';
+}
+
+function closeItemDonationPickupPreview() {
+  const modal = document.getElementById('item-donation-pickup-preview-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function sendItemDonationPickupEmails() {
+  const checkboxes = document.querySelectorAll('.item-donation-pickup-cb:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one donor.');
+    return;
+  }
+
+  // Ensure user is authenticated; request access if needed
+  if (!accessToken) {
+    const settings = DB.getSettings();
+    const clientId = settings.gmailClientId;
+
+    if (!tokenClient) {
+      reinitTokenClient();
+    }
+    if (!tokenClient || !clientId) {
+      alert('Gmail authentication not configured. Check settings.');
+      return;
+    }
+
+    window._pendingEmailSend = sendItemDonationPickupEmails;
+    console.log('Opening authentication popup...');
+    const hint = settings.inboxEmail || '';
+    tokenClient.requestAccessToken({ prompt: 'consent', login_hint: hint });
+    return;
+  }
+
+  const settings = DB.getSettings();
+  const donorsByKey = {};
+  getUnsoldItemsByDonor().forEach(d => { donorsByKey[d.key] = d; });
+  const inboxEmail = settings.inboxEmail || 'auction@example.com';
+
+  let sent = 0, failed = 0;
+  const errors = [];
+
+  for (const checkbox of checkboxes) {
+    try {
+      const donorName = checkbox.dataset.name || 'Donor';
+      const donorEmail = checkbox.dataset.email;
+      const donor = donorsByKey[checkbox.dataset.key] || { items: [] };
+
+      if (!donorEmail) {
+        failed++;
+        errors.push(`${donorName}: No email on file`);
+        continue;
+      }
+
+      const subject = settings.donorNotBidSubject || '';
+      const body = settings.donorNotBidBody || '';
+      const footerLeft = settings.donorNotBidFooterLeft || '';
+      const footerCenter = settings.donorNotBidFooterCenter || '';
+      const footerRight = settings.donorNotBidFooterRight || '';
+
+      const clubLogo = getClub().logo;
+      const logoUrl = new URL(clubLogo, window.location.href).href;
+      const itemsHtml = buildDonationItemsHtml(donor.items);
+
+      const htmlBody = `
+<html><head></head><body style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#333;">
+<div style="text-align:center;margin-bottom:20px;"><img src="${logoUrl}" style="max-height:50px;max-width:150px;" alt="Logo" /></div>
+<p>Dear ${donorName},</p>
+<p>${formatEmailBody(body)}</p>
+${itemsHtml}
+<p style="margin-top:20px;border-top:1px solid #ddd;padding-top:12px;">
+${footerLeft}${footerCenter ? '<br/>' + footerCenter : ''}${footerRight ? '<br/>' + footerRight : ''}
+</p>
+</body></html>`;
+
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please refresh and try again.');
+      }
+      // UTF-8 encode before base64 (btoa rejects non-Latin1); subject as encoded-word.
+      const rawMessage = `From: ${inboxEmail}\r\nTo: ${donorEmail}\r\nSubject: =?utf-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset="UTF-8"\r\n\r\n${htmlBody}`;
+      const message = btoa(unescape(encodeURIComponent(rawMessage))).replace(/\+/g, '-').replace(/\//g, '_');
+
+      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ raw: message })
+      });
+
+      if (response.ok) {
+        sent++;
+      } else {
+        failed++;
+        errors.push(`${donorName}: HTTP ${response.status}`);
+      }
+    } catch (e) {
+      failed++;
+      errors.push(`${checkbox.dataset.name}: ${e.message}`);
+    }
+  }
+
+  closeItemDonationPickupPreview();
+  const msg = `Sent: ${sent}, Failed: ${failed}`;
+  if (errors.length > 0) {
+    alert(msg + '\n\nErrors:\n' + errors.slice(0, 5).join('\n') + (errors.length > 5 ? '\n...' : ''));
+  } else {
+    alert(msg);
+  }
+}
+
 function printAuctionSummary() {
   const items    = Items.getAll();
   const bidders  = Bidders.getAll();
@@ -10176,7 +10541,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v2.1</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 11:32 AM</span></div>
+  <div>Version: <span id="app-version">v2.2</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 11:53 AM</span></div>
 </div>
 
 </body>
