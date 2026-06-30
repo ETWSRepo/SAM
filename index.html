@@ -1472,10 +1472,10 @@
           </div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:10px;">Email</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
-            <div onclick="openEmailBiddersPage()" class="pa-card">
+            <div onclick="openThankYouEmailModal()" class="pa-card">
               <div class="pa-card-icon">✉</div>
-              <div class="pa-card-title">Email Bidders</div>
-              <div class="pa-card-desc">Select bidders and open email client</div>
+              <div class="pa-card-title">Thank You Email</div>
+              <div class="pa-card-desc">Send thank you emails to selected bidders</div>
             </div>
           </div>
         </div>
@@ -1993,7 +1993,7 @@
           <div id="version-display" style="font-size:12px;color:var(--text-secondary);padding:8px;background:var(--bg-section);border-radius:4px;"></div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 5:57 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jun 30, 2026 7:03 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2032,7 +2032,8 @@
         <h2>Change Log</h2>
       </div>
       <div class="card" style="margin-bottom:16px;">
-        <div id="changelog-meta" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">
+        <div id="changelog-meta" style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;">
+          <div class="stat-box"><div class="stat-label">Current Version</div><div class="stat-value" id="cl-version">—</div></div>
           <div class="stat-box"><div class="stat-label">Repository</div><div class="stat-value" id="cl-repo">—</div></div>
           <div class="stat-box"><div class="stat-label">FTP Deployment Path</div><div class="stat-value" id="cl-ftp">—</div></div>
           <div class="stat-box"><div class="stat-label">Files in Repo</div><div class="stat-value" id="cl-files">—</div></div>
@@ -2133,6 +2134,69 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button onclick="closeAuthModal()" style="padding:8px 16px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;">Cancel</button>
       <button onclick="submitAuthPassword()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Thank You Email Modal -->
+<div id="thankyou-email-modal" style="display:none;position:fixed;inset:0;z-index:1900;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg);border-radius:10px;width:95vw;height:95vh;max-width:1000px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <!-- Header -->
+    <div style="padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;color:var(--text);font-size:16px;">Thank You Email - Select Bidders</h3>
+      <button onclick="closeThankYouEmailModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text);padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+
+    <!-- Bidders Table -->
+    <div style="flex:1;overflow-y:auto;padding:20px;">
+      <table id="thankyou-bidders-table" class="tablekit" style="width:100%;border-collapse:collapse;">
+        <thead style="position:sticky;top:0;background:#dbeafe;">
+          <tr>
+            <th style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);">
+              <input type="checkbox" id="thankyou-select-all" onchange="toggleAllThankYouBidders()" style="cursor:pointer;width:16px;height:16px;" title="Select All" />
+            </th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Bidder #</th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Name</th>
+            <th style="padding:10px;text-align:left;border:1px solid var(--border);">Email</th>
+            <th style="padding:10px;text-align:center;border:1px solid var(--border);width:80px;">Winner</th>
+          </tr>
+        </thead>
+        <tbody id="thankyou-bidders-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer with Buttons -->
+    <div style="padding:20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeThankYouEmailModal()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
+      <button onclick="previewThankYouEmail()" style="padding:10px 20px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">Preview</button>
+    </div>
+  </div>
+</div>
+
+<!-- Thank You Email Preview Modal -->
+<div id="thankyou-email-preview-modal" style="display:none;position:fixed;inset:0;z-index:1950;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:10px;width:95vw;height:95vh;max-width:900px;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+    <!-- Preview Header -->
+    <div style="padding:20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;color:#333;font-size:16px;">Email Preview</h3>
+      <div style="display:flex;gap:8px;">
+        <button onclick="window.print()" style="padding:8px 16px;background:#0071e3;border:none;border-radius:6px;cursor:pointer;color:#fff;font-size:13px;font-weight:600;">🖨 Print</button>
+        <button onclick="closeThankYouEmailPreview()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#333;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+    </div>
+
+    <!-- Preview Content -->
+    <div style="flex:1;overflow-y:auto;padding:40px;background:#f5f5f5;">
+      <div id="thankyou-email-preview-content" style="background:#fff;padding:40px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;max-width:600px;margin:0 auto;">
+        <!-- Email preview content populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Preview Footer -->
+    <div style="padding:20px;border-top:1px solid #ddd;display:flex;justify-content:flex-end;">
+      <button onclick="closeThankYouEmailPreview()" style="padding:10px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;">Close</button>
     </div>
   </div>
 </div>
@@ -2626,9 +2690,28 @@ const DB = {
       body: JSON.stringify({ action: 'save_bidders', data: v, auction_id: this.getCurrentAuctionId() })
     }).catch(e => console.warn('Failed to save bidders to database:', e));
   },
-  getWinners()    { return JSON.parse(localStorage.getItem(this._k('winners'))  || '{}'); },
+  getWinners()    {
+    const raw = JSON.parse(localStorage.getItem(this._k('winners')) || '{}');
+    // Winners must be a plain object keyed by item number. If an Array ever
+    // slipped into storage, item keys live as string properties that
+    // JSON.stringify(array) silently drops (serializing to []). Coerce back
+    // to a plain object so those entries survive.
+    if (Array.isArray(raw)) {
+      const obj = {};
+      Object.keys(raw).forEach(k => { obj[k] = raw[k]; });
+      return obj;
+    }
+    return raw;
+  },
   saveWinners(v)  {
     if (isReadOnly()) return;
+    // Normalize to a plain object before persisting/sending. An array with
+    // string keys would stringify to [] and wipe every winner server-side.
+    if (Array.isArray(v)) {
+      const obj = {};
+      Object.keys(v).forEach(k => { obj[k] = v[k]; });
+      v = obj;
+    }
     const count = Object.keys(v).length;
     console.log(`[DB.saveWinners] Saving ${count} winners...`);
     console.log(`[DB.saveWinners] Winners data:`, v);
@@ -5396,65 +5479,76 @@ function refreshWinnersTable() {
     tbody.appendChild(tr);
   });
 
-  tbody.querySelectorAll('.win-bid').forEach(inp => {
-    inp.addEventListener('change', () => {
-      const tr      = inp.closest('tr');
-      const key     = tr.dataset.itemKey;
-      const numEl   = tr.querySelector('.win-num');
-      const rawVal  = inp.value.trim();
-      const bidder  = Bidders.getAll().find(b => b.bidder_number === parseInt(numEl.value, 10));
+  // Unified row persistence: always captures BOTH the winning bid and the
+  // bidder from the DOM and writes a complete winner record. This prevents
+  // either field from being dropped by a stale read of the winners object.
+  // `formatBid` true → format the bid as whole dollars (on blur/change/commit).
+  const persistWinnerRow = (tr, formatBid = false) => {
+    const key   = tr.dataset.itemKey;
+    const bidEl = tr.querySelector('.win-bid');
+    const numEl = tr.querySelector('.win-num');
+    if (!key || !bidEl || !numEl) return;
 
-      // Clear error state
-      inp.style.borderColor = '';
-      if (numEl) numEl.style.borderColor = '';
+    const rawBid = bidEl.value.trim();
+    const num    = parseInt(numEl.value, 10);
 
-      // Save winning bid amount as currency
-      const winners = DB.getWinners();
-      if (!winners[key]) winners[key] = {};
-      if (rawVal) {
-        const num = parseFloat(String(rawVal).replace(/[^0-9.]/g, '')) || 0;
-        const formatted = '$' + num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        winners[key].winning_bid = formatted;
-        inp.value = formatted;
-      } else {
-        delete winners[key].winning_bid;
-        inp.value = '';
-      }
+    bidEl.style.borderColor = '';
+    numEl.style.borderColor = '';
+
+    const winners = DB.getWinners();
+
+    // Nothing entered in either field → remove the record entirely.
+    if (!rawBid && !num) {
+      delete winners[key];
       DB.saveWinners(winners);
-      debugLog(`✓ Updated winning bid for item ${key}: ${winners[key]?.winning_bid || 'cleared'}`);
-    });
+      return;
+    }
+
+    const rec = winners[key] || {};
+
+    // Winning bid (whole dollars, no cents)
+    if (rawBid) {
+      const dollars = Math.round(parseFloat(rawBid.replace(/[^0-9.]/g, '')) || 0);
+      if (formatBid) {
+        const formatted = '$' + dollars.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        rec.winning_bid = formatted;
+        bidEl.value = formatted;
+      } else {
+        rec.winning_bid = '$' + dollars;
+      }
+    } else {
+      delete rec.winning_bid;
+    }
+
+    // Bidder
+    if (num) {
+      const bidder = Bidders.getAll().find(b => b.bidder_number === num);
+      rec.bidder_number = num;
+      rec.bidder_name   = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '(not found)';
+      if (!bidder) numEl.style.borderColor = 'var(--danger)';
+    } else {
+      delete rec.bidder_number;
+      delete rec.bidder_name;
+    }
+
+    winners[key] = rec;
+    DB.saveWinners(winners);
+    if (formatBid) debugLog(`✓ Saved winner for item ${key}: bid=${rec.winning_bid || '—'}, bidder=${rec.bidder_number || '—'}`);
+  };
+
+  tbody.querySelectorAll('.win-bid').forEach(inp => {
+    const tr = inp.closest('tr');
+    // Save once when the user finishes editing the field (change fires on blur
+    // when the value changed). Saving per-keystroke floods the server-synced
+    // localStorage and triggers HTTP 429 rate limiting, dropping the final value.
+    inp.addEventListener('change', () => persistWinnerRow(tr, true));
   });
 
   tbody.querySelectorAll('.win-num').forEach(sel => {
-    sel.addEventListener('change', () => {
-      const num     = parseInt(sel.value, 10);
-      const key     = sel.closest('tr').dataset.itemKey;
-      const tr      = sel.closest('tr');
-      const winners = DB.getWinners();
-      sel.style.borderColor = '';
-      if (!num) {
-        const existing = winners[key] || {};
-        // Preserve winning_bid when clearing bidder
-        winners[key] = Object.assign({}, existing, { bidder_number: undefined, bidder_name: undefined });
-        DB.saveWinners(winners);
-        return;
-      }
-      const bidEl = tr.querySelector('.win-bid');
-      if (!bidEl.value.trim()) {
-        sel.style.borderColor = 'var(--danger)';
-        bidEl.style.borderColor = 'var(--danger)';
-        return;
-      }
-      bidEl.style.borderColor = '';
-      const bidder = Bidders.getAll().find(b => b.bidder_number === num);
-      const name   = bidder ? `${bidder.first_name} ${bidder.last_name}`.trim() : '(not found)';
-      // Preserve winning_bid when setting bidder
-      winners[key] = Object.assign(winners[key] || {}, { bidder_number: num, bidder_name: name });
-      DB.saveWinners(winners);
-      sel.style.borderColor = bidder ? '' : 'var(--danger)';
-    });
+    const tr = sel.closest('tr');
+    sel.addEventListener('change', () => persistWinnerRow(tr, true));
     sel.addEventListener('blur', () => {
-      const nextRow = sel.closest('tr').nextElementSibling;
+      const nextRow = tr.nextElementSibling;
       if (nextRow) nextRow.querySelector('.win-bid')?.focus();
     });
   });
@@ -6766,6 +6860,111 @@ function openEmailBiddersPage() {
   if (!win) return;
   win.document.write(html);
   win.document.close();
+}
+
+function openThankYouEmailModal() {
+  const bidders = Bidders.getAll();
+  if (!bidders.length) {
+    alert('No bidders registered yet.');
+    return;
+  }
+
+  const tbody = document.getElementById('thankyou-bidders-body');
+  const modal = document.getElementById('thankyou-email-modal');
+
+  if (!tbody || !modal) {
+    alert('Thank You Email modal not found. Please refresh the page.');
+    return;
+  }
+
+  const winners = DB.getWinners();
+  const winnerBidderNums = new Set(Object.values(winners).map(w => String(w.bidder_number)));
+
+  tbody.innerHTML = bidders.map((b, idx) => {
+    const isWinner = winnerBidderNums.has(String(b.bidder_number));
+    const winnerBadge = isWinner
+      ? '<span style="font-size:11px;font-weight:600;color:#1a7f37;background:#d1fae5;border-radius:4px;padding:2px 8px;">✓ Winner</span>'
+      : '<span style="font-size:11px;color:#888;background:#f0f0f0;border-radius:4px;padding:2px 8px;">—</span>';
+
+    return `
+    <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="thankyou-bidder-cb" data-idx="${idx}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml(String(b.bidder_number))}</td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</td>
+      <td style="padding:10px;border:1px solid var(--border);">${escHtml(b.email || '')}</td>
+      <td style="padding:10px;border:1px solid var(--border);text-align:center;">${winnerBadge}</td>
+    </tr>
+  `;
+  }).join('');
+
+  // TableKit.initAll() replaced header cell 0's checkbox with a sort dropdown.
+  // Re-inject the select-all checkbox into header cell 0 (same model as the
+  // Record Winning Bidders table) so it survives TableKit processing.
+  const headerRow = document.querySelector('#thankyou-bidders-table thead tr');
+  const cell0 = headerRow ? headerRow.cells[0] : null;
+  if (cell0) {
+    cell0.innerHTML = '<input type="checkbox" id="thankyou-select-all" onchange="toggleAllThankYouBidders()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
+    cell0.style.textAlign = 'center';
+    cell0.style.verticalAlign = 'middle';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeThankYouEmailModal() {
+  const modal = document.getElementById('thankyou-email-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function toggleAllThankYouBidders() {
+  const allCheckbox = document.getElementById('thankyou-select-all');
+  if (!allCheckbox) return;
+  const checkboxes = document.querySelectorAll('.thankyou-bidder-cb');
+  checkboxes.forEach(cb => cb.checked = allCheckbox.checked);
+}
+
+function previewThankYouEmail() {
+  const checkboxes = document.querySelectorAll('.thankyou-bidder-cb:checked');
+  if (checkboxes.length === 0) {
+    alert('Please select at least one bidder.');
+    return;
+  }
+
+  const settings = DB.getSettings();
+  const selectedBidder = checkboxes[0]; // Get first selected bidder for preview
+  const bidderName = selectedBidder.dataset.name;
+  const previewContent = document.getElementById('thankyou-email-preview-content');
+  const previewModal = document.getElementById('thankyou-email-preview-modal');
+
+  if (!previewContent || !previewModal) {
+    alert('Email preview modal not found. Please refresh the page.');
+    return;
+  }
+
+  // Format footer with 3 columns
+  const footerLeft = settings.thankYouFooterLeft || '';
+  const footerCenter = settings.thankYouFooterCenter || '';
+  const footerRight = settings.thankYouFooterRight || '';
+
+  const previewHtml = `
+    <p style="margin:0 0 16px;">Dear ${bidderName},</p>
+    <p style="margin:0 0 16px;">${settings.thankYouBody || ''}</p>
+    <div style="margin:24px 0;padding-top:16px;border-top:1px solid #ddd;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center;font-size:12px;line-height:1.5;">
+        <div style="text-align:left;"><div>${footerLeft}</div></div>
+        <div style="text-align:center;"><div>${footerCenter}</div></div>
+        <div style="text-align:right;"><div>${footerRight}</div></div>
+      </div>
+    </div>
+  `;
+
+  previewContent.innerHTML = previewHtml;
+  previewModal.style.display = 'flex';
+}
+
+function closeThankYouEmailPreview() {
+  const modal = document.getElementById('thankyou-email-preview-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function printAuctionSummary() {
@@ -9335,6 +9534,7 @@ async function loadChangelog() {
   const FTP   = 'ftp.etccapps.com → /apps/sam/';
   const BASE  = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
+  document.getElementById('cl-version').textContent = getAppVersion();
   document.getElementById('cl-repo').textContent    = `${OWNER}/${REPO}`;
   document.getElementById('cl-ftp').textContent     = FTP;
 
@@ -9412,7 +9612,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v1.13</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 5:57 AM</span></div>
+  <div>Version: <span id="app-version">v1.14</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jun 30, 2026 7:03 AM</span></div>
 </div>
 
 </body>

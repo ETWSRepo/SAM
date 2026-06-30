@@ -987,26 +987,59 @@ if ($action === 'login') {
     }
 
     try {
+        // Self-heal the schema: ensure the winners table and all expected columns
+        // exist. A mismatched/legacy prod table (e.g. missing winning_bid) makes
+        // every INSERT throw "Unknown column", which previously surfaced as
+        // count:0 with the data only surviving via the KV backup below.
+        $pdo->exec("CREATE TABLE IF NOT EXISTS winners (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            auction_id VARCHAR(50) NOT NULL DEFAULT '',
+            item_number VARCHAR(20),
+            bidder_number INT NULL,
+            bidder_name VARCHAR(255),
+            winning_bid VARCHAR(20),
+            UNIQUE KEY unique_auction_item (auction_id, item_number),
+            INDEX idx_auction (auction_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        // Add any columns missing from a legacy table. ADD COLUMN IF NOT EXISTS is
+        // MariaDB syntax; on MySQL it errors, so each is wrapped and ignored.
+        foreach ([
+            "ALTER TABLE winners ADD COLUMN winning_bid VARCHAR(20)",
+            "ALTER TABLE winners ADD COLUMN bidder_number INT NULL",
+            "ALTER TABLE winners ADD COLUMN bidder_name VARCHAR(255)",
+            "ALTER TABLE winners ADD COLUMN auction_id VARCHAR(50) NOT NULL DEFAULT ''",
+            "ALTER TABLE winners ADD COLUMN item_number VARCHAR(20)",
+        ] as $alter) {
+            try { $pdo->exec($alter); } catch (Throwable $ignore) { /* column already exists */ }
+        }
+
         // Full replace for this auction so cleared winners are removed from the DB.
         $pdo->prepare("DELETE FROM winners WHERE auction_id = ?")->execute([$auctionId]);
         $insertQuery = "INSERT INTO winners (auction_id, item_number, bidder_number, bidder_name, winning_bid) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE bidder_number=VALUES(bidder_number), bidder_name=VALUES(bidder_name), winning_bid=VALUES(winning_bid)";
         $stmt = $pdo->prepare($insertQuery);
 
+        $insertErrors = [];
         foreach ($data as $itemNum => $winner) {
             try {
-                $bidNum = $winner['bidder_number'] ?? null;
-                $bidName = $winner['bidder_name'] ?? null;
+                // Coerce bidder_number to a non-empty int or SQL NULL. An empty
+                // string ('') is what the client sends for a bid-only row, and
+                // inserting '' into an INT column throws on strict SQL modes.
+                $bidNumRaw = $winner['bidder_number'] ?? null;
+                $bidNum = ($bidNumRaw === null || $bidNumRaw === '') ? null : intval($bidNumRaw);
+                $bidName = isset($winner['bidder_name']) && $winner['bidder_name'] !== '' ? $winner['bidder_name'] : null;
                 $bid = $winner['winning_bid'] ?? null;
 
-                // Phase 2: Validate winning bid
+                // Validate winning bid (skip only on a genuine validation failure)
                 $bidCheck = validateWinningBid($bid);
                 if (!$bidCheck['valid']) {
-                    logQuery($action, $insertQuery, 'ERROR', "Invalid bid for item $itemNum: " . $bidCheck['error']);
-                    logAudit($pdo, $userId, 'save_winners_validation_failed', 'winners', $itemNum, null, $winner, 'failure', $bidCheck['error']);
+                    $msg = $bidCheck['error'] ?? ($bidCheck['message'] ?? 'invalid bid');
+                    $insertErrors[] = "item $itemNum: $msg";
+                    logQuery($action, $insertQuery, 'ERROR', "Invalid bid for item $itemNum: $msg");
+                    logAudit($pdo, $userId, 'save_winners_validation_failed', 'winners', $itemNum, null, $winner, 'failure', $msg);
                     continue;
                 }
 
-                error_log("[save_winners] Inserting: item=$itemNum, bidder_number=$bidNum, bidder_name=$bidName, winning_bid=$bid");
+                error_log("[save_winners] Inserting: item=$itemNum, bidder_number=" . var_export($bidNum, true) . ", bidder_name=" . var_export($bidName, true) . ", winning_bid=$bid");
 
                 $stmt->execute([
                     $auctionId,
@@ -1017,22 +1050,30 @@ if ($action === 'login') {
                 ]);
                 $count++;
 
-                // Phase 2: Log successful winner save
                 logAudit($pdo, $userId, 'save_winners', 'winners', $itemNum, null, $winner, 'success', "Winner recorded: bidder=$bidNum, bid=$bid");
-            } catch (Exception $winErr) {
+            } catch (Throwable $winErr) {
+                // Catch Throwable (not just Exception) so PDO/TypeErrors surface.
+                $insertErrors[] = "item $itemNum: " . $winErr->getMessage();
                 logQuery($action, $insertQuery, 'ERROR', "Failed to insert winner for item $itemNum: " . $winErr->getMessage());
                 logAudit($pdo, $userId, 'save_winners_error', 'winners', $itemNum, null, $winner, 'failure', $winErr->getMessage());
             }
         }
 
-        // Also save to key-value store as backup
+        // Also save to key-value store as backup. This is the authoritative copy
+        // the client reads back via get_all/syncFromKeyValueDB, so persistence
+        // works even if the relational insert above is skipped.
         $kvQuery = "INSERT INTO sam_store (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)";
         $kvStmt = $pdo->prepare($kvQuery);
-        $kvStmt->execute([($auctionId ? "sam_{$auctionId}_winners" : 'sam_winners'), json_encode($data)]);
+        // Cast to object so the stored JSON is always a keyed object ({...}),
+        // never a bare array ([]). The client treats winners as an object map;
+        // a stored '[]' would round-trip into a JS Array and drop string keys.
+        $kvStmt->execute([($auctionId ? "sam_{$auctionId}_winners" : 'sam_winners'), json_encode((object)$data)]);
 
         logQuery($action, $insertQuery, 'SUCCESS', "Saved/updated $count winners to SQL table");
-        echo json_encode(['ok' => true, 'count' => $count]);
-    } catch (Exception $e) {
+        $resp = ['ok' => true, 'count' => $count];
+        if (!empty($insertErrors)) $resp['insert_errors'] = $insertErrors;
+        echo json_encode($resp);
+    } catch (Throwable $e) {
         logQuery($action, $insertQuery ?? 'N/A', 'ERROR', $e->getMessage());
         echo json_encode(['error' => 'Failed to save winners: ' . $e->getMessage()]);
     }
