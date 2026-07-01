@@ -29,6 +29,31 @@ session_start();
 
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PRODUCTION HARDENING: HTTP Method Validation & Security Headers
+// ═════════════════════════════════════════════════════════════════════════════
+$allowedMethods = ['GET', 'POST', 'OPTIONS'];
+if (!in_array($_SERVER['REQUEST_METHOD'], $allowedMethods, true)) {
+    http_response_code(405);
+    header('Allow: GET, POST, OPTIONS');
+    echo json_encode(['error' => 'Method not allowed']);
+    exit;
+}
+
+// Additional security headers to prevent caching of sensitive responses
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
+header('Pragma: no-cache');
+header('Expires: -1');
+// Prevent MIME type detection of JSON
+header('X-Content-Type-Options: nosniff');
+// Prevent clickjacking
+header('X-Frame-Options: DENY');
+// Prevent browser-based XSS auditor (can be exploited)
+header('X-XSS-Protection: 0');
 
 // Include Phase 2 security helpers (optional - graceful degradation)
 $securityHelpersPath = __DIR__ . '/security-helpers.php';
@@ -132,7 +157,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ═════════════════════════════════════════════════════════════════════════════
 // SECURITY: Input validation - Whitelist allowed actions
 // ═════════════════════════════════════════════════════════════════════════════
-$input = json_decode(file_get_contents('php://input'), true) ?? [];
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true);
+
+// Validate JSON parsing
+if (json_last_error() !== JSON_ERROR_NONE) {
+    logSecurityEvent('INVALID_JSON', 'unknown', 'JSON decode error: ' . json_last_error_msg(), 'WARN');
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid JSON']);
+    exit;
+}
+
+$input = $input ?? [];
 $action = $input['action'] ?? '';
 
 // Validate action is a string (not array/object injection)
@@ -278,6 +314,59 @@ function logSecurityEvent($eventType, $action, $details = '', $severity = 'INFO'
     if ($severity === 'CRITICAL') {
         error_log("[SECURITY_CRITICAL] {$logEntry}");
     }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PRODUCTION HARDENING: Response Filtering (prevent sensitive data leakage)
+// ═════════════════════════════════════════════════════════════════════════════
+function filterSensitiveData($data) {
+    if (!is_array($data) && !is_object($data)) {
+        return $data;
+    }
+
+    $sensitiveFields = [
+        'password', 'passwordHash', 'settingsPassword',
+        'encryption_key', 'encryptionKey', 'secret', 'token',
+        'api_key', 'apiKey', 'private_key', 'privateKey',
+        'db_pass', 'dbPass', 'database_password', 'databasePassword'
+    ];
+
+    $isArray = is_array($data);
+    $filtered = $isArray ? [] : new stdClass();
+
+    foreach ($data as $key => $value) {
+        $shouldFilter = false;
+
+        // Check exact match
+        if (in_array($key, $sensitiveFields, true)) {
+            $shouldFilter = true;
+        }
+
+        // Check case-insensitive for common patterns
+        $lowerKey = strtolower($key);
+        foreach ($sensitiveFields as $field) {
+            if (strpos($lowerKey, strtolower($field)) !== false) {
+                $shouldFilter = true;
+                break;
+            }
+        }
+
+        if ($shouldFilter) {
+            $filteredValue = '***REDACTED***';
+        } else if (is_array($value) || is_object($value)) {
+            $filteredValue = filterSensitiveData($value);
+        } else {
+            $filteredValue = $value;
+        }
+
+        if ($isArray) {
+            $filtered[$key] = $filteredValue;
+        } else {
+            $filtered->$key = $filteredValue;
+        }
+    }
+
+    return $filtered;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

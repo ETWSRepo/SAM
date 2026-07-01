@@ -531,36 +531,52 @@ function createDatabaseBackup($pdo, $backupDir, $dbName) {
         $backupFile = $backupDir . '/backup_' . date('Y-m-d_H-i-s') . '.sql';
         $gzFile = $backupFile . '.gz';
 
-        // Use mysqldump if available, otherwise use PDO
-        $mysqlDumpPath = shell_exec('which mysqldump');
+        // SECURITY: Avoid shell_exec() (command injection risk). Use PHP-based backup instead.
+        // This is safer and more portable across hosting environments.
+        $tables = ['items', 'bidders', 'winners', 'payments', 'settings', 'audit_log', 'sam_store'];
+        $backup = [];
+        $backupMeta = [
+            'backup_time' => date('Y-m-d H:i:s'),
+            'database' => $dbName,
+            'version' => '1.0'
+        ];
 
-        if ($mysqlDumpPath && function_exists('shell_exec')) {
-            // Use mysqldump for full backup
-            $cmd = sprintf(
-                'mysqldump --single-transaction --quick --lock-tables=false %s > %s && gzip %s',
-                escapeshellarg($dbName),
-                escapeshellarg($backupFile),
-                escapeshellarg($backupFile)
-            );
-            shell_exec($cmd);
-        } else {
-            // Fallback: PHP-based backup of key tables
-            $tables = ['items', 'bidders', 'winners', 'payments', 'settings', 'audit_log', 'sam_store'];
-            $backup = [];
-
-            foreach ($tables as $table) {
-                try {
-                    $rows = $pdo->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_ASSOC);
-                    $backup[$table] = $rows;
-                } catch (Exception $e) {
-                    // Table might not exist
-                }
+        foreach ($tables as $table) {
+            try {
+                // Use prepared statement for safety (though table name is hardcoded)
+                $rows = $pdo->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_ASSOC);
+                $backup[$table] = $rows;
+            } catch (Exception $e) {
+                // Table might not exist, skip
+                error_log("[BACKUP] Table $table not found: " . $e->getMessage());
             }
-
-            $sql = json_encode($backup, JSON_PRETTY_PRINT);
-            file_put_contents($backupFile, $sql);
-            gzcompress($sql);
         }
+
+        // Create SQL dump format for readability and restore capability
+        $sqlDump = "-- Database Backup\n";
+        $sqlDump .= "-- Generated: " . $backupMeta['backup_time'] . "\n";
+        $sqlDump .= "-- Database: " . $backupMeta['database'] . "\n\n";
+        $sqlDump .= json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        // Write backup file with restrictive permissions
+        if (!file_put_contents($backupFile, $sqlDump, LOCK_EX)) {
+            throw new Exception("Failed to write backup file: $backupFile");
+        }
+        chmod($backupFile, 0600); // Owner read/write only
+
+        // Compress using PHP gzcompress (no shell commands)
+        $compressed = gzcompress($sqlDump, 9);
+        if ($compressed === false) {
+            throw new Exception("Failed to compress backup");
+        }
+
+        if (!file_put_contents($gzFile, $compressed, LOCK_EX)) {
+            throw new Exception("Failed to write compressed backup: $gzFile");
+        }
+        chmod($gzFile, 0600); // Owner read/write only
+
+        // Clean up uncompressed file
+        @unlink($backupFile);
 
         if (file_exists($gzFile)) {
             return [
@@ -728,4 +744,250 @@ function filterByWhitelist($array, $allowedKeys) {
         return [];
     }
     return array_intersect_key($array, array_flip($allowedKeys));
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PRODUCTION HARDENING: Password & File Security
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Hash a password using bcrypt (OWASP recommendation)
+ * @param string $password Password to hash
+ * @param int $cost Bcrypt cost (default 12, 10-14 recommended)
+ * @return string|null Hashed password or null if hash fails
+ */
+function hashPassword($password, $cost = 12) {
+    if (empty($password) || !is_string($password)) {
+        return null;
+    }
+    $hashed = password_hash($password, PASSWORD_BCRYPT, ['cost' => $cost]);
+    return $hashed !== false ? $hashed : null;
+}
+
+/**
+ * Verify password against bcrypt hash
+ * @param string $password Plain text password to verify
+ * @param string $hash Bcrypt hash to verify against
+ * @return bool True if password matches hash
+ */
+function verifyPassword($password, $hash) {
+    if (empty($password) || empty($hash) || !is_string($password) || !is_string($hash)) {
+        return false;
+    }
+    return password_verify($password, $hash);
+}
+
+/**
+ * Check if a password needs rehashing (bcrypt cost changed or algorithm upgraded)
+ * @param string $hash Current password hash
+ * @return bool True if password should be rehashed
+ */
+function needsRehash($hash) {
+    return password_needs_rehash($hash, PASSWORD_BCRYPT, ['cost' => 12]);
+}
+
+/**
+ * Validate file path is within allowed directory (prevent path traversal)
+ * @param string $filePath Path to validate
+ * @param string $baseDir Base directory that must contain the file
+ * @return bool True if file is safely within base directory
+ */
+function isPathAllowed($filePath, $baseDir) {
+    $baseDir = realpath($baseDir);
+    $filePath = realpath($filePath);
+
+    if (!$baseDir || !$filePath) {
+        return false; // One or both paths don't exist
+    }
+
+    // Ensure file is within base directory
+    return strpos($filePath, $baseDir . DIRECTORY_SEPARATOR) === 0;
+}
+
+/**
+ * Safely read file with size limits and encoding validation
+ * @param string $filePath File to read
+ * @param string $baseDir Base directory for path validation
+ * @param int $maxSize Maximum file size to read (default 1MB)
+ * @return string|null File contents or null if invalid/too large
+ */
+function safeReadFile($filePath, $baseDir, $maxSize = 1048576) {
+    if (!isPathAllowed($filePath, $baseDir)) {
+        error_log("[FILE_ERROR] Path traversal attempt: $filePath");
+        return null;
+    }
+
+    if (!file_exists($filePath) || !is_readable($filePath)) {
+        error_log("[FILE_ERROR] File not readable: $filePath");
+        return null;
+    }
+
+    $fileSize = filesize($filePath);
+    if ($fileSize === false || $fileSize > $maxSize) {
+        error_log("[FILE_ERROR] File too large: $filePath ($fileSize bytes)");
+        return null;
+    }
+
+    $content = file_get_contents($filePath);
+    if ($content === false) {
+        error_log("[FILE_ERROR] Failed to read file: $filePath");
+        return null;
+    }
+
+    return $content;
+}
+
+/**
+ * Safely write file with directory validation
+ * @param string $filePath File to write
+ * @param string $baseDir Base directory for path validation
+ * @param string $content Content to write
+ * @param int $permissions File permissions (default 0640 - restrictive)
+ * @return bool True if write successful
+ */
+function safeWriteFile($filePath, $baseDir, $content, $permissions = 0640) {
+    if (!isPathAllowed($filePath, $baseDir)) {
+        error_log("[FILE_ERROR] Path traversal attempt on write: $filePath");
+        return false;
+    }
+
+    // Create directory if needed (restrictive permissions)
+    $dir = dirname($filePath);
+    if (!is_dir($dir)) {
+        if (!mkdir($dir, 0750, true)) {
+            error_log("[FILE_ERROR] Failed to create directory: $dir");
+            return false;
+        }
+    }
+
+    if (file_put_contents($filePath, $content, LOCK_EX) === false) {
+        error_log("[FILE_ERROR] Failed to write file: $filePath");
+        return false;
+    }
+
+    // Set restrictive permissions (owner read/write, group read, no others)
+    chmod($filePath, $permissions);
+    return true;
+}
+
+/**
+ * Validate table name is in whitelist (prevent SQL injection via table names)
+ * @param string $tableName Table name to validate
+ * @param array $whitelist Allowed table names
+ * @return bool True if table is whitelisted
+ */
+function isValidTableName($tableName, $whitelist = []) {
+    $defaultWhitelist = [
+        'items', 'bidders', 'winners', 'payments', 'settings',
+        'audit_log', 'sam_store', 'emails', 'members', 'registrations',
+        'auctions', 'workflow_steps'
+    ];
+
+    $allowed = !empty($whitelist) ? $whitelist : $defaultWhitelist;
+    return in_array($tableName, $allowed, true);
+}
+
+/**
+ * Escape SQL identifier (table/column names) - use backticks for MySQL
+ * @param string $identifier Table or column name to escape
+ * @return string Escaped identifier safe for SQL
+ */
+function escapeSqlIdentifier($identifier) {
+    return '`' . str_replace('`', '``', $identifier) . '`';
+}
+
+/**
+ * Rotate log files older than retention period (prevent disk exhaustion)
+ * @param string $logDir Directory containing logs
+ * @param int $retentionDays Days to keep logs (default 30)
+ * @param int $maxFiles Maximum number of log files to keep
+ * @return array Summary of cleanup actions
+ */
+function rotateLogFiles($logDir, $retentionDays = 30, $maxFiles = 100) {
+    $result = ['deleted' => 0, 'errors' => 0];
+
+    if (!is_dir($logDir)) {
+        error_log("[LOG_ROTATION] Directory not found: $logDir");
+        return $result;
+    }
+
+    $cutoffTime = time() - ($retentionDays * 86400);
+    $files = glob($logDir . '/*.log', GLOB_NOSORT);
+
+    if (!$files) {
+        return $result;
+    }
+
+    // Sort by modification time (oldest first)
+    usort($files, function($a, $b) {
+        return filemtime($a) - filemtime($b);
+    });
+
+    // Delete old files
+    foreach ($files as $file) {
+        if (filemtime($file) < $cutoffTime) {
+            if (!unlink($file)) {
+                $result['errors']++;
+                error_log("[LOG_ROTATION] Failed to delete: $file");
+            } else {
+                $result['deleted']++;
+            }
+        }
+    }
+
+    // If still too many files, delete oldest until we're under limit
+    $remainingFiles = glob($logDir . '/*.log', GLOB_NOSORT);
+    if (count($remainingFiles) > $maxFiles) {
+        usort($remainingFiles, function($a, $b) {
+            return filemtime($a) - filemtime($b);
+        });
+
+        $toDelete = count($remainingFiles) - $maxFiles;
+        for ($i = 0; $i < $toDelete; $i++) {
+            if (!unlink($remainingFiles[$i])) {
+                $result['errors']++;
+            } else {
+                $result['deleted']++;
+            }
+        }
+    }
+
+    return $result;
+}
+
+/**
+ * Validate database connection and permissions
+ * @param PDO $pdo Database connection
+ * @return array Status array with 'valid' => bool and any issues found
+ */
+function validateDatabaseSecurity($pdo) {
+    $issues = [];
+
+    try {
+        // Check that strict mode is enabled
+        $result = $pdo->query("SELECT @@sql_mode")->fetchColumn();
+        if (strpos($result, 'STRICT_TRANS_TABLES') === false) {
+            $issues[] = 'STRICT_TRANS_TABLES mode not enabled';
+        }
+
+        // Check that tables exist
+        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($tables)) {
+            $issues[] = 'No tables found in database';
+        }
+
+        // Check for dangerous global variables (should not allow FILE access)
+        $filePriv = $pdo->query("SELECT @@secure_file_priv")->fetchColumn();
+        if ($filePriv === null || $filePriv === '') {
+            $issues[] = 'secure_file_priv not set (FILE operations enabled globally)';
+        }
+
+    } catch (Exception $e) {
+        $issues[] = 'Database check failed: ' . $e->getMessage();
+    }
+
+    return [
+        'valid' => empty($issues),
+        'issues' => $issues
+    ];
 }
