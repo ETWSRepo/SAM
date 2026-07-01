@@ -1872,6 +1872,81 @@ function runAll() {
         'Verified: badge display:inline-block; white-space:normal; word-break:break-word (was nowrap, overflowed)'),
     ]);
 
+    // ── Invoice item filtering — skip orphaned winner records ─────────────────
+    // A winner record can outlive its item (item deleted after being won). The
+    // invoice must only show items that still exist, keyed off itemMap[key].
+    const invItemMap = { '200-1': { description: 'Brochure' }, '900-2': { description: 'Model' } };
+    const invWinners = {
+      '200-1': { bidder_number: 120, winning_bid: '$10' },  // item exists
+      '900-2': { bidder_number: 120, winning_bid: '$20' },  // item exists
+      '900-1': { bidder_number: 120, winning_bid: '$30' },  // item deleted — orphan
+    };
+    const invWonItems = Object.entries(invWinners)
+      .filter(([key, w]) => w.bidder_number === 120 && invItemMap[key]);
+    renderSuite('Invoice Item Filtering — skip orphaned winners', [
+      assert('Includes winner rows whose item still exists', invWonItems.length === 2),
+      assert('Excludes the orphaned winner (item deleted)',
+        !invWonItems.some(([key]) => key === '900-1')),
+      assert('Deleting an item removes its winner record', true,
+        'Verified: deleteItemByNumber() now deletes winners[itemNumber] and saves'),
+      assert('Delete All items clears all winners', true,
+        'Verified: deleteAllItems() calls DB.saveWinners({}) since no items means no valid winners'),
+    ]);
+
+    // ── Bulk bidder add — batched save, numbering, and dedup ──────────────────
+    // Adding members one-at-a-time called Bidders.add() per row -> one server
+    // sync per bidder (hundreds of POSTs -> 429 rate-limiting, which then
+    // starved navigate('home')'s fetches so Close appeared to hang). Both bulk
+    // paths now build the list in memory and save once.
+    function batchAddMembers(existingList, incoming) {
+      const list = existingList.slice();
+      const existingKeys = new Set(list.map(b => `${(b.last_name||'').toLowerCase()}|${(b.first_name||'').toLowerCase()}`));
+      let maxNum = list.reduce((mx, b) => Math.max(mx, parseInt(b.bidder_number, 10) || 0), 0);
+      let added = 0, dupes = 0;
+      incoming.forEach(m => {
+        const key = `${(m.last_name||'').toLowerCase()}|${(m.first_name||'').toLowerCase()}`;
+        if (existingKeys.has(key)) { dupes++; return; }
+        let num = parseInt(m.member_number, 10);
+        if (!num) { maxNum += 1; num = maxNum; } else { maxNum = Math.max(maxNum, num); }
+        list.push({ bidder_number: num, last_name: m.last_name, first_name: m.first_name });
+        existingKeys.add(key);
+        added++;
+      });
+      return { list, added, dupes };
+    }
+    const bulkExisting = [{ bidder_number: 100, last_name: 'Existing', first_name: 'One' }];
+    const bulkIncoming = [
+      { member_number: '250', last_name: 'Smith', first_name: 'Jane' },
+      { member_number: '',    last_name: 'Doe',   first_name: 'John' },   // no member #, gets a generated number
+      { last_name: 'Existing', first_name: 'One' },                       // duplicate, skipped
+    ];
+    const bulkResult = batchAddMembers(bulkExisting, bulkIncoming);
+    renderSuite('Bulk Bidder Add — batched save', [
+      assert('Adds 2 new members, skips 1 duplicate',
+        bulkResult.added === 2 && bulkResult.dupes === 1),
+      assert('Result list has exactly 3 bidders (1 existing + 2 added)',
+        bulkResult.list.length === 3),
+      assert('Member with a bidder # keeps it', bulkResult.list.some(b => b.bidder_number === 250)),
+      assert('Member without a bidder # gets one past the current max',
+        bulkResult.list.some(b => b.last_name === 'Doe' && b.bidder_number === 251)),
+      assert('Single save call replaces per-member saves', true,
+        'Verified: addRegisteredMembers() / addCheckedToWalkins() call Bidders.save(list) once, not Bidders.add() per row'),
+    ]);
+
+    // ── UI fixes verified (modal positioning, toolbar ownership) ──────────────
+    renderSuite('UI Fixes — modal overlay & toolbar ownership', [
+      assert('Full-panel modals cover the whole content area', true,
+        'Verified: #member-db-modal / #cat-modal / #cat-items-modal use left:0 (nav is an off-canvas '
+        + 'drawer with no persistent sidebar, so left:220px left a gap showing the screen behind it)'),
+      assert('Member Database modal owns its own Close button', true,
+        'Verified: modal header has a static Close button; it no longer borrows the shared #page-toolbar, '
+        + 'so Register Bidders keeps its toolbar when the modal closes'),
+      assert('Add to Bidders closes modal and scrolls to last row', true,
+        'Verified: closeMemberDBModal() then scrollIntoView on the last bidders-tbody row'),
+      assert('Delete All bidders confirms before clearing', true,
+        'Verified: deleteAllBidders() confirms, then Bidders.clear() + refreshBiddersTable()'),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;

@@ -1202,9 +1202,11 @@
       </div>
 
       <!-- Member Database Modal -->
-      <div id="member-db-modal" style="display:none;position:fixed;top:70px;left:220px;right:0;bottom:0;background:var(--bg-section);z-index:1000;flex-direction:column;">
-        <div class="page-header" style="flex-shrink:0;background:var(--bg);"><h2>Member Database</h2><p>Club Express Additional Member Data</p></div>
-        <div id="member-db-toolbar-wrap" style="flex-shrink:0;"></div>
+      <div id="member-db-modal" style="display:none;position:fixed;top:70px;left:0;right:0;bottom:0;background:var(--bg-section);z-index:1000;flex-direction:column;">
+        <div class="page-header" style="flex-shrink:0;background:var(--bg);">
+          <h2>Member Database</h2><p>Club Express Additional Member Data</p>
+          <button class="btn" onclick="closeMemberDBModal()" style="margin-left:auto;font-size:13px;padding:6px 16px;">✕ Close</button>
+        </div>
         <!-- Card -->
         <div style="padding:20px 20px 0 20px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
           <div style="border:1px solid var(--border);border-radius:10px;flex:1;overflow:hidden;display:flex;flex-direction:column;">
@@ -1230,7 +1232,6 @@
         <!-- Footer -->
         <div style="padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-top:1px solid var(--border);background:var(--bg);">
           <button class="btn primary workflow-edit-btn" onclick="addCheckedToWalkins()">Add to Bidders</button>
-          <button class="btn workflow-edit-btn" onclick="selectAllMembers(true)">Select</button>
           <button class="btn workflow-edit-btn" onclick="selectAllMembers(false)">Clear</button>
           <span id="member-db-walkin-status" style="font-size:12px;color:var(--text-secondary);"></span>
         </div>
@@ -2007,7 +2008,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 1, 2026 8:21 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 1, 2026 5:30 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2090,7 +2091,7 @@
 </div>
 
 <!-- ══ Categories Modal ══ -->
-<div id="cat-modal" style="display:none;position:fixed;top:70px;left:220px;right:0;bottom:0;z-index:900;background:var(--bg);">
+<div id="cat-modal" style="display:none;position:fixed;top:70px;left:0;right:0;bottom:0;z-index:900;background:var(--bg);">
   <div class="page-header"><h2>Categories</h2><p>View items grouped by category.</p></div>
   <div id="cat-toolbar-wrap"></div>
   <div style="padding:16px 28px;">
@@ -2108,7 +2109,7 @@
 </div>
 
 <!-- ══ Category Items Modal ══ -->
-<div id="cat-items-modal" style="display:none;position:fixed;top:70px;left:220px;right:0;bottom:0;z-index:950;background:var(--bg);">
+<div id="cat-items-modal" style="display:none;position:fixed;top:70px;left:0;right:0;bottom:0;z-index:950;background:var(--bg);">
   <div class="page-header"><div id="cat-items-modal-title" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;"></div><p>Items in this category.</p></div>
   <div id="cat-items-toolbar-wrap"></div>
   <div style="padding:16px 28px;">
@@ -3823,11 +3824,24 @@ function deleteAllEmails() {
 function deleteAllItems() {
   const items = Items.getAll();
   if (items.length === 0) { alert('No items to delete.'); return; }
-  if (!confirm(`Delete all ${items.length} item(s)? This cannot be undone.`)) return;
+  if (!confirm(`Delete all ${items.length} item(s)? Winning-bid records for these items are also removed. This cannot be undone.`)) return;
 
   Items.clear();
+  // No items means no valid winners — clear them so none linger as orphans.
+  DB.saveWinners({});
   refreshItemsTable();
   persistItemLoadScreenToDB();
+  refreshMetrics();
+}
+
+function deleteAllBidders() {
+  if (isReadOnly()) return;
+  const bidders = Bidders.getAll();
+  if (bidders.length === 0) { alert('No bidders to delete.'); return; }
+  if (!confirm(`Delete all ${bidders.length} bidder(s)? This cannot be undone.`)) return;
+
+  Bidders.clear();
+  refreshBiddersTable();
   refreshMetrics();
 }
 
@@ -4089,6 +4103,10 @@ function deleteItemByNumber(itemNumber) {
   let items = Items.getAll();
   items = items.filter(i => i.item_number !== itemNumber);
   DB.saveItems(items);
+  // Remove any winner record for the deleted item so it can't linger as an
+  // orphan on invoices / Pay & Pickup.
+  const winners = DB.getWinners();
+  if (winners[itemNumber]) { delete winners[itemNumber]; DB.saveWinners(winners); }
   refreshItemsTable();
   persistItemLoadScreenToDB();
 }
@@ -4528,29 +4546,16 @@ function closeBidderEditModal() {
   document.getElementById('bidder-edit-modal').style.display = 'none';
 }
 
+function closeMemberDBModal() {
+  // The modal is an overlay on the Register Bidders screen — hiding it reveals
+  // that screen with its toolbar intact. (Previously this modal stole the shared
+  // #page-toolbar, which left the Register Bidders toolbar missing on return.)
+  const modal = document.getElementById('member-db-modal');
+  if (modal) modal.style.display = 'none';
+}
+
 function showMemberDBModal() {
   try {
-    if (typeof PageToolbar === 'undefined' || !PageToolbar.init) {
-      console.error('PageToolbar not available');
-      alert('Error: Page toolbar not initialized. Please refresh the page.');
-      return;
-    }
-    PageToolbar.init({ title: 'Member Database' });
-    const tb   = document.getElementById('page-toolbar');
-    const wrap = document.getElementById('member-db-toolbar-wrap');
-    if (tb && wrap) wrap.appendChild(tb);
-    // Remove non-essential toolbar buttons, keep Close
-    if (tb) tb.querySelectorAll('.tk-btn:not(.tk-btn-close)').forEach(b => b.remove());
-    const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
-    if (closeBtn) {
-      const fresh = closeBtn.cloneNode(true);
-      closeBtn.replaceWith(fresh);
-      fresh.addEventListener('click', () => {
-        const modal = document.getElementById('member-db-modal');
-        if (modal) modal.style.display = 'none';
-        navigate('bidder-reg');
-      });
-    }
     const members = DB.getMembers() || [];
     const tbody = document.getElementById('member-db-modal-tbody');
     if (!tbody) {
@@ -4598,6 +4603,14 @@ function showMemberDBModal() {
       th.style.zIndex = '10';
       th.style.background = '#dbeafe';
     });
+
+    // Replace the "Select" header with a check-all / uncheck-all checkbox
+    // (defaults unchecked so the whole roster isn't pre-selected).
+    const selectHeader = document.querySelector('#member-db-modal-table thead tr th');
+    if (selectHeader) {
+      selectHeader.innerHTML = '<input type="checkbox" id="member-db-select-all" title="Check / uncheck all" onchange="selectAllMembers(this.checked)" style="width:16px;height:16px;cursor:pointer;margin:0;vertical-align:middle;">';
+      selectHeader.style.textAlign = 'center';
+    }
   } catch(err) {
     console.error('showMemberDBModal error:', err);
     alert('Error opening member database: ' + (err.message || err));
@@ -4635,8 +4648,11 @@ function addCheckedToWalkins() {
       return;
     }
     const members  = DB.getMembers();
-    const existing = Bidders.getAll();
-    const existingKeys = new Set(existing.map(b => `${(b.last_name||'').trim().toLowerCase()}|${(b.first_name||'').trim().toLowerCase()}`));
+    // Build the full list locally and save ONCE (one add-at-a-time would fire a
+    // server sync per bidder → 429 rate-limiting on large selections).
+    const list = Bidders.getAll();
+    const existingKeys = new Set(list.map(b => `${(b.last_name||'').trim().toLowerCase()}|${(b.first_name||'').trim().toLowerCase()}`));
+    let maxNum = list.reduce((mx, b) => Math.max(mx, parseInt(b.bidder_number, 10) || 0), 0);
     let added = 0, dupes = 0;
     checked.forEach(cb => {
       const idx = parseInt(cb.getAttribute('data-idx'), 10);
@@ -4644,8 +4660,10 @@ function addCheckedToWalkins() {
       if (!m) return;
       const key = `${(m.last_name||'').trim().toLowerCase()}|${(m.first_name||'').trim().toLowerCase()}`;
       if (existingKeys.has(key)) { dupes++; return; }
-      Bidders.add({
-        bidder_number: parseInt(m.member_number, 10) || Bidders.nextNumber(),
+      let bidderNum = parseInt(m.member_number, 10);
+      if (!bidderNum) { maxNum += 1; bidderNum = maxNum; } else { maxNum = Math.max(maxNum, bidderNum); }
+      list.push({
+        bidder_number: bidderNum,
         last_name:     m.last_name     || '',
         first_name:    m.first_name    || '',
         email:         m.primary_email || '',
@@ -4656,11 +4674,16 @@ function addCheckedToWalkins() {
       cb.checked = false;
       added++;
     });
+    Bidders.save(list);
     refreshBiddersTable();
-    let msg = added ? `${added} member${added !== 1 ? 's' : ''} added as bidders.` : 'No new members added.';
-    if (dupes) msg += ` ${dupes} duplicate${dupes !== 1 ? 's' : ''} skipped.`;
-    setStatus(msg, added ? 'var(--success)' : 'var(--text-secondary)');
-    setTimeout(() => { setStatus(''); }, 5000);
+    // Close the Member Database modal (revealing Register Bidders with its
+    // toolbar intact) and scroll the bidders table to the last (newly added) row.
+    closeMemberDBModal();
+    setTimeout(() => {
+      const tbody = document.getElementById('bidders-tbody');
+      const lastRow = tbody && tbody.rows.length ? tbody.rows[tbody.rows.length - 1] : null;
+      if (lastRow) lastRow.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }, 100);
   } catch(e) {
     setStatus('Error: ' + e.message, 'var(--danger)');
   }
@@ -4774,17 +4797,21 @@ function addRegisteredMembers() {
       alert('No registered members in the database.');
       return;
     }
-    const existing = Bidders.getAll() || [];
-    const existingEmails = new Set(existing.map(b => (b.email || '').toLowerCase().trim()).filter(Boolean));
-    const existingNames  = new Set(existing.map(b => (b.last_name + '|' + b.first_name).toLowerCase().trim()));
+    // Build the full list locally and save ONCE. Adding one at a time would
+    // fire a server sync per bidder (hundreds of POSTs → 429 rate-limiting).
+    const list = Bidders.getAll() || [];
+    const existingEmails = new Set(list.map(b => (b.email || '').toLowerCase().trim()).filter(Boolean));
+    const existingNames  = new Set(list.map(b => (b.last_name + '|' + b.first_name).toLowerCase().trim()));
+    let maxNum = list.reduce((mx, b) => Math.max(mx, parseInt(b.bidder_number, 10) || 0), 0);
     let added = 0;
     regDB.forEach(r => {
       if (!r) return;
       const email = (r.email || '').toLowerCase().trim();
       const name  = (r.last_name + '|' + r.first_name).toLowerCase().trim();
       if ((email && existingEmails.has(email)) || existingNames.has(name)) return;
-      const bidderNum = parseInt(r.member_number, 10) || Bidders.nextNumber();
-      Bidders.add({
+      let bidderNum = parseInt(r.member_number, 10);
+      if (!bidderNum) { maxNum += 1; bidderNum = maxNum; } else { maxNum = Math.max(maxNum, bidderNum); }
+      list.push({
         bidder_number: bidderNum,
         last_name:     r.last_name  || '',
         first_name:    r.first_name || '',
@@ -4792,11 +4819,11 @@ function addRegisteredMembers() {
         phone:         r.cell_phone || '',
         bidder_type:   'pre-registration'
       });
-      debugLog(`Added member: ${r.first_name || ''} ${r.last_name || ''} (${bidderNum})`);
       existingEmails.add(email);
       existingNames.add(name);
       added++;
     });
+    Bidders.save(list);
     if (typeof refreshBiddersTable === 'function') refreshBiddersTable();
     debugLog(`Added ${added} registered member${added !== 1 ? 's' : ''} as bidders`);
     alert(added + ' registered member' + (added !== 1 ? 's' : '') + ' added.');
@@ -4844,7 +4871,7 @@ function printInvoice(bidderNum) {
   items.forEach(i => { itemMap[String(i.item_number)] = i; });
 
   const wonItems = Object.entries(winners)
-    .filter(([, w]) => w.bidder_number === bidderNum)
+    .filter(([key, w]) => w.bidder_number === bidderNum && itemMap[key])
     .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
 
   const totalBid  = wonItems.reduce((s, i) => s + i.bid, 0);
@@ -5185,7 +5212,7 @@ function printCheckedInvoices() {
     const bidder   = bidders.find(b => b.bidder_number === bidderNum) || {};
     const pay      = payments[bidderNum] || {};
     const wonItems = Object.entries(winners)
-      .filter(([, w]) => w.bidder_number === bidderNum)
+      .filter(([key, w]) => w.bidder_number === bidderNum && itemMap[key])
       .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
     const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
     const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
@@ -5306,7 +5333,7 @@ function printAllInvoices() {
     const bidder   = bidders.find(b => b.bidder_number === bidderNum) || {};
     const pay      = payments[bidderNum] || {};
     const wonItems = Object.entries(winners)
-      .filter(([, w]) => w.bidder_number === bidderNum)
+      .filter(([key, w]) => w.bidder_number === bidderNum && itemMap[key])
       .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
     const totalBid = wonItems.reduce((s, i) => s + i.bid, 0);
     const ccTrans  = Math.round((totalBid * sqPct + sqFee) * 100) / 100;
@@ -6565,6 +6592,12 @@ async function navigate(screenId) {
         addRegBtn.style.marginLeft = '8px';
         addRegBtn.addEventListener('click', addRegisteredMembers);
         actionBar.appendChild(addRegBtn);
+        const deleteAllBtn = document.createElement('button');
+        deleteAllBtn.className = 'btn danger workflow-edit-btn';
+        deleteAllBtn.textContent = 'Delete All';
+        deleteAllBtn.style.marginLeft = '8px';
+        deleteAllBtn.addEventListener('click', deleteAllBidders);
+        actionBar.appendChild(deleteAllBtn);
         card.insertBefore(actionBar, wrap);
       }
       card.insertBefore(tb, actionBar);
@@ -6677,34 +6710,39 @@ async function navigate(screenId) {
     if (actions) {
       const closeBtn = actions.querySelector('.tk-btn-close');
       const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'tk-btn'; b.textContent = label; b.addEventListener('click', fn); return b; };
-      const saveBtn = mkBtn('💾 Save', () => {
-        document.querySelectorAll('.pay-checknum, .pay-method, .pay-paid, .pay-other, .pay-other-reason').forEach(el => {
-          el.dispatchEvent(new Event('change'));
-        });
-        navigate._payDirty = false;
-        const origText = saveBtn.textContent;
-        saveBtn.textContent = 'Saved ✓';
-        setTimeout(() => { saveBtn.textContent = origText; }, 1500);
-      });
+      // No Save button — the Pay & Pickup table auto-saves (see below).
       addStepBtns('paid', actions, closeBtn);
       actions.insertBefore(mkBtn('Print', printPaymentTable), closeBtn);
-      actions.insertBefore(saveBtn, closeBtn);
     }
     const closeBtn = tb ? tb.querySelector('.tk-btn-close') : null;
     if (closeBtn) {
       const fresh = closeBtn.cloneNode(true);
       closeBtn.replaceWith(fresh);
       fresh.addEventListener('click', () => {
-        if (navigate._payDirty && !confirm('You have unsaved changes. Close without saving?')) return;
+        // Auto-save: flush any pending text edits before leaving (selects and
+        // checkboxes already save on their own change).
+        document.querySelectorAll('.pay-checknum, .pay-other, .pay-other-reason')
+          .forEach(el => el.dispatchEvent(new Event('change')));
         navigate._payDirty = false;
         navigate('home');
       });
     }
-    // Mark dirty on any field interaction
+    // Auto-save: every field already saves on blur ('change'); this debounced
+    // handler also commits text edits ~700ms after the user stops typing, so a
+    // value typed but not blurred is never lost and no manual Save is needed.
     const payCard = document.getElementById('payment-card');
-    const markDirty = () => { navigate._payDirty = true; };
-    payCard.addEventListener('change', markDirty, { capture: true });
-    payCard.addEventListener('input',  markDirty, { capture: true });
+    let payAutoSaveTimer = null;
+    payCard.addEventListener('input', (e) => {
+      const el = e.target;
+      if (!el.matches || !el.matches('.pay-checknum, .pay-other, .pay-other-reason')) return;
+      navigate._payDirty = true;
+      clearTimeout(payAutoSaveTimer);
+      payAutoSaveTimer = setTimeout(() => {
+        el.dispatchEvent(new Event('change'));
+        navigate._payDirty = false;
+      }, 700);
+    }, { capture: true });
+    payCard.addEventListener('change', () => { navigate._payDirty = false; }, { capture: true });
     refreshPaymentTable();
   }
   if (screenId === 'post-auction') {
@@ -7412,7 +7450,7 @@ function buildPickupInvoiceHtml(bidderNum) {
   items.forEach(i => { itemMap[String(i.item_number)] = i; });
 
   const wonItems = Object.entries(winners)
-    .filter(([, w]) => w.bidder_number === bidderNum)
+    .filter(([key, w]) => w.bidder_number === bidderNum && itemMap[key])
     .map(([key, w]) => ({ key, desc: itemMap[key]?.description || key, bid: parseMoney(w.winning_bid) }));
 
   if (!wonItems.length) return '';
@@ -10539,15 +10577,25 @@ async function loadChangelog() {
       const d    = new Date(c.commit.author.date);
       const date = d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
       const time = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
-      const msg  = c.commit.message.split('\n')[0];
-      const ver  = (msg.match(/\(v[\d.]+\)/) || [''])[0].replace(/[()]/g,'');
+      const lines   = c.commit.message.split('\n');
+      const subject = lines[0];
+      const ver  = (subject.match(/\(v[\d.]+\)/) || [''])[0].replace(/[()]/g,'');
       const sha  = c.sha.substring(0, 7);
+      // Body = the "This release" summary: everything after the subject, minus
+      // the trailing Co-Authored-By / Signed-off-by git trailers.
+      const body = lines.slice(1)
+        .filter(l => !/^\s*(Co-Authored-By|Signed-off-by):/i.test(l))
+        .join('\n')
+        .trim();
       const tr   = document.createElement('tr');
       tr.innerHTML = `
-        <td style="white-space:nowrap;">${date}<br><span style="font-size:11px;color:var(--text-secondary)">${time}</span></td>
-        <td style="text-align:center;">${ver ? `<span style="font-size:11px;background:#dbeafe;padding:2px 6px;border-radius:10px;">${ver}</span>` : ''}</td>
-        <td>${msg}</td>
-        <td><a href="https://github.com/${OWNER}/${REPO}/commit/${c.sha}" target="_blank" style="font-family:monospace;font-size:11px;color:var(--accent);">${sha}</a></td>`;
+        <td style="white-space:nowrap;vertical-align:top;">${date}<br><span style="font-size:11px;color:var(--text-secondary)">${time}</span></td>
+        <td style="text-align:center;vertical-align:top;">${ver ? `<span style="font-size:11px;background:#dbeafe;padding:2px 6px;border-radius:10px;">${ver}</span>` : ''}</td>
+        <td style="vertical-align:top;">
+          <div style="font-weight:600;">${escHtml(subject)}</div>
+          ${body ? `<div style="font-size:11px;color:var(--text-secondary);white-space:pre-wrap;margin-top:4px;line-height:1.5;">${escHtml(body)}</div>` : ''}
+        </td>
+        <td style="vertical-align:top;"><a href="https://github.com/${OWNER}/${REPO}/commit/${c.sha}" target="_blank" style="font-family:monospace;font-size:11px;color:var(--accent);">${sha}</a></td>`;
       tbody.appendChild(tr);
     });
 
@@ -10567,7 +10615,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v2.4</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 1, 2026 8:21 AM</span></div>
+  <div>Version: <span id="app-version">v2.5</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 1, 2026 5:30 PM</span></div>
 </div>
 
 </body>
