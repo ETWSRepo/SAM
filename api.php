@@ -20,15 +20,12 @@ if (file_exists($phase3HelpersPath)) {
 // ═════════════════════════════════════════════════════════════════════════════
 function loadEnvFile($envFile) {
     if (!file_exists($envFile)) {
-        // Fallback to hardcoded defaults if .env doesn't exist
+        // No hardcoded secret fallback: a missing .env must fail closed (DB
+        // connection below will fail with empty credentials) rather than
+        // silently running on hardcoded production secrets baked into source
+        // control. Only non-secret defaults belong here.
         return [
-            'DB_HOST' => 'localhost',
-            'DB_USER' => 'u177039107_sam',
-            'DB_PASS' => 'uemk$td*TjnAD9t4HXeYdsBQfqDDSZ4m',
-            'DB_NAME' => 'u177039107_sam',
             'ALLOWED_ORIGIN' => 'https://etccapps.com',
-            'API_KEY' => 'sam_prod_2026_F1G4W8ZrfEJ2gTOBRnlLsD3y',
-            'SESSION_SECRET' => 'sam_sess_2026_K9mZxQ2pL8vN4rT6wJ5hG7cD1sE3aBfM',
         ];
     }
 
@@ -146,24 +143,18 @@ $allowedActions = [
     'get_storage_report',
 ];
 
-// Actions that don't require authentication (read-only, initial data load)
+// Actions that don't require authentication. Deliberately minimal: every
+// action that returns stored data (get_all, get_items, get_bidders, etc.)
+// used to be public, which let anyone with the API URL — no password needed
+// — dump the full bidder/donor PII, payment records, and even the admin
+// password fields straight out of get_all/get_settings. All reads now require
+// the same session the client already establishes via the app's password
+// screen (action:'login'); the client re-syncs data immediately after login.
 $publicActions = [
-    'login',            // Establishes the authenticated session
-    'logout',           // Clears the session
-    'health',           // API health check
-    'init_tables',      // Database initialization
-    'log',              // Debug logging
-    'get_all',          // Read all data from localStorage sync
-    'get_all_data',     // Read all data for export
-    'get_items',        // Read items
-    'get_bidders',      // Read bidders
-    'get_winners',      // Read winners
-    'get_payments',     // Read payments
-    'get_settings',     // Read settings
-    'get_auctions',     // Read auctions
-    'get_members',      // Read members
-    'get_registrations',// Read registrations
-    'get_emails',       // Read emails
+    'login',  // Establishes the authenticated session
+    'logout', // Clears the session
+    'health', // API health check
+    'log',    // Debug logging — called throughout boot, before login resolves
 ];
 
 // Validate action is in whitelist
@@ -190,6 +181,21 @@ if (!in_array($action, $publicActions, true)) {
         http_response_code(401);
         echo json_encode(['error' => $sessionCheck['message']]);
         exit;
+    }
+
+    // CSRF validation for destructive/irreversible actions. The client sends
+    // the token issued at login (X-CSRF-Token) via secureApiFetch(). Scoped to
+    // actions confirmed to go through that helper, rather than every
+    // authenticated request, so a fetch() call site missed in this audit can't
+    // silently break the live app.
+    $csrfProtectedActions = ['save_settings', 'delete_auction', 'clear_all', 'clear_data', 'clear_auctions'];
+    if (in_array($action, $csrfProtectedActions, true)) {
+        $sentToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $sentToken)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF token missing or invalid']);
+            exit;
+        }
     }
 }
 
@@ -266,9 +272,13 @@ if ($action === 'login') {
     // password comes from the stored settings, falling back to the env default.
     $entered = (string)($input['password'] ?? '');
 
-    // Accept the app password, the staff/settings password (also used to bypass
-    // maintenance mode), or the env default. Any valid one establishes the session.
-    $accepted = [$env['DEFAULT_PASSWORD'] ?? 'ETCCauctionoct2026', 'Gladiator#1'];
+    // Accept the app password/staff-settings password (dynamic, admin-set) or
+    // the env bootstrap default (only relevant before any settings row exists).
+    // A hardcoded literal password ('Gladiator#1') used to be unconditionally
+    // accepted here regardless of what the admin configured — a permanent
+    // backdoor that couldn't be revoked. Removed; only the DB-stored and env
+    // bootstrap values are honored now.
+    $accepted = [$env['DEFAULT_PASSWORD'] ?? 'ETCCauctionoct2026'];
     try {
         $val = $pdo->query("SELECT `value` FROM sam_store WHERE `key` = 'sam_settings' LIMIT 1")->fetchColumn();
         if ($val) {
@@ -289,8 +299,13 @@ if ($action === 'login') {
         session_regenerate_id(true);
         $_SESSION['authenticated'] = true;
         $_SESSION['last_activity'] = time();
+        // Issue a server-tied CSRF token. The client stores it and sends it back
+        // via X-CSRF-Token on subsequent requests; validated below for every
+        // authenticated action. Previously the client generated its own token
+        // that the server never checked — real protection, not just the header.
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         logQuery($action, 'LOGIN', 'SUCCESS', 'Authenticated');
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true, 'csrf_token' => $_SESSION['csrf_token']]);
     } else {
         logQuery($action, 'LOGIN', 'FAIL', 'Bad password');
         http_response_code(401);

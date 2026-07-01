@@ -2008,7 +2008,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 1, 2026 5:30 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 1, 2026 5:47 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2595,6 +2595,13 @@ const SessionManager = {
       sessionStorage.setItem('sam_csrf_token', token);
     }
     return token;
+  },
+
+  // Called on successful login with the server-issued token (api.php now
+  // validates X-CSRF-Token against this exact value for destructive actions).
+  // Overrides the locally self-generated placeholder above.
+  setCsrfToken(token) {
+    if (token) sessionStorage.setItem('sam_csrf_token', token);
   },
 
   _generateCsrfToken() {
@@ -8821,10 +8828,15 @@ function initializePasswordScreen() {
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setApiPassword(enteredPassword); // enable silent re-auth on later 401s
+        if (data.csrf_token) SessionManager.setCsrfToken(data.csrf_token);
         passwordAuthenticated = true;
         console.log('[Password] ✓ Authenticated');
         passwordScreen.classList.add('hidden');
         document.body.style.overflow = 'auto';
+        // Data reads now require this session (see api.php $publicActions) —
+        // the pre-login boot sync returned nothing, so pull the real data now.
+        await syncFromKeyValueDB();
+        refreshHomeMetrics();
         return;
       }
       console.log('[Password] ✗ Incorrect password');
@@ -9049,7 +9061,10 @@ function initializeEntryGate() {
   input?.focus();
   const errEl = document.getElementById('maintenance-error');
   const btn   = document.getElementById('maintenance-btn');
-  const bypass = settings.settingsPassword || 'Gladiator#1';
+  // No hardcoded literal fallback here — that was a permanent, un-revocable
+  // backdoor password baked into public source. settingsPassword always has a
+  // value (DEFAULT_SETTINGS sets one), so this is never empty in practice.
+  const bypass = settings.settingsPassword;
   const fail = () => {
     errEl.classList.add('show');
     input.value = '';
@@ -9076,7 +9091,14 @@ function initializeEntryGate() {
         method: 'POST',
         body: JSON.stringify({ action: 'login', password: entered })
       });
-      await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
+      if (data && data.csrf_token) SessionManager.setCsrfToken(data.csrf_token);
+      if (res.ok && data && data.success) {
+        // Data reads now require this session (see api.php $publicActions) —
+        // the pre-login boot sync returned nothing, so pull the real data now.
+        await syncFromKeyValueDB();
+        refreshHomeMetrics();
+      }
     } catch (e) {
       // Even if the session call fails, the local password matched — let them in.
     } finally {
@@ -10054,12 +10076,14 @@ function showCategoryItems(code, name) {
 // ══════════════════════════════════════
 async function syncFromKeyValueDB() {
   try {
-    const response = await fetch('https://etccapps.com/apps/sam/api.php', {
+    // get_all now requires the authenticated session (api.php); secureApiFetch
+    // ensures the session cookie + auth headers are attached consistently.
+    const response = await secureApiFetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'get_all' })
     });
     const keyValueData = await response.json();
+    if (keyValueData && keyValueData.error) { console.warn('get_all:', keyValueData.error); return; }
 
     // Load all data from key-value store into localStorage
     let loadedCount = 0;
@@ -10615,7 +10639,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v2.5</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 1, 2026 5:30 PM</span></div>
+  <div>Version: <span id="app-version">v2.6</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 1, 2026 5:47 PM</span></div>
 </div>
 
 </body>

@@ -238,6 +238,7 @@ function checkRateLimit($endpoint, $maxRequests, $windowSeconds) {
  */
 function getRateLimitConfig($action) {
     $limits = [
+        'login' => ['maxRequests' => 8, 'windowSeconds' => 300],         // 8 per 5 minutes — brute-force guard
         'scan_inbox' => ['maxRequests' => 1, 'windowSeconds' => 300],     // 1 per 5 minutes
         'set_password' => ['maxRequests' => 5, 'windowSeconds' => 900],   // 5 per 15 minutes
         'save_items' => ['maxRequests' => 100, 'windowSeconds' => 60],    // 100 per minute
