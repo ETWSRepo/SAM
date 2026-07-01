@@ -2007,7 +2007,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 1, 2026 7:30 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 1, 2026 8:21 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -4883,8 +4883,7 @@ function printInvoice(bidderNum) {
     <tfoot>
 <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Cash <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
       <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Check <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(totalBid)}</td></tr>
-      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;"><span style="font-weight:400;color:#888;font-size:11px;">(Transaction fee of ${settings.squarePct || 0}% + $${sqFee.toFixed(2)} = ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
-      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;">Paid <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;"></td></tr>
+      <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;"><span style="font-weight:400;color:#888;font-size:11px;">(transaction fee of ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;">${fmtDollar(ccTotal)}</td></tr>
     </tfoot>
   </table>
   <div style="margin-top:32px;padding:16px 20px;border:1px solid #000;border-radius:6px;text-align:center;">
@@ -5196,7 +5195,7 @@ function printCheckedInvoices() {
       <tr><td style="padding:4px 10px;border-bottom:1px solid #eee;vertical-align:top;">${escHtml(i.key)}</td>
           <td style="padding:4px 10px;border-bottom:1px solid #eee;font-size:12px;line-height:1.4;">${escHtml(i.desc)}</td>
           <td style="padding:4px 10px;border-bottom:1px solid #eee;text-align:right;vertical-align:top;">${fmtDollar(i.bid)}</td></tr>`).join('');
-    const ccLabel = `Credit Card Due <span style="font-weight:400;font-size:11px;color:#666;">(${fmtDollar(ccTrans)} Transaction fee)</span>`;
+    const ccLabel = `Credit Card Due <span style="font-weight:400;font-size:11px;color:#666;">(transaction fee of ${fmtDollar(ccTrans)})</span>`;
     return `<div class="invoice">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:12px;">
@@ -5210,8 +5209,7 @@ function printCheckedInvoices() {
         <tfoot>
           <tr><td colspan="2" style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">Cash <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;"></td><td style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
           <tr><td colspan="2" style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">Check <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;"></td><td style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
-          <tr><td colspan="2" style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;font-size:11px;color:#666;">(${fmtDollar(ccTrans)} Transaction fee)&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;"></td><td style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
-          <tr><td colspan="2" style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">Paid <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;accent-color:#1a7f37;"></td><td style="padding:5px 10px;border:1px solid #000;"></td></tr>
+          <tr><td colspan="2" style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;font-size:11px;color:#666;">(transaction fee of ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;"></td><td style="padding:5px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
         </tfoot>
       </table>
       <div style="margin-top:16px;padding:10px 16px;border:1px solid #000;border-radius:6px;text-align:center;">
@@ -5339,8 +5337,7 @@ function printAllInvoices() {
         <tfoot>
           <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Cash <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
           <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Check <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
-          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;color:#888;font-size:11px;">(Transaction fee of ${settings.squarePct || 0}% + $${sqFee.toFixed(2)} = ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
-          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Paid <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;border:1px solid #000;"></td></tr>
+          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;color:#888;font-size:11px;">(transaction fee of ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;cursor:pointer;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
         </tfoot>
       </table>
       <div style="margin-top:32px;padding:16px 20px;border:1px solid #000;border-radius:6px;text-align:center;">
@@ -5783,7 +5780,7 @@ function refreshBsItemsTable() {
     const catCode = item.category_code ? 'cat-' + item.category_code : 'cat-900';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center;"><input type="checkbox" class="bs-chk" ${isReadOnly() ? 'disabled' : ''}/></td>
+      <td style="text-align:center;"><input type="checkbox" class="bs-chk" checked ${isReadOnly() ? 'disabled' : ''}/></td>
       <td><strong>${escHtml(String(item.item_number))}</strong></td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(item.email_date || '')}</td>
       <td style="vertical-align:top;"><span class="badge ${catCode}" style="display:inline-block;white-space:normal;word-break:break-word;line-height:1.35;">${escHtml(String(item.category_code))} ${escHtml(item.category_name)}</span></td>
@@ -5805,7 +5802,7 @@ function refreshBsItemsTable() {
   const bsHeaderRow = document.querySelector('#bs-items-table thead tr');
   const bsCell0 = bsHeaderRow ? bsHeaderRow.cells[0] : null;
   if (bsCell0) {
-    bsCell0.innerHTML = '<input type="checkbox" id="bs-check-all" onchange="bsToggleAll()" title="Check / uncheck all" style="width:18px;height:18px;cursor:pointer;margin:0;">';
+    bsCell0.innerHTML = '<input type="checkbox" id="bs-check-all" checked onchange="bsToggleAll()" title="Check / uncheck all" style="width:18px;height:18px;cursor:pointer;margin:0;">';
     bsCell0.style.textAlign = 'center';
     bsCell0.style.verticalAlign = 'middle';
   }
@@ -7038,7 +7035,7 @@ function openThankYouEmailModal() {
 
     return `
     <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
-      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="thankyou-bidder-cb" data-idx="${idx}" data-bidder-number="${b.bidder_number}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="thankyou-bidder-cb" checked data-idx="${idx}" data-bidder-number="${b.bidder_number}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(String(b.bidder_number))}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(b.email || '')}</td>
@@ -7053,7 +7050,7 @@ function openThankYouEmailModal() {
   const headerRow = document.querySelector('#thankyou-bidders-table thead tr');
   const cell0 = headerRow ? headerRow.cells[0] : null;
   if (cell0) {
-    cell0.innerHTML = '<input type="checkbox" id="thankyou-select-all" onchange="toggleAllThankYouBidders()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
+    cell0.innerHTML = '<input type="checkbox" id="thankyou-select-all" checked onchange="toggleAllThankYouBidders()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
     cell0.style.textAlign = 'center';
     cell0.style.verticalAlign = 'middle';
   }
@@ -7358,7 +7355,7 @@ function openWinningBidderPickupModal() {
   tbody.innerHTML = filteredBidders.map((b, idx) => {
     return `
     <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
-      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="winbidder-pickup-cb" data-idx="${idx}" data-bidder-number="${b.bidder_number}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="winbidder-pickup-cb" checked data-idx="${idx}" data-bidder-number="${b.bidder_number}" data-email="${escHtml(b.email || '')}" data-name="${escHtml((b.first_name + ' ' + b.last_name).trim())}" style="cursor:pointer;width:16px;height:16px;" /></td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(String(b.bidder_number))}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(b.email || '')}</td>
@@ -7369,7 +7366,7 @@ function openWinningBidderPickupModal() {
   const headerRow = document.querySelector('#winbidder-pickup-table thead tr');
   const cell0 = headerRow ? headerRow.cells[0] : null;
   if (cell0) {
-    cell0.innerHTML = '<input type="checkbox" id="winbidder-pickup-select-all" onchange="toggleAllWinningBidderPickup()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
+    cell0.innerHTML = '<input type="checkbox" id="winbidder-pickup-select-all" checked onchange="toggleAllWinningBidderPickup()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
     cell0.style.textAlign = 'center';
     cell0.style.verticalAlign = 'middle';
   }
@@ -7450,8 +7447,7 @@ function buildPickupInvoiceHtml(bidderNum) {
         <tfoot>
           <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Cash <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
           <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Check <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(totalBid)}</td></tr>
-          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;color:#888;font-size:11px;">(Transaction fee of ${settings.squarePct || 0}% + $${sqFee.toFixed(2)} = ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
-          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">Paid <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;accent-color:#1a7f37;"></td><td style="padding:6px 10px;border:1px solid #000;"></td></tr>
+          <tr><td colspan="2" style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;"><span style="font-weight:400;color:#888;font-size:11px;">(transaction fee of ${fmtDollar(ccTrans)})&nbsp;&nbsp;</span>Credit Card <input type="checkbox" style="width:18px;height:18px;vertical-align:middle;margin-left:6px;accent-color:#1a7f37;"></td><td style="padding:6px 10px;text-align:right;font-weight:700;border:1px solid #000;">${fmtDollar(ccTotal)}</td></tr>
         </tfoot>
       </table>
     </div>`;
@@ -7707,7 +7703,7 @@ function openItemDonationPickupModal() {
 
   tbody.innerHTML = donors.map((d, idx) => `
     <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#f0f7ff;' : ''}">
-      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="item-donation-pickup-cb" data-idx="${idx}" data-key="${escHtml(d.key)}" data-email="${escHtml(d.email)}" data-name="${escHtml(d.name)}" style="cursor:pointer;width:16px;height:16px;" /></td>
+      <td style="width:50px;text-align:center;padding:10px;border:1px solid var(--border);"><input type="checkbox" class="item-donation-pickup-cb" checked data-idx="${idx}" data-key="${escHtml(d.key)}" data-email="${escHtml(d.email)}" data-name="${escHtml(d.name)}" style="cursor:pointer;width:16px;height:16px;" /></td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(d.name || '(no name)')}</td>
       <td style="padding:10px;border:1px solid var(--border);">${escHtml(d.email || '(no email)')}</td>
       <td style="padding:10px;border:1px solid var(--border);text-align:center;">${d.items.length}</td>
@@ -7717,7 +7713,7 @@ function openItemDonationPickupModal() {
   const headerRow = document.querySelector('#item-donation-pickup-table thead tr');
   const cell0 = headerRow ? headerRow.cells[0] : null;
   if (cell0) {
-    cell0.innerHTML = '<input type="checkbox" id="item-donation-pickup-select-all" onchange="toggleAllItemDonationPickup()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
+    cell0.innerHTML = '<input type="checkbox" id="item-donation-pickup-select-all" checked onchange="toggleAllItemDonationPickup()" title="Select / clear all" style="width:18px;height:18px;cursor:pointer;margin:0;" />';
     cell0.style.textAlign = 'center';
     cell0.style.verticalAlign = 'middle';
   }
@@ -9587,7 +9583,7 @@ function showViewAll(type) {
           const checkboxTd = document.createElement('td');
           checkboxTd.style.textAlign = 'center';
           checkboxTd.style.width = '40px';
-          checkboxTd.innerHTML = `<input type="checkbox" class="${sel.cbClass}" title="Select row">`;
+          checkboxTd.innerHTML = `<input type="checkbox" class="${sel.cbClass}" checked title="Select row">`;
           row.insertBefore(checkboxTd, row.firstChild);
 
           // Remove delete button from last cell (keep View / Edit)
@@ -9625,7 +9621,7 @@ function showViewAll(type) {
     const headerRow = destTable.querySelector('thead tr');
     const cell0 = headerRow ? headerRow.cells[0] : null;
     if (cell0) {
-      cell0.innerHTML = `<input type="checkbox" id="${selPost.cbAllId}" onchange="${selPost.toggleFn}" title="Check / uncheck all" style="width:18px;height:18px;cursor:pointer;margin:0;">`;
+      cell0.innerHTML = `<input type="checkbox" id="${selPost.cbAllId}" checked onchange="${selPost.toggleFn}" title="Check / uncheck all" style="width:18px;height:18px;cursor:pointer;margin:0;">`;
       cell0.style.textAlign = 'center';
       cell0.style.verticalAlign = 'middle';
     }
@@ -10571,7 +10567,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v2.4</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 1, 2026 7:30 AM</span></div>
+  <div>Version: <span id="app-version">v2.4</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 1, 2026 8:21 AM</span></div>
 </div>
 
 </body>

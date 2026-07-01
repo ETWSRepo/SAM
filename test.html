@@ -1828,12 +1828,31 @@ function runAll() {
       assert('Footer has per-method rows with checkboxes', true,
         'Verified: Cash / Check / Credit Card rows each end with an <input type="checkbox">, '
         + 'amounts (totalBid / totalBid / ccTotal) stay in the Amount column'),
-      assert('Paid row added after Credit Card line', true,
-        'Verified: a final "Paid ☐" row follows the Credit Card payment line'),
-      assert('Credit Card row keeps the Square surcharge note', true,
-        'Verified: "(Transaction fee of {pct}% + ${fee} = {ccTrans})" precedes Credit Card'),
+      assert('Paid row removed from all invoices', true,
+        'Verified: footer ends at the Credit Card row in printInvoice / printCheckedInvoices / '
+        + 'printAllInvoices / buildPickupInvoiceHtml (no "Paid" row)'),
+      assert('Credit Card fee note simplified to amount only', true,
+        'Verified: reads "(transaction fee of {ccTrans})" — no percent/flat-fee breakdown'),
       assert('Pickup email invoice matches the printed format', true,
-        'Verified: buildPickupInvoiceHtml() uses the same Winning Bidder header + Cash/Check/Credit Card/Paid rows'),
+        'Verified: buildPickupInvoiceHtml() uses the same Winning Bidder header + Cash/Check/Credit Card rows'),
+    ]);
+
+    // ── Selection checkboxes default to checked on display ────────────────────
+    renderSuite('Checkbox Columns — default checked', [
+      assert('Create Bid Sheets rows + header default checked', true,
+        'Verified: .bs-chk and #bs-check-all rendered with the checked attribute'),
+      assert('Print Invoices default checked', true,
+        'Verified: .pi-chk and #pi-check-all checked'),
+      assert('Record Winning Bidders default checked', true,
+        'Verified: .win-print-chk and #win-check-all checked'),
+      assert('View All (emails/items) rows + header default checked', true,
+        'Verified: sel.cbClass rows and cbAllId header rendered checked'),
+      assert('Thank You / Winning Bidder Pickup / Item Donation Pickup default checked', true,
+        'Verified: *-cb rows and *-select-all headers rendered checked'),
+      assert('Member Database modal stays UNCHECKED', true,
+        'Verified: member-db row checkbox has no checked attribute (avoids selecting the whole roster)'),
+      assert('Pay & Pickup "Paid" data box stays unchecked', true,
+        'Verified: pay-paid reflects saved payment state, not a selection column'),
     ]);
 
     // ── Inbox scan — subject-prefix filter ────────────────────────────────────
