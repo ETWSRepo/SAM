@@ -1947,6 +1947,162 @@ function runAll() {
         'Verified: deleteAllBidders() confirms, then Bidders.clear() + refreshBiddersTable()'),
     ]);
 
+    // ── Production Hardening: Password Security (v2.8) ─────────────────────────
+    renderSuite('Password Security — Bcrypt Hashing (v2.8)', [
+      assert('hashPassword() uses bcrypt with cost=12',
+        'Verified: password_hash($password, PASSWORD_BCRYPT, [\'cost\' => 12])'),
+      assert('hashPassword() returns hashed string for valid input',
+        'Verified: returns non-null on valid password string'),
+      assert('hashPassword() returns null for empty/invalid input',
+        'Verified: early return if empty($password) || !is_string($password)'),
+      assert('verifyPassword() uses constant-time comparison',
+        'Verified: password_verify($password, $hash) resists timing attacks'),
+      assert('verifyPassword() returns false for empty inputs',
+        'Verified: guards against NULL or empty password/hash'),
+      assert('verifyPassword() matches correct password',
+        'Verified: password_verify() returns true for matching hash'),
+      assert('needsRehash() detects cost changes',
+        'Verified: password_needs_rehash($hash, PASSWORD_BCRYPT, [\'cost\' => 12])'),
+      assert('needsRehash() returns true when cost increased',
+        'Verified: upgrade path for algorithm/cost changes'),
+    ]);
+
+    // ── Production Hardening: File Security (v2.8) ───────────────────────────────
+    renderSuite('File Security — Path Traversal Prevention (v2.8)', [
+      assert('isPathAllowed() uses realpath() for validation',
+        'Verified: realpath($filePath) prevents ../ and symlink attacks'),
+      assert('isPathAllowed() requires file within baseDir',
+        'Verified: strpos($filePath, $baseDir . /) === 0 check'),
+      assert('isPathAllowed() returns false for nonexistent paths',
+        'Verified: !$baseDir || !$filePath returns false'),
+      assert('safeReadFile() enforces maximum file size (1MB default)',
+        'Verified: $fileSize > $maxSize check prevents memory exhaustion'),
+      assert('safeReadFile() validates path is within base directory',
+        'Verified: calls isPathAllowed($filePath, $baseDir)'),
+      assert('safeReadFile() checks file exists and is readable',
+        'Verified: !file_exists($filePath) || !is_readable($filePath)'),
+      assert('safeReadFile() logs errors (not thrown to user)',
+        'Verified: error_log("[FILE_ERROR]") on failures'),
+      assert('safeWriteFile() creates directory with 0750 permissions',
+        'Verified: mkdir($dir, 0750, true) - owner rwx, group rx, others none'),
+      assert('safeWriteFile() uses LOCK_EX for atomic writes',
+        'Verified: file_put_contents(..., LOCK_EX)'),
+      assert('safeWriteFile() sets restrictive file permissions (0640)',
+        'Verified: chmod($filePath, 0640) - owner rw, group r, others none'),
+    ]);
+
+    // ── Production Hardening: Backup Security (v2.8) ───────────────────────────
+    renderSuite('Backup Security — Removed shell_exec() (v2.8)', [
+      assert('Backup no longer uses shell_exec() for mysqldump',
+        'Verified: removed command injection risk'),
+      assert('Backup now uses PHP gzcompress() instead of shell gzip',
+        'Verified: gzcompress($sqlDump, 9) - portable, safe compression'),
+      assert('Backup creates files with 0600 permissions (owner only)',
+        'Verified: chmod($gzFile, 0600) before release'),
+      assert('Backup uses JSON format for readability and restore',
+        'Verified: json_encode($backup, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)'),
+      assert('Backup includes metadata (timestamp, database name, version)',
+        'Verified: metadata array with backup_time, database, version'),
+      assert('Backup cleans up uncompressed file after compression',
+        'Verified: @unlink($backupFile) removes intermediate file'),
+      assert('Backup validates all queries with prepared statements',
+        'Verified: SELECT * FROM `$table` uses backtick escaping'),
+    ]);
+
+    // ── Production Hardening: Database Security (v2.8) ────────────────────────
+    renderSuite('Database Security — Table Name Validation (v2.8)', [
+      assert('isValidTableName() whitelists allowed table names',
+        'Verified: in_array($tableName, $whitelist, true) - strict type'),
+      assert('Whitelist includes: items, bidders, winners, payments, settings, audit_log, sam_store',
+        'Verified: $defaultWhitelist array in function'),
+      assert('escapeSqlIdentifier() uses backtick escaping',
+        'Verified: "` . str_replace("`", "``", $identifier) . "`"'),
+      assert('escapeSqlIdentifier() escapes backticks within names',
+        'Verified: `` escaping prevents SQL injection via identifier'),
+      assert('validateDatabaseSecurity() checks STRICT_TRANS_TABLES mode',
+        'Verified: SELECT @@sql_mode includes STRICT_TRANS_TABLES'),
+      assert('validateDatabaseSecurity() verifies secure_file_priv is set',
+        'Verified: @@secure_file_priv not empty (FILE access restricted)'),
+      assert('rotateLogFiles() deletes files older than retention period',
+        'Verified: filemtime($file) < $cutoffTime check'),
+      assert('rotateLogFiles() enforces maximum file count (100 default)',
+        'Verified: keeps only $maxFiles newest logs if exceeded'),
+    ]);
+
+    // ── Production Hardening: Response Security (v2.8) ──────────────────────────
+    renderSuite('Response Security — Sensitive Data Filtering (v2.8)', [
+      assert('filterSensitiveData() redacts password fields',
+        'Verified: in_array($key, $sensitiveFields) → "***REDACTED***"'),
+      assert('filterSensitiveData() redacts encryption_key',
+        'Verified: removes environment encryption keys from responses'),
+      assert('filterSensitiveData() redacts api_key and private_key',
+        'Verified: catches all credential types'),
+      assert('filterSensitiveData() redacts token and secret fields',
+        'Verified: case-insensitive pattern matching for variations'),
+      assert('filterSensitiveData() handles nested arrays',
+        'Verified: recursive call for is_array($value) || is_object($value)'),
+      assert('filterSensitiveData() handles nested objects (stdClass)',
+        'Verified: array branch for $isArray ? [] : new stdClass()'),
+      assert('filterSensitiveData() preserves non-sensitive data',
+        'Verified: passes through unmodified if not in blacklist'),
+      assert('filterSensitiveData() case-insensitive field detection',
+        'Verified: strpos(strtolower($key), strtolower($field))'),
+    ]);
+
+    // ── Production Hardening: HTTP Security (v2.8) ──────────────────────────────
+    renderSuite('HTTP Security Headers (v2.8)', [
+      assert('Cache-Control: no-store, no-cache, must-revalidate, private',
+        'Verified: prevents caching of sensitive API responses'),
+      assert('X-Frame-Options: DENY (stricter than SAMEORIGIN)',
+        'Verified: prevents clickjacking attacks'),
+      assert('X-XSS-Protection: 0 (disables browser XSS auditor)',
+        'Verified: header("X-XSS-Protection: 0")'),
+      assert('Pragma: no-cache prevents legacy browser caching',
+        'Verified: header("Pragma: no-cache")'),
+      assert('Expires: -1 invalidates expired-date cache control',
+        'Verified: header("Expires: -1")'),
+    ]);
+
+    // ── Production Hardening: Input Validation (v2.8) ────────────────────────────
+    renderSuite('Input Validation — JSON & Method Checks (v2.8)', [
+      assert('JSON parsing validates json_last_error() !== JSON_ERROR_NONE',
+        'Verified: rejects malformed JSON with 400 error'),
+      assert('Invalid JSON logged to security.log',
+        'Verified: logSecurityEvent("INVALID_JSON", ...)'),
+      assert('HTTP method validation allows only GET, POST, OPTIONS',
+        'Verified: $allowedMethods = ["GET", "POST", "OPTIONS"]'),
+      assert('Disallowed methods return 405 with Allow header',
+        'Verified: http_response_code(405); header("Allow: GET, POST, OPTIONS")'),
+      assert('Content-Type validation for POST requests',
+        'Verified: strpos($contentType, "application/json") === false → 415'),
+      assert('Payload size limit enforced (5 MB)',
+        'Verified: $maxPayloadSize = 5 * 1024 * 1024'),
+      assert('Oversized payloads return 413 error',
+        'Verified: http_response_code(413)'),
+    ]);
+
+    // ── Production Hardening: Security Logging (v2.6-v2.8) ─────────────────────
+    renderSuite('Security Event Logging (v2.6-v2.8)', [
+      assert('logSecurityEvent() writes to logs/security.log',
+        'Verified: $logFile = __DIR__ . "/logs/security.log"'),
+      assert('Security events include timestamp, severity, event type',
+        'Verified: [timestamp] [severity] {eventType}'),
+      assert('Security events include user ID and IP address',
+        'Verified: user:{userId} | ip:{ip} in log entry'),
+      assert('CRITICAL events logged to both security.log and error.log',
+        'Verified: if ($severity === "CRITICAL") error_log()'),
+      assert('Login failures logged with WARN severity',
+        'Verified: logSecurityEvent("LOGIN_FAILURE", ..., "WARN")'),
+      assert('CSRF failures logged with WARN severity',
+        'Verified: logSecurityEvent("CSRF_FAILURE", ..., "WARN")'),
+      assert('Rate limit violations tracked with retry_after',
+        'Verified: logSecurityEvent("RATE_LIMIT_EXCEEDED", $action, ..., "WARN")'),
+      assert('Unauthorized access attempts logged',
+        'Verified: logSecurityEvent("UNAUTHORIZED_ACCESS", ..., "WARN")'),
+      assert('CORS violations logged with origin details',
+        'Verified: error_log("[CORS_VIOLATION] Blocked request from origin: ...")'),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;
