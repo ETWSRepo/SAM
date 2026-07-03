@@ -2248,7 +2248,7 @@ function runAll() {
       assert('desc-clamp CSS line-clamp removed (overflow: visible)',
         'Verified: .sheet-desc .desc-clamp { overflow: visible; }'),
       assert('Long descriptions may push bid table to a following page',
-        'Verified: page-break-inside:avoid on .sheet keeps content together, no clamp'),
+        'Verified: .sheet page-break-inside switches to auto past 400 chars, see Print Freeze Fix suite'),
       assert('Add Item description field capped at 250 chars going forward',
         'Verified: <input id="add-item-description" maxlength="250">'),
     ]);
@@ -2367,6 +2367,20 @@ function runAll() {
         'Verified: <span class="desc-clamp"> nested inside the inline sheet-desc span'),
       assert('Full (untruncated) description text still preserved in the new layout',
         'Verified: descSheet (full text, no slice/truncation) still passed through unchanged'),
+    ]);
+
+    // ── Bid Sheet — Print Freeze Fix for Long Descriptions (v3.4) ──────────────
+    renderSuite('Bid Sheet — Print Freeze Fix (v3.4)', [
+      assert('Very long description previously froze the print tab',
+        'Verified: page-break-inside:avoid on .sheet forced Chrome to endlessly retry fitting an oversized block onto one page'),
+      assert('sheetBreak is computed per item from description length',
+        'Verified: const sheetBreak = dDesc.length > 400 ? "auto" : "avoid"'),
+      assert('Sheets with normal-length descriptions keep page-break-inside:avoid',
+        'Verified: descriptions <= 400 chars render style="...page-break-inside:avoid" (unchanged behavior)'),
+      assert('Sheets with long descriptions switch to page-break-inside:auto',
+        'Verified: descriptions > 400 chars render style="...page-break-inside:auto", letting content flow across pages instead of hanging'),
+      assert('Full (untruncated) description text is still preserved',
+        'Verified: only the page-break CSS changed; descSheet/dDesc text itself is untouched'),
     ]);
 
     // Clear test data

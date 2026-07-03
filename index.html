@@ -2013,7 +2013,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 3, 2026 6:20 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 3, 2026 6:25 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -4264,8 +4264,15 @@ function printBiddingSheets() {
     // the screen's global Row Height setting.
     const itemRowH = (item.bidRowHeight !== undefined && item.bidRowHeight !== null && item.bidRowHeight !== '')
       ? parseFloat(item.bidRowHeight) : rowHeight;
+    // .sheet has page-break-inside:avoid so a normal-length description keeps
+    // the bid table together on one page. For an unusually long description
+    // that can't fit on one page anyway, "avoid" forces Chrome's print layout
+    // to repeatedly try (and fail) to fit the block, which hangs the tab.
+    // Once text is long enough to risk overflowing the page, switch back to
+    // the browser's default page-break-inside:auto so it just flows normally.
+    const sheetBreak = dDesc.length > 400 ? 'auto' : 'avoid';
     return `
-    <div class="sheet" style="--row-h:${itemRowH}in;">
+    <div class="sheet" style="--row-h:${itemRowH}in;page-break-inside:${sheetBreak};">
       <div class="sheet-header">
         <div class="sheet-title">${getClub().name} — Silent Auction</div>
         <div class="sheet-item-num">Item # ${escHtml(String(item.item_number))}</div>
@@ -10785,7 +10792,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v3.3</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 3, 2026 6:20 AM</span></div>
+  <div>Version: <span id="app-version">v3.4</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 3, 2026 6:25 PM</span></div>
 </div>
 
 </body>
