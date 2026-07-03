@@ -2013,7 +2013,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 3, 2026 5:38 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 3, 2026 6:20 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -2806,12 +2806,14 @@ const DB = {
   getAuctions()           { return JSON.parse(localStorage.getItem('sam_auctions') || '[]'); },
   saveAuctions(v)         {
     localStorage.setItem('sam_auctions', JSON.stringify(v));
-    // Persist to MySQL via API (async, fire and forget). Uses secureApiFetch so
-    // the session cookie (credentials: same-origin) is actually sent — a plain
-    // fetch() here was silently failing auth (401) and dropping the write,
-    // which made auctions vanish after a cache clear even though the app
-    // showed no error (only network failures were caught, not HTTP status).
-    secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+    // Persist to MySQL via API. Uses secureApiFetch so the session cookie
+    // (credentials: same-origin) is actually sent — a plain fetch() here was
+    // silently failing auth (401) and dropping the write, which made auctions
+    // vanish after a cache clear even though the app showed no error (only
+    // network failures were caught, not HTTP status). Returned (not fire-and-
+    // forget) so callers that need the write to land before re-syncing can
+    // await it; callers that don't await are unaffected.
+    return secureApiFetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       body: JSON.stringify({ action: 'save_auctions', data: v })
     }).then(r => {
@@ -2842,7 +2844,10 @@ const DB = {
     localStorage.setItem(this._k('items'), JSON.stringify(v));
     const payload = { action: 'save_items', data: v, auction_id: this.getCurrentAuctionId() };
     console.log(`[DB.saveItems] Sending payload with ${count} items to API...`);
-    secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+    // Returned so callers that need the save to actually land before reading
+    // fresh data back (e.g. navigate()'s "save then re-sync") can await it;
+    // existing fire-and-forget callers are unaffected since they don't await.
+    return secureApiFetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       body: JSON.stringify(payload)
     }).then(r => {
@@ -2874,7 +2879,7 @@ const DB = {
   saveBidders(v)  {
     if (isReadOnly()) return;
     localStorage.setItem(this._k('bidders'), JSON.stringify(v));
-    secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+    return secureApiFetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       body: JSON.stringify({ action: 'save_bidders', data: v, auction_id: this.getCurrentAuctionId() })
     }).then(r => { if (r.status === 429) notifySaveRateLimited('bidders'); })
@@ -2912,7 +2917,7 @@ const DB = {
     localStorage.setItem(this._k('winners'), JSON.stringify(v));
     const payload = { action: 'save_winners', data: v, auction_id: this.getCurrentAuctionId() };
     console.log(`[DB.saveWinners] Sending payload to API...`);
-    secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+    return secureApiFetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       body: JSON.stringify(payload)
     }).then(r => {
@@ -2936,7 +2941,7 @@ const DB = {
     localStorage.setItem(this._k('payments'), JSON.stringify(v));
     const payload = { action: 'save_payments', data: v, auction_id: this.getCurrentAuctionId() };
     console.log(`[DB.savePayments] Sending payload to API...`);
-    secureApiFetch('https://etccapps.com/apps/sam/api.php', {
+    return secureApiFetch('https://etccapps.com/apps/sam/api.php', {
       method: 'POST',
       body: JSON.stringify(payload)
     }).then(r => {
@@ -4266,9 +4271,13 @@ function printBiddingSheets() {
         <div class="sheet-item-num">Item # ${escHtml(String(item.item_number))}</div>
       </div>
       <table class="sheet-info">
-        <tr><td class="label">Description</td><td class="sheet-desc" style="font-weight:700;font-size:13px;"><div class="desc-clamp">${escHtml(descSheet)}</div></td></tr>
         <tr>
-          <td colspan="2" style="padding:0;border:none;">
+          <td style="padding:0;border:none;">
+            <div style="border:1px solid #000;background:#dbeafe;padding:3px 5px;"><span style="font-weight:800;font-size:14px;">Description: </span><span class="sheet-desc" style="font-weight:800;font-size:14px;"><span class="desc-clamp">${escHtml(descSheet)}</span></span></div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0;border:none;">
             <div style="display:grid;grid-template-columns:2fr 1.5fr 0.8fr ${parseFloat(item.reserve_amount || 0) > 0 ? '0.8fr' : ''};gap:0;height:100%;">
               <div style="border:1px solid #000;background:#dbeafe;padding:3px 5px;"><span style="font-weight:800;font-size:14px;">Category: </span><span style="font-weight:800;font-size:14px;">${escHtml(item.category_name || '')}</span></div>
               <div style="border:1px solid #000;background:#dbeafe;padding:3px 5px;"><span style="font-weight:800;font-size:14px;">Donor: </span><span style="font-weight:800;font-size:14px;">${escHtml(item.donor_name || '')}</span></div>
@@ -6486,40 +6495,20 @@ function addStepBtns(stepName, actions, closeBtn) {
   actions.insertBefore(btn, closeBtn);
 }
 
+// Refreshes the local cache from the database before every screen navigation
+// (not just at login), using the same sam_store round-trip as login's initial
+// sync — guarantees exact shape/type fidelity (e.g. payments.paid stays a real
+// boolean) rather than reading the separate SQL tables, whose column types
+// (e.g. MySQL INT for booleans) don't match what the client expects and would
+// silently break strict equality checks like `payment.paid === true`.
+//
+// Previously this function fetched per-field SQL-table data but discarded the
+// result (only logged a count) — so the cache was never actually refreshed on
+// navigation, only at login. That's why data already in the database (e.g.
+// auctions synced from another browser) wouldn't show up until logging out
+// and back in.
 async function loadScreenDataFromDatabase(screenId) {
-  // Load screen-specific data from database
-  const dataToLoad = {
-    'home': ['auctions', 'items', 'bidders', 'winners', 'payments', 'settings'],
-    'item-load': ['items', 'emails'],
-    'bidding-sheets': ['items', 'settings'],
-    'bidder-reg': ['bidders'],
-    'auction-close': ['items', 'bidders', 'winners'],
-    'print-invoices': ['items', 'bidders', 'winners', 'settings'],
-    'winner-announce': ['items', 'winners', 'bidders'],
-    'payment-pickup': ['bidders', 'payments', 'winners', 'items'],
-    'post-auction': ['items', 'bidders', 'winners', 'payments', 'settings']
-  };
-
-  const fieldsToLoad = dataToLoad[screenId] || [];
-
-  for (const field of fieldsToLoad) {
-    try {
-      console.log(`[loadScreenDataFromDatabase] Loading ${field} from database...`);
-      const response = await secureApiFetch('https://etccapps.com/apps/sam/api.php', {
-        method: 'POST',
-        body: JSON.stringify({ action: `get_${field}` })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const count = Array.isArray(data) ? data.length : Object.keys(data).length;
-        console.log(`[loadScreenDataFromDatabase] Loaded ${field}: ${count} rows`);
-        await debugLog(`✓ Loaded ${field} from database: ${count} rows`);
-      }
-    } catch (e) {
-      console.warn(`[loadScreenDataFromDatabase] Failed to load ${field}:`, e);
-    }
-  }
+  await syncFromKeyValueDB();
 }
 
 async function navigate(screenId) {
@@ -6552,26 +6541,28 @@ async function navigate(screenId) {
     const currentScreenId = currentScreen.id.replace('screen-', '');
     console.log(`[navigate] Current screen: ${currentScreenId}`);
 
-    // Save screen-specific data
+    // Save screen-specific data. Awaited (DB.save* now return their fetch
+    // promise) so the sync-back below reads data that includes this save,
+    // rather than racing it and momentarily reverting the user's own edit.
     if (currentScreenId === 'payment-pickup' || currentScreenId === 'paid') {
       console.log(`[navigate] Saving payments before leaving payment screen...`);
       const payments = DB.getPayments();
-      DB.savePayments(payments);
+      await DB.savePayments(payments);
       await debugLog(`💾 Auto-persisted payments table when leaving screen: ${Object.keys(payments).length} records`);
     } else if (currentScreenId === 'item-load') {
       console.log(`[navigate] Saving items before leaving item screen...`);
       const items = Items.getAll();
-      DB.saveItems(items);
+      await DB.saveItems(items);
       await debugLog(`💾 Auto-persisted items table when leaving screen: ${items.length} records`);
     } else if (currentScreenId === 'bidder-reg') {
       console.log(`[navigate] Saving bidders before leaving bidder screen...`);
       const bidders = Bidders.getAll();
-      DB.saveBidders(bidders);
+      await DB.saveBidders(bidders);
       await debugLog(`💾 Auto-persisted bidders table when leaving screen: ${bidders.length} records`);
     } else if (currentScreenId === 'auction-close' || currentScreenId === 'winner-announce') {
       console.log(`[navigate] Saving winners before leaving winner screen...`);
       const winners = DB.getWinners();
-      DB.saveWinners(winners);
+      await DB.saveWinners(winners);
       await debugLog(`💾 Auto-persisted winners table when leaving screen: ${Object.keys(winners).length} records`);
     }
   }
@@ -10234,18 +10225,24 @@ async function syncFromKeyValueDB() {
     const keyValueData = await response.json();
     if (keyValueData && keyValueData.error) { console.warn('get_all:', keyValueData.error); return; }
 
-    // Load all data from key-value store into localStorage
+    // Load all data from key-value store into localStorage. Uses the
+    // unwrapped setItem + loading flag so this doesn't immediately re-POST
+    // every key back to the server via the auto-save hook — this now runs on
+    // every navigation (not just login), so that redundant write-back would
+    // multiply requests and could re-trigger rate limiting.
     let loadedCount = 0;
+    window._samLoadingFromServer = true;
     for (const [key, value] of Object.entries(keyValueData)) {
       if (key.startsWith('sam_')) {
         try {
-          localStorage.setItem(key, value);
+          window._samOrigSetItem(key, value);
           loadedCount++;
         } catch (e) {
           console.warn(`Failed to load ${key}:`, e);
         }
       }
     }
+    window._samLoadingFromServer = false;
 
     // Check if auctions were loaded
     const auctions = localStorage.getItem('sam_auctions');
@@ -10788,7 +10785,7 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v3.2</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 3, 2026 5:38 AM</span></div>
+  <div>Version: <span id="app-version">v3.3</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 3, 2026 6:20 AM</span></div>
 </div>
 
 </body>

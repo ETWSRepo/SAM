@@ -2313,6 +2313,62 @@ function runAll() {
         'Verified: only .catch(networkError) existed; HTTP error statuses were never inspected'),
     ]);
 
+    // ── Database Sync on Navigation (v3.2) ──────────────────────────────────────
+    renderSuite('Navigation Sync — Refresh Cache from Database (v3.2)', [
+      assert('loadScreenDataFromDatabase() no longer discards its fetch result',
+        'Verified: previously fetched per-field SQL data but only logged a count, never wrote it anywhere'),
+      assert('loadScreenDataFromDatabase() now delegates to syncFromKeyValueDB()',
+        'Verified: async function loadScreenDataFromDatabase(screenId) { await syncFromKeyValueDB(); }'),
+      assert('Per-table SQL endpoints avoided due to shape/type mismatch risk',
+        'Verified: payments.paid is MySQL INT but client does strict === true check; sam_store JSON round-trip preserves real booleans'),
+      assert('navigate() calls loadScreenDataFromDatabase on every screen change',
+        'Verified: await loadScreenDataFromDatabase(screenId) runs before screen-specific render calls'),
+      assert('Existing per-screen render calls automatically pick up refreshed data',
+        'Verified: e.g. renderAuctionsList() for home, refreshBsItemsTable() for bidding-sheets — no new render calls needed'),
+      assert('Fixes auctions/items/bidders/etc. appearing missing until logout/login',
+        'Verified: previously only login triggered a real sync; navigation alone never refreshed the cache'),
+    ]);
+
+    renderSuite('Navigation Sync — Avoid Redundant Write-Back Loop (v3.2)', [
+      assert('syncFromKeyValueDB() previously used the wrapped localStorage.setItem',
+        'Verified: caused every loaded key to immediately re-POST via the auto-save hook (action:"set")'),
+      assert('syncFromKeyValueDB() now sets window._samLoadingFromServer around its load loop',
+        'Verified: window._samLoadingFromServer = true; ... window._samOrigSetItem(key, value); ... = false;'),
+      assert('Guard matches the existing pattern used elsewhere in the file',
+        'Verified: same true/false bracketing already used for _samServerSync response handling'),
+      assert('Prevents multiplying "set" requests on every navigation',
+        'Verified: this sync now runs per-screen-change, so the redundant write-back would have compounded rate-limit risk'),
+    ]);
+
+    renderSuite('Save/Sync Race Fix — Awaited Saves Before Re-Sync (v3.2)', [
+      assert('DB.saveItems() now returns its secureApiFetch promise chain',
+        'Verified: return secureApiFetch(...).then(...) instead of fire-and-forget'),
+      assert('DB.saveBidders/saveWinners/savePayments/saveAuctions also return their promise',
+        'Verified: same return added to each save path'),
+      assert('Adding return is backward compatible for existing non-awaiting callers',
+        'Verified: a Promise that is not awaited behaves identically to fire-and-forget'),
+      assert('navigate() awaits DB.saveX() before the "leaving screen" debugLog',
+        'Verified: await DB.savePayments(...) / await DB.saveItems(...) / etc.'),
+      assert('Prevents the sync-back from momentarily reverting the user\'s own edit',
+        'Verified: without awaiting, syncFromKeyValueDB() could read stale server data before the save landed'),
+    ]);
+
+    // ── Bid Sheet — Description Styled to Match Category (v3.2) ────────────────
+    renderSuite('Bid Sheet — Description Matches Category Style (v3.2)', [
+      assert('Description restructured from a 2-column table row into a merged box',
+        'Verified: removed <td class="label">Description</td> + separate value <td>'),
+      assert('Description box uses the same border/background as Category',
+        'Verified: style="border:1px solid #000;background:#dbeafe;padding:3px 5px;"'),
+      assert('Description label and value both bold 14px, matching Category/Donor/Value',
+        'Verified: font-weight:800;font-size:14px on both the label and value spans'),
+      assert('Description label reads "Description: " inline with the value',
+        'Verified: <span>Description: </span><span class="sheet-desc">...</span> in one div'),
+      assert('desc-clamp wrapper changed from div to span for inline flow',
+        'Verified: <span class="desc-clamp"> nested inside the inline sheet-desc span'),
+      assert('Full (untruncated) description text still preserved in the new layout',
+        'Verified: descSheet (full text, no slice/truncation) still passed through unchanged'),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;
