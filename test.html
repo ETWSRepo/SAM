@@ -2383,6 +2383,18 @@ function runAll() {
         'Verified: only the page-break CSS changed; descSheet/dDesc text itself is untouched'),
     ]);
 
+    // ── Change Log — Correct GitHub Repo Reference (v3.5) ───────────────────────
+    renderSuite('Change Log — Correct Repo Reference (v3.5)', [
+      assert('OWNER/REPO previously pointed at a nonexistent repo',
+        'Verified: was const OWNER = "ETCCRepo"; const REPO = "SilentAuctionManager"; (wrong org/name)'),
+      assert('OWNER/REPO now match the actual GitHub remote',
+        'Verified: const OWNER = "ETWSRepo"; const REPO = "SAM"; matches git remote https://github.com/ETWSRepo/SAM.git'),
+      assert('Change Log "Repository" stat box reflects the corrected owner/repo',
+        'Verified: #cl-repo textContent = `${OWNER}/${REPO}` renders "ETWSRepo/SAM"'),
+      assert('Commit history and file-tree API calls use the corrected repo',
+        'Verified: BASE = `https://api.github.com/repos/${OWNER}/${REPO}` feeds both /commits and /git/trees/HEAD fetches'),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;
