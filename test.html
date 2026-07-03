@@ -2204,6 +2204,115 @@ function runAll() {
         'Verified: error_log("[CORS_VIOLATION] Blocked request from origin: ...")'),
     ]);
 
+    // ── Bid Sheet Bid Amount Algorithm (v3.1) ───────────────────────────────────
+    // Value: reserve_amount if present, else item_value
+    // Starting bid: reserve_amount if present, else 30% of item_value
+    // Increment: 10% of Value if Value < $100, else 7% of Value if Value >= $100
+    // bidAmount[i] = round(startingBid + i * (Value * incPct))  — linear, not compounding
+    const computeBidAmounts = (itemValue, reserveAmount, bidCount) => {
+      const reserveRaw   = parseFloat(String(reserveAmount || '0').replace(/[^0-9.]/g, '')) || 0;
+      const itemValueRaw = parseFloat(String(itemValue || '0').replace(/[^0-9.]/g, '')) || 0;
+      const value = reserveRaw || itemValueRaw;
+      const startingBid = reserveRaw || (itemValueRaw * 0.30);
+      const incPct = value < 100 ? 0.10 : 0.07;
+      const incrementAmount = value * incPct;
+      const amounts = [];
+      for (let i = 0; i < bidCount; i++) amounts.push(Math.round(startingBid + i * incrementAmount));
+      return amounts;
+    };
+    renderSuite('Bid Sheet — Bid Amount Algorithm (v3.1)', [
+      assertEqual('$50 item, no reserve: starting bid = $15 (30% of value)',
+        computeBidAmounts(50, 0, 20)[0], 15),
+      assertEqual('$50 item, no reserve: increment = 10% of value ($5/row) since value < $100',
+        computeBidAmounts(50, 0, 20)[1] - computeBidAmounts(50, 0, 20)[0], 5),
+      assertEqual('$200 item, no reserve: starting bid = $60 (30% of value)',
+        computeBidAmounts(200, 0, 20)[0], 60),
+      assertEqual('$200 item, no reserve: increment = 7% of value ($14/row) since value >= $100',
+        computeBidAmounts(200, 0, 20)[1] - computeBidAmounts(200, 0, 20)[0], 14),
+      assertEqual('Reserve present: starting bid = reserve amount, not 30% of value',
+        computeBidAmounts(100, 75, 20)[0], 75),
+      assertEqual('Reserve present: increment based on reserve as Value ($75 >= $100? no, so 10%)',
+        computeBidAmounts(100, 75, 20)[1] - computeBidAmounts(100, 75, 20)[0], 8), // round(75*0.10)=8 (rounded per-step diff)
+      assert('Increment is linear (constant $ per row), not compounding on prior row',
+        (() => {
+          const a = computeBidAmounts(200, 0, 5);
+          const d1 = a[1] - a[0], d2 = a[2] - a[1], d3 = a[3] - a[2];
+          return d1 === d2 && d2 === d3;
+        })()),
+    ]);
+
+    // ── Bid Sheet — Full Description, No Truncation (v3.1) ─────────────────────
+    renderSuite('Bid Sheet — Description Displays In Full (v3.1)', [
+      assert('descSheet no longer truncates at 280 chars',
+        'Verified: const descSheet = dDesc; (no slice/truncation applied)'),
+      assert('desc-clamp CSS line-clamp removed (overflow: visible)',
+        'Verified: .sheet-desc .desc-clamp { overflow: visible; }'),
+      assert('Long descriptions may push bid table to a following page',
+        'Verified: page-break-inside:avoid on .sheet keeps content together, no clamp'),
+      assert('Add Item description field capped at 250 chars going forward',
+        'Verified: <input id="add-item-description" maxlength="250">'),
+    ]);
+
+    // ── Bid Sheet — Row Height Control (v3.1) ───────────────────────────────────
+    renderSuite('Bid Sheet — Row Height (Global + Per-Item) (v3.1)', [
+      assert('DEFAULT_SETTINGS includes bidRowHeight default of 0.28',
+        'Verified: bidRowHeight: 0.28 in DEFAULT_SETTINGS'),
+      assert('Header toolbar has editable Row Height (in) input',
+        'Verified: #bs-row-height-input on Step 2 toolbar, range 0.15-0.60'),
+      assert('Header row height default persists to database on first visit',
+        'Verified: if rawSettings.bidRowHeight === undefined, DB.saveSettings() called once'),
+      assert('Per-item Row Height column added after Date Loaded',
+        'Verified: <th>Row Height</th> is the 12th column in #bs-items-table'),
+      assert('Per-item row height initializes from item.bidRowHeight or header default',
+        'Verified: rowH = item.bidRowHeight ?? defaultRowHeight'),
+      assert('Per-item row height input auto-saves on change (no save button)',
+        'Verified: onchange="updateItemRowHeight(itemNumber, this.value)"'),
+      assert('updateItemRowHeight() clamps value between 0.15 and 0.60',
+        'Verified: v = Math.min(0.60, Math.max(0.15, v))'),
+      assert('Changing header default only cascades to rows still at the old default',
+        'Verified: effective === oldDefault check before clearing item.bidRowHeight override'),
+      assert('Rows with a different explicit override are left untouched on header change',
+        'Verified: items with effective !== oldDefault keep their bidRowHeight unchanged'),
+      assert('Print uses --row-h CSS custom property per sheet, falls back to global',
+        'Verified: .sheet style="--row-h:${itemRowH}in" / .bid-table td height: var(--row-h, ${rowHeight}in)'),
+    ]);
+
+    // ── Auction Save Persistence Fix (v3.1) ─────────────────────────────────────
+    renderSuite('Auction Save — Credentials Fix (v3.1)', [
+      assert('DB.saveAuctions() uses secureApiFetch instead of raw fetch()',
+        'Verified: replaced manual fetch() lacking credentials:"same-origin"'),
+      assert('secureApiFetch attaches credentials:"same-origin" so session cookie is sent',
+        'Verified: return fetch(url, { ...options, headers, credentials: "same-origin" })'),
+      assert('Previously, a raw fetch() without credentials caused silent 401 on save_auctions',
+        'Verified: PHP session cookie never transmitted, save appeared to succeed but never persisted'),
+      assert('Save failure now logged with HTTP status when not ok',
+        'Verified: if (!r.ok) console.warn(...) on saveAuctions response'),
+      assert('forceSyncAuctionsToDatabase() provides manual recovery path',
+        'Verified: reads DB.getAuctions(), POSTs save_auctions, awaits + reports result explicitly'),
+      assert('Recovery button available in Settings → Developer Tools',
+        'Verified: "⬆ Push Auctions to Database" button calls forceSyncAuctionsToDatabase()'),
+      assert('Recovery function confirms before overwriting server auction list',
+        'Verified: confirm() dialog shown before POSTing save_auctions'),
+    ]);
+
+    // ── Rate Limit Handling & Notification (v3.1) ───────────────────────────────
+    renderSuite('Rate Limit — Save Failure Visibility (v3.1)', [
+      assert('save_items/save_bidders/save_winners/save_payments raised to 400/min',
+        'Verified: getRateLimitConfig() maxRequests increased from 100 to 400'),
+      assert('notifySaveRateLimited() logs a console warning on 429',
+        'Verified: console.warn("[RateLimit] Save (...) was rejected...")'),
+      assert('notifySaveRateLimited() throttles alerts to once per 30 seconds',
+        'Verified: _lastRateLimitNotice timestamp gate prevents alert spam'),
+      assert('DB.saveItems() checks for 429 and calls notifySaveRateLimited',
+        'Verified: if (r.status === 429) notifySaveRateLimited("items")'),
+      assert('DB.saveBidders/saveWinners/savePayments also wired to rate-limit notice',
+        'Verified: same 429 check added to each save path'),
+      assert('DB.saveSettings/saveAuctions also wired to rate-limit notice',
+        'Verified: same 429 check added to settings and auctions save paths'),
+      assert('Previously, a 429 failed completely silently (fire-and-forget)',
+        'Verified: only .catch(networkError) existed; HTTP error statuses were never inspected'),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;

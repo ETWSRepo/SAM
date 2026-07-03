@@ -241,10 +241,14 @@ function getRateLimitConfig($action) {
         'login' => ['maxRequests' => 8, 'windowSeconds' => 300],         // 8 per 5 minutes — brute-force guard
         'scan_inbox' => ['maxRequests' => 1, 'windowSeconds' => 300],     // 1 per 5 minutes
         'set_password' => ['maxRequests' => 5, 'windowSeconds' => 900],   // 5 per 15 minutes
-        'save_items' => ['maxRequests' => 100, 'windowSeconds' => 60],    // 100 per minute
-        'save_bidders' => ['maxRequests' => 100, 'windowSeconds' => 60],
-        'save_winners' => ['maxRequests' => 100, 'windowSeconds' => 60],
-        'save_payments' => ['maxRequests' => 100, 'windowSeconds' => 60],
+        // Raised from 100 to 400 per minute — per-field inline auto-save (e.g. bid
+        // sheet row height, inline item edits) resends the full array on every
+        // field commit, so heavy interactive editing was hitting 100/min and
+        // silently failing saves (looked like the UI was "stuck").
+        'save_items' => ['maxRequests' => 400, 'windowSeconds' => 60],
+        'save_bidders' => ['maxRequests' => 400, 'windowSeconds' => 60],
+        'save_winners' => ['maxRequests' => 400, 'windowSeconds' => 60],
+        'save_payments' => ['maxRequests' => 400, 'windowSeconds' => 60],
         'get_all_data' => ['maxRequests' => 10, 'windowSeconds' => 60],   // 10 per minute
         'clear_all' => ['maxRequests' => 1, 'windowSeconds' => 3600],     // 1 per hour
     ];
