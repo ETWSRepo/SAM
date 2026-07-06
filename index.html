@@ -549,7 +549,7 @@
       color: #888;
       font-size: 10px;
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
       align-items: center;
       border-top: 1px solid #333;
       z-index: 50;
@@ -566,7 +566,8 @@
     }
     #app-footer div:nth-child(1) { text-align: left; border-right: 1px solid #444; }
     #app-footer div:nth-child(2) { text-align: center; border-right: 1px solid #444; }
-    #app-footer div:nth-child(3) { text-align: right; }
+    #app-footer div:nth-child(3) { text-align: center; border-right: 1px solid #444; }
+    #app-footer div:nth-child(4) { text-align: right; }
     #app-footer a { color: #aaa; text-decoration: none; }
     #app-footer a:hover { color: #fff; }
 
@@ -2013,7 +2014,7 @@
           </div>
           <div>
             <label for="inp-deploy-date" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;">Last Deploy Date</label>
-            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 3, 2026 6:29 PM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
+            <input type="text" id="inp-deploy-date" data-deploy-date="Jul 6, 2026 8:48 AM" placeholder="e.g. Jun 20, 2026 5:19 PM" style="width:250px;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);" />
           </div>
           <button class="btn primary" onclick="saveSettings()" style="font-size:12px;align-self:flex-start;">Save Settings</button>
         </div>
@@ -10792,7 +10793,8 @@ async function loadChangelog() {
 <div id="app-footer">
   <div>&copy; 2026 <span id="footer-club-name">${getClub().name}</span> &nbsp;&middot;&nbsp; Knoxville, TN</div>
   <div><a href="mailto:etccwebsite.webmanager@gmail.com">etccwebsite.webmanager@gmail.com</a></div>
-  <div>Version: <span id="app-version">v3.5</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 3, 2026 6:29 PM</span></div>
+  <div>Version: <span id="app-version">v3.6</span> &nbsp;&middot;&nbsp; Deployed: <span id="app-deploy-date">Jul 6, 2026 8:48 AM</span></div>
+  <div>Website by Business Web Express &nbsp;&middot;&nbsp; <a href="mailto:info@businesswebexpress.com">info@businesswebexpress.com</a></div>
 </div>
 
 </body>

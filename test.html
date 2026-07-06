@@ -2395,6 +2395,20 @@ function runAll() {
         'Verified: BASE = `https://api.github.com/repos/${OWNER}/${REPO}` feeds both /commits and /git/trees/HEAD fetches'),
     ]);
 
+    // ── Footer — Website Credit (v3.6) ──────────────────────────────────────────
+    renderSuite('Footer — Website Credit (v3.6)', [
+      assert('Footer grid expanded from 3 to 4 columns',
+        'Verified: #app-footer grid-template-columns: 1fr 1fr 1fr 1fr'),
+      assert('4th footer column shows "Website by Business Web Express"',
+        'Verified: <div>Website by Business Web Express ... <a href="mailto:info@businesswebexpress.com">'),
+      assert('Credit email is a mailto link',
+        'Verified: href="mailto:info@businesswebexpress.com"'),
+      assert('Column divider styling applied to columns 1-3, last column right-aligned',
+        'Verified: nth-child(1)/(2)/(3) border-right + center/left align, nth-child(4) text-align:right, no border'),
+      assert('Deploy date baked at deploy time, not overwritten by JS on load',
+        'Verified: updateFooterDeployDate() remains a no-op; #app-deploy-date is authoritative from deploy.ps1 Get-Date'),
+    ]);
+
     // Clear test data
     _store['sam_items'] = null;
     _store['sam_winners'] = null;
